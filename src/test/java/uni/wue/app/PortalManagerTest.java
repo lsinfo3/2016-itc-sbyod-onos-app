@@ -18,24 +18,30 @@ package uni.wue.app;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.onosproject.TestApplicationId;
+import org.onosproject.core.IdGenerator;
+import org.onosproject.net.intent.Intent;
+import org.onosproject.net.intent.MockIdGenerator;
 
 /**
- * Set of tests of the ONOS application component.
+ * Set of tests of the ONOS application manager.
  */
-public class AppComponentTest {
+public class PortalManagerTest {
 
-    private AppComponent component;
+    protected PortalManager manager;
+    protected IdGenerator idGenerator = new MockIdGenerator();
 
     @Before
     public void setUp() {
-        component = new AppComponent();
-        component.activate();
+        manager = new PortalManager();
+        manager.appId = new TestApplicationId("network-test");
+        Intent.bindIdGenerator(idGenerator);
 
     }
 
     @After
     public void tearDown() {
-        component.deactivate();
+        Intent.unbindIdGenerator(idGenerator);
     }
 
     @Test

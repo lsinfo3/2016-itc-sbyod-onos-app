@@ -20,6 +20,11 @@ package uni.wue.app.cli;
 import org.apache.karaf.shell.commands.Argument;
 import org.apache.karaf.shell.commands.Command;
 import org.onosproject.cli.AbstractShellCommand;
+import uni.wue.app.PortalManager;
+import uni.wue.app.PortalService;
+
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Created by lorry on 13.11.15.
@@ -33,6 +38,25 @@ public class SetCaptivePortalCommand extends AbstractShellCommand{
 
     @Override
     protected void execute() {
-        print("Set portal MAC address to %s", portalmac);
+
+        PortalService portalService = get(PortalService.class);
+        portalService.setPortal(portalmac);
+
+//        if(validate(portalmac)){
+//            print("Set portal MAC address to %s", portalmac);
+//        } else{
+//            print("Portal MAC address %s has wrong format", portalmac);
+//        }
+
     }
+
+    private boolean validate(String mac) {
+        //only mac addresses of this type are allowed
+        //3D:F2:C9:A6:B3:4F
+        //3D-F2-C9-A6-B3:4F
+        Pattern p = Pattern.compile("^([a-fA-F0-9][:-]){5}[a-fA-F0-9][:-]$");
+        Matcher m = p.matcher(mac);
+        return m.find();
+    }
+
 }

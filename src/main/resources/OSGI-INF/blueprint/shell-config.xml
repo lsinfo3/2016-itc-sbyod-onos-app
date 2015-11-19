@@ -17,9 +17,6 @@
 
     <command-bundle xmlns="http://karaf.apache.org/xmlns/shell/v1.1.0">
         <command>
-            <action class="uni.wue.app.AppCommand"/>
-        </command>
-        <command>
             <action class="uni.wue.app.cli.SetCaptivePortalCommand"/>
         </command>
     </command-bundle>
