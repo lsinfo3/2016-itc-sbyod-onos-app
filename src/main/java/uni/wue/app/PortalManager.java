@@ -27,14 +27,21 @@ import org.onlab.packet.Ethernet;
 import org.onlab.packet.MacAddress;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
+import org.onosproject.net.Host;
+import org.onosproject.net.HostId;
+import org.onosproject.net.Path;
+import org.onosproject.net.PortNumber;
 import org.onosproject.net.packet.InboundPacket;
 import org.onosproject.net.packet.PacketContext;
 import org.onosproject.net.packet.PacketProcessor;
 import org.onosproject.net.packet.PacketService;
+import org.onosproject.net.host.HostService;
+import org.onosproject.net.topology.TopologyService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigInteger;
+import java.util.Set;
 
 
 /**
@@ -45,6 +52,12 @@ import java.math.BigInteger;
 public class PortalManager implements PortalService{
 
     private final Logger log = LoggerFactory.getLogger(getClass());
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected HostService hostService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected TopologyService topologyService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected CoreService coreService;
@@ -70,6 +83,7 @@ public class PortalManager implements PortalService{
     @Deactivate
     protected void deactivate() {
         packetService.removeProcessor(processor);
+        processor = null;
         log.info("Stopped");
     }
 
@@ -99,17 +113,96 @@ public class PortalManager implements PortalService{
                 return;
             }
 
+            //print out the ethernet type of the packet
             EthType type = new EthType(ethPkt.getEtherType());
             System.out.println("Packet with ethType: " + type.toString());
 
+
+            //change destination of packet with ipv4 type and if portal is defined
             if(ethPkt.getEtherType() == Ethernet.TYPE_IPV4 && portalMac != null){
-                MacAddress oldMac = ethPkt.getDestinationMAC();
-                ethPkt.setDestinationMACAddress(portalMac);
-                System.out.println("Changed destination mac address of packet from " + oldMac.toString()
-                        + " to " + portalMac.toString());
-                return;
+                //do not change packets from or to portal device
+                if(ethPkt.getSourceMAC().equals(portalMac) || ethPkt.getDestinationMAC().equals(portalMac)){
+                    System.out.println("Did not change mac address of source "
+                            + (ethPkt.getSourceMAC()).toString());
+                    return;
+                } else {
+                    MacAddress oldMac = ethPkt.getDestinationMAC();
+                    ethPkt.setDestinationMACAddress(portalMac);
+                    System.out.println("Changed packet destination mac address from " + oldMac.toString()
+                            + " to " + portalMac.toString());
+
+                    //send the packet to destination port of portal
+                    packetOut(context);
+                    return;
+                }
+            }
+            return;
+        }
+    }
+
+    // Sends a packet out to its destination.
+    private void packetOut(PacketContext context) {
+
+        InboundPacket pkt = context.inPacket();
+        Ethernet ethPkt = pkt.parsed();
+        HostId id = HostId.hostId(ethPkt.getDestinationMAC());
+
+        // Do we know who this is for? If not, flood and bail.
+        Host dst = hostService.getHost(id);
+        if (dst == null) {
+            //flood(context);
+            return;
+        }
+
+        // Are we on an edge switch that our destination is on? If so,
+        // simply forward out to the destination and bail.
+        if (pkt.receivedFrom().deviceId().equals(dst.location().deviceId())) {
+            if (!context.inPacket().receivedFrom().port().equals(dst.location().port())) {
+                System.out.println("Send context to port " + dst.location().port().toString());
+                context.treatmentBuilder().setOutput(dst.location().port());
+                context.send();
+            }
+            return;
+        }
+
+        // Otherwise, get a set of paths that lead from here to the
+        // destination edge switch.
+        Set<Path> paths =
+                topologyService.getPaths(topologyService.currentTopology(),
+                        pkt.receivedFrom().deviceId(),
+                        dst.location().deviceId());
+        if (paths.isEmpty()) {
+            // If there are no paths, flood and bail.
+            //flood(context);
+            return;
+        }
+
+        // Otherwise, pick a path that does not lead back to where we
+        // came from; if no such path, flood and bail.
+        Path path = pickForwardPathIfPossible(paths, pkt.receivedFrom().port());
+        if (path == null) {
+            Object[] pathDetails = {pkt.receivedFrom(), ethPkt.getSourceMAC(), ethPkt.getDestinationMAC()};
+            log.warn("Don't know where to go from here {} for {} -> {}", pathDetails);
+            //flood(context);
+            return;
+        }
+
+        // Otherwise forward and be done with it.
+        context.treatmentBuilder().setOutput(path.src().port());
+        context.send();
+    }
+
+    // Selects a path from the given set that does not lead back to the
+    // specified port if possible.
+    private Path pickForwardPathIfPossible(Set<Path> paths, PortNumber notToPort) {
+        Path lastPath = null;
+        for (Path path : paths) {
+            lastPath = path;
+            if (!path.src().port().equals(notToPort)) {
+                return path;
             }
         }
+        return lastPath;
     }
 
     // Indicates whether this is a control packet, e.g. LLDP, BDDP
