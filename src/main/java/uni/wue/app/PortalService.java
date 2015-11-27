@@ -17,6 +17,9 @@
  */
 package uni.wue.app;
 
+import org.onlab.packet.IpAddress;
+import org.onlab.packet.MacAddress;
+
 /**
  * Created by lorry on 13.11.15.
  */
@@ -28,5 +31,19 @@ public interface PortalService {
      * @param portal portal MAC
      */
     void setPortal(String portal);
+
+    /**
+     * Get the Mac Address of the portal
+     *
+     * @return MacAddress
+     */
+    MacAddress getPortalMac();
+
+    /**
+     * Get the Ip Address of the portal
+     *
+     * @return IpAddress
+     */
+    IpAddress getPortalIp();
 
 }

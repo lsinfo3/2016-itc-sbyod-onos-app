@@ -17,30 +17,19 @@
  */
 package uni.wue.app.cli;
 
-import org.apache.karaf.shell.commands.Argument;
 import org.apache.karaf.shell.commands.Command;
 import org.onosproject.cli.AbstractShellCommand;
-import uni.wue.app.PortalManager;
 import uni.wue.app.PortalService;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 /**
- * Created by lorry on 13.11.15.
+ * Created by lorry on 27.11.15.
  */
-@Command(scope="onos", name="set-portal", description = "Define the captive portal")
-public class SetCaptivePortalCommand extends AbstractShellCommand{
-
-    @Argument(index=0, name = "portal-mac", description = "The MAC address of the portal",
-            required = true, multiValued = false)
-    String portalmac = null;
-
+@Command(scope="onos", name="get-portal", description = "Show portal information")
+public class GetCaptivePortalCommand extends AbstractShellCommand {
     @Override
     protected void execute() {
-
         PortalService portalService = get(PortalService.class);
-        portalService.setPortal(portalmac);
-
+        System.out.println(String.format("Portal Mac address: %s\nPortal Ip address: %s",
+                portalService.getPortalMac(), portalService.getPortalIp()));
     }
 }

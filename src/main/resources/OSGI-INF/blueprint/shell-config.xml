@@ -19,6 +19,9 @@
         <command>
             <action class="uni.wue.app.cli.SetCaptivePortalCommand"/>
         </command>
+        <command>
+            <action class="uni.wue.app.cli.GetCaptivePortalCommand"/>
+        </command>
     </command-bundle>
 
 </blueprint>
