@@ -19,6 +19,9 @@ package uni.wue.app;
 
 import org.onlab.packet.IpAddress;
 import org.onlab.packet.MacAddress;
+import org.onosproject.net.Host;
+
+import java.util.Set;
 
 /**
  * Created by lorry on 13.11.15.
@@ -44,6 +47,13 @@ public interface PortalService {
      *
      * @return IpAddress
      */
-    IpAddress getPortalIp();
+    Set<IpAddress> getPortalIp();
+
+    /**
+     * Get the portal as host
+     *
+     * @return Host
+     */
+    Host getPortal();
 
 }

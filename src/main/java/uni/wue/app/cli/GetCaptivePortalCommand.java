@@ -19,6 +19,7 @@ package uni.wue.app.cli;
 
 import org.apache.karaf.shell.commands.Command;
 import org.onosproject.cli.AbstractShellCommand;
+import org.onosproject.net.Host;
 import uni.wue.app.PortalService;
 
 /**
@@ -29,7 +30,9 @@ public class GetCaptivePortalCommand extends AbstractShellCommand {
     @Override
     protected void execute() {
         PortalService portalService = get(PortalService.class);
-        System.out.println(String.format("Portal Mac address: %s\nPortal Ip address: %s",
-                portalService.getPortalMac(), portalService.getPortalIp()));
+        Host portal = portalService.getPortal();
+        if(portal != null && portal.ipAddresses().iterator().hasNext())
+            System.out.println(String.format("Portal Mac address: %s\nPortal Ip address: %s",
+                portal.mac().toString(), portal.ipAddresses().iterator().next().toString()));
     }
 }
