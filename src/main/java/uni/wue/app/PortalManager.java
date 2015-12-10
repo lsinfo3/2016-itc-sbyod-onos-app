@@ -17,9 +17,8 @@
  */
 package uni.wue.app;
 
-import jdk.nashorn.internal.objects.Global;
-
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.*;
@@ -37,9 +36,9 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
 
-import java.math.BigInteger;
 import java.nio.ByteBuffer;
-import java.util.Iterator;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 
@@ -70,12 +69,12 @@ public class PortalManager implements PortalService{
     private ReactivePacketProcessor processor = new ReactivePacketProcessor();
 
     private Host portal;
-    private MacAddress portalMac;
-    private IpAddress portalIp;
+    private Map<Host, Host> primaryDst;
 
     @Activate
     protected void activate() {
         appId = coreService.registerApplication("uni.wue.app");
+        primaryDst = new HashMap<Host, Host>();
 
         packetService.addProcessor(processor, PacketProcessor.director(3));
 
@@ -85,6 +84,7 @@ public class PortalManager implements PortalService{
     @Deactivate
     protected void deactivate() {
         packetService.removeProcessor(processor);
+        primaryDst = null;
         processor = null;
         log.info("Stopped");
     }
@@ -121,20 +121,34 @@ public class PortalManager implements PortalService{
             //log.debug(byodMarker, "Packet with ethType: " + type.toString());
 
             //if portal is defined -> change destination of packet with ipv4 type
-            if(portalMac != null && ethPkt.getEtherType() == Ethernet.TYPE_IPV4){
+            if(portal != null && ethPkt.getEtherType() == Ethernet.TYPE_IPV4){
 
-                //do not change packets from or to portal device
-                if(ethPkt.getSourceMAC().equals(portalMac) || ethPkt.getDestinationMAC().equals(portalMac)){
-                    log.debug(byodMarker, "Did not change mac address of source "
-                            + (ethPkt.getSourceMAC()).toString());
+                // filter out packets from or to the portal
+                if(ethPkt.getSourceMAC().equals(portal.mac())){
+                    // get the destination host
+                    Set<Host> dst = hostService.getHostsByMac(ethPkt.getDestinationMAC());
+                    if(dst.iterator().hasNext()){
+                        Host dstHost = dst.iterator().next();
+                        // check if the packet of the dstHost was changed before
+                        if(primaryDst.containsKey(dstHost)){
+                            log.debug(byodMarker, "Restore the source of the previous intended packet source");
+                            restoreSource(context, primaryDst.get(dstHost));
+                            return;
+                        }
+                    }
+                    return;
+                } else if(ethPkt.getDestinationMAC().equals(portal.mac())){
+                    log.debug(byodMarker, "Do not change the packets with the portal as destination.");
                     return;
                 } else {
-                    MacAddress oldMac = ethPkt.getDestinationMAC();
-                    //log.debug(byodMarker, "Changed packet destination mac address from " + oldMac.toString()
-                    //        + " to " + portalMac.toString());
+                    // save the destination and source pairs to restore it later
+                    Set<Host> src = hostService.getHostsByMac(ethPkt.getSourceMAC());
+                    Set<Host> dst = hostService.getHostsByMac(ethPkt.getDestinationMAC());
+                    if(src.iterator().hasNext() && dst.iterator().hasNext())
+                        primaryDst.put(src.iterator().next(), dst.iterator().next());
 
                     //send the packet to destination port of portal
-                    packetOut(context);
+                    sendToPortal(context);
 
                     return;
                 }
@@ -143,31 +157,92 @@ public class PortalManager implements PortalService{
         }
     }
 
-    // Sends a packet out to its destination.
-    private void packetOut(PacketContext context) {
+    /**
+     * Restores the packet source from the portal to the previous intended source
+     * @param context the packet context
+     * @param previousSrc previously intended packet destination
+     */
+    private void restoreSource(PacketContext context, Host previousSrc){
+        checkNotNull(context, "No context defined!");
+        checkNotNull(previousSrc, "No previous host defined!");
+        checkNotNull(previousSrc.ipAddresses().iterator().next(), "No ip address for previous source defined!");
 
-        checkNotNull(portal);
-        checkNotNull(portal.ipAddresses().iterator().next());
-
-        TrafficTreatment.Builder builder = DefaultTrafficTreatment.builder();;
+        TrafficTreatment.Builder builder = DefaultTrafficTreatment.builder();
         InboundPacket pkt = context.inPacket();
         Ethernet ethPkt = pkt.parsed();
+        Host dstHost;
+        // get the destination host
+        Set<Host> dst = hostService.getHostsByMac(ethPkt.getDestinationMAC());
+        if(dst.iterator().hasNext())
+            dstHost = dst.iterator().next();
+        else
+            throw new NullPointerException(String.format("No dst host found with mac address %s",
+                    ethPkt.getDestinationMAC()));
 
-        //set destination mac and ip of portal
-        ethPkt.setDestinationMACAddress(portal.mac());
+        // restore the mac address
+        ethPkt.setSourceMACAddress(previousSrc.mac());
         IPv4 ipPkt = (IPv4)ethPkt.getPayload();
-
-        ipPkt.setDestinationAddress((portal.ipAddresses().iterator().next().getIp4Address()).toInt());
-        //wrap the packet as buffer
+        // restore the ip address
+        ipPkt.setSourceAddress(previousSrc.ipAddresses().iterator().next().getIp4Address().toInt());
+        ipPkt.resetChecksum();
+        // wrap the packet
         ByteBuffer buf = ByteBuffer.wrap(ethPkt.serialize());
 
-        // Do we know the portal host? If not, flood and bail.
-        if (portal == null) {
+        // set up the traffic management
+        builder.setIpSrc(previousSrc.ipAddresses().iterator().next())
+                .setEthSrc(previousSrc.mac());
+
+        // packet send from the switch with the destination host connected to
+        if(pkt.receivedFrom().deviceId().equals(dstHost.location().deviceId())){
+            if(!pkt.receivedFrom().port().equals(dstHost.location().port())){
+                builder.setOutput(dstHost.location().port());
+                packetService.emit(new DefaultOutboundPacket(pkt.receivedFrom().deviceId(), builder.build(), buf));
+                log.debug(byodMarker, "Send packet to port " + dstHost.location().port().toString());
+            }
+            return;
+        }
+
+        Set<Path> paths = topologyService.getPaths(topologyService.currentTopology(),
+                pkt.receivedFrom().deviceId(),
+                dstHost.location().deviceId());
+        if(paths.isEmpty()){
+            return;
+        }
+
+        Path path = pickForwardPathIfPossible(paths, pkt.receivedFrom().port());
+        if(path == null){
+            Object[] pathDetails = {pkt.receivedFrom(), ethPkt.getSourceMAC(), ethPkt.getDestinationMAC()};
+            log.warn("Don't know where to go from here {} for {} -> {}", pathDetails);
             //flood(context);
             return;
         }
 
-        //all packets go to portal
+        // Otherwise forward and be done with it.
+        builder.setOutput(path.src().port());
+        packetService.emit(new DefaultOutboundPacket(pkt.receivedFrom().deviceId(), builder.build(), buf));
+        log.debug(byodMarker, "Send packet to port " + dstHost.location().port().toString());
+    }
+
+    // Sends a packet out to its destination.
+    private void sendToPortal(PacketContext context) {
+
+        checkNotNull(portal, "No portal defined!");
+        checkNotNull(portal.ipAddresses().iterator().next(), "Portal has no IP-address!");
+
+        TrafficTreatment.Builder builder = DefaultTrafficTreatment.builder();
+        InboundPacket pkt = context.inPacket();
+        Ethernet ethPkt = pkt.parsed();
+
+        //set the mac address of the portal as destination
+        ethPkt.setDestinationMACAddress(portal.mac());
+        IPv4 ipPkt = (IPv4)ethPkt.getPayload();
+        // set the ip address of the portal as destination
+        ipPkt.setDestinationAddress((portal.ipAddresses().iterator().next().getIp4Address()).toInt());
+        ipPkt.resetChecksum();
+        //wrap the packet as buffer
+        ByteBuffer buf = ByteBuffer.wrap(ethPkt.serialize());
+
+        // set up the traffic management
         if(portal.ipAddresses().iterator().hasNext())
             builder.setIpDst(portal.ipAddresses().iterator().next())
                 .setEthDst(portal.mac());
@@ -232,15 +307,17 @@ public class PortalManager implements PortalService{
         return type == Ethernet.TYPE_LLDP || type == Ethernet.TYPE_BSN;
     }
 
+    private void changeSource(PacketContext contex, Host newSource){
+
+
+    }
+
     @Override
     public void setPortal(String portalId) {
         checkNotNull(portalId, "Portal-ID can not be null");
 
         portal = hostService.getHost(HostId.hostId(portalId));
         checkNotNull(portal, String.format("No host with host-id %s found", portalId));
-
-        portalMac = portal.mac();
-        portalIp = portal.ipAddresses().iterator().next();
 
         System.out.println(String.format("Set portal to %s", portal.id().toString()));
     }
@@ -252,7 +329,7 @@ public class PortalManager implements PortalService{
      */
     @Override
     public MacAddress getPortalMac() {
-        return new MacAddress(portalMac.toBytes());
+        return new MacAddress(portal.mac().toBytes());
     }
 
     /**
@@ -261,9 +338,7 @@ public class PortalManager implements PortalService{
      * @return IpAddress
      */
     @Override
-    public Set<IpAddress> getPortalIp() {
-        return portal.ipAddresses();
-    }
+    public Set<IpAddress> getPortalIp() { return portal.ipAddresses(); }
 
     /**
      * Get the portal as host
