@@ -25,9 +25,8 @@ import org.onlab.packet.*;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.net.*;
-import org.onosproject.net.flow.DefaultTrafficTreatment;
+import org.onosproject.net.flow.*;
 import org.onosproject.net.packet.*;
-import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.Host;
 import org.onosproject.net.host.HostService;
 import org.onosproject.net.topology.TopologyService;
@@ -53,6 +52,9 @@ public class PortalManager implements PortalService{
     Marker byodMarker = MarkerFactory.getMarker("BYOD");
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected FlowRuleService flowRuleService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected HostService hostService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
@@ -69,6 +71,7 @@ public class PortalManager implements PortalService{
     private ReactivePacketProcessor processor = new ReactivePacketProcessor();
 
     private Host portal;
+    // source and destination pairs of changed packets
     private Map<Host, Host> primaryDst;
 
     @Activate
@@ -83,6 +86,7 @@ public class PortalManager implements PortalService{
 
     @Deactivate
     protected void deactivate() {
+        removeFlows();
         packetService.removeProcessor(processor);
         primaryDst = null;
         processor = null;
@@ -116,10 +120,6 @@ public class PortalManager implements PortalService{
                 return;
             }
 
-            //print out the ethernet type of the packet
-            //EthType type = new EthType(ethPkt.getEtherType());
-            //log.debug(byodMarker, "Packet with ethType: " + type.toString());
-
             //if portal is defined -> change destination of packet with ipv4 type
             if(portal != null && ethPkt.getEtherType() == Ethernet.TYPE_IPV4){
 
@@ -132,7 +132,12 @@ public class PortalManager implements PortalService{
                         // check if the packet of the dstHost was changed before
                         if(primaryDst.containsKey(dstHost)){
                             log.debug(byodMarker, "Restore the source of the previous intended packet source");
-                            restoreSource(context, primaryDst.get(dstHost));
+                            // restoreSource(context, primaryDst.get(dstHost));
+                            // TODO: rule is not applied, as all IPv4 packets are handled by the sendToPortalFlow!
+                            // TODO: add rule that pushes all unknown portal packets to the controller
+                            preventPortalFlow(context);
+                            // block original outbound packet from being send
+                            context.block();
                             return;
                         }
                     }
@@ -148,8 +153,10 @@ public class PortalManager implements PortalService{
                         primaryDst.put(src.iterator().next(), dst.iterator().next());
 
                     //send the packet to destination port of portal
-                    sendToPortal(context);
-
+                    //sendToPortal(context);
+                    sendToPortalFlow(context);
+                    // block original outbound packet from being send
+                    context.block();
                     return;
                 }
             }
@@ -159,6 +166,8 @@ public class PortalManager implements PortalService{
 
     /**
      * Restores the packet source from the portal to the previous intended source
+     * and send a copy of the packet
+     *
      * @param context the packet context
      * @param previousSrc previously intended packet destination
      */
@@ -223,7 +232,10 @@ public class PortalManager implements PortalService{
         log.debug(byodMarker, "Send packet to port " + dstHost.location().port().toString());
     }
 
-    // Sends a packet out to its destination.
+    /**
+     * Create new packet and send it to the portal
+     * @param context the packet context
+     */
     private void sendToPortal(PacketContext context) {
 
         checkNotNull(portal, "No portal defined!");
@@ -288,8 +300,148 @@ public class PortalManager implements PortalService{
 
     }
 
-    // Selects a path from the given set that does not lead back to the
-    // specified port if possible.
+    private PortNumber getDstPort(InboundPacket pkt, Host dstHost){
+
+        Ethernet ethPkt = pkt.parsed();
+
+        // Are we on an edge switch that our dstHost is on? If so,
+        // simply forward out to the destination.
+        if (pkt.receivedFrom().deviceId().equals(dstHost.location().deviceId())) {
+            // if the packet is not send from the same port as the portal
+            if (!pkt.receivedFrom().port().equals(dstHost.location().port())) {
+                //return the actual port of the portal
+                return dstHost.location().port();
+            } else
+                return null;
+        } else {
+            // Otherwise get a set of paths that lead from here to the
+            // destination edge switch.
+            Set<Path> paths =
+                    topologyService.getPaths(topologyService.currentTopology(),
+                            pkt.receivedFrom().deviceId(),
+                            dstHost.location().deviceId());
+            if (paths.isEmpty()) {
+                // If there are no paths
+                return null;
+            }
+
+            // pick a path that does not lead back to where we came from
+            Path path = pickForwardPathIfPossible(paths, pkt.receivedFrom().port());
+            if (path == null) {
+                Object[] pathDetails = {pkt.receivedFrom(), ethPkt.getSourceMAC(), ethPkt.getDestinationMAC()};
+                log.warn("Don't know where to go from here {} for {} -> {}", pathDetails);
+                // if no such path exists return null
+                return null;
+            } else {
+                // return the first port of the path
+                return path.src().port();
+            }
+        }
+    }
+
+    /**
+     * Add flow table to redirect the packets to the portal
+     * @param context the packet context
+     */
+    private void sendToPortalFlow(PacketContext context){
+
+        InboundPacket pkt = context.inPacket();
+
+        // traffic selector for packets of type IPv4
+        TrafficSelector.Builder selectorBuilder = DefaultTrafficSelector.builder();
+        selectorBuilder.matchEthType(Ethernet.TYPE_IPV4);
+
+        PortNumber outPort = getDstPort(pkt, portal);
+        if(outPort == null) {
+            log.warn(byodMarker, String.format("Could not find a path from %s to the portal.",
+                    pkt.receivedFrom().deviceId().toString()));
+            return;
+        }
+
+        // change the destination to portal mac and ip address
+        TrafficTreatment.Builder treatmentBuilder = DefaultTrafficTreatment.builder();
+        treatmentBuilder.setIpDst(this.getPortalIp().iterator().next())
+                .setEthDst(this.getPortalMac())
+                .setOutput(outPort);
+
+        // create flow rule
+        FlowRule.Builder flowBuilder = DefaultFlowRule.builder();
+        flowBuilder.withSelector(selectorBuilder.build())
+                .withTreatment(treatmentBuilder.build())
+                .fromApp(appId)
+                .makeTemporary(120)
+                .withPriority(1000)
+                .forDevice(context.inPacket().receivedFrom().deviceId());
+
+        flowRuleService.applyFlowRules(flowBuilder.build());
+
+    }
+
+    /**
+     * Prevent the packets coming from the portal to be changed
+     * @param context the packet context
+     */
+    private void preventPortalFlow(PacketContext context){
+
+        InboundPacket pkt = context.inPacket();
+        Ethernet ethPkt = pkt.parsed();
+        Host dstHost;
+        // get destination host
+        Set<Host> hosts = hostService.getHostsByMac(ethPkt.getDestinationMAC());
+        if(hosts.iterator().hasNext())
+            dstHost = hosts.iterator().next();
+        else{
+            log.warn(byodMarker, String.format("No host found with mac %s", ethPkt.getDestinationMAC().toString()));
+            return;
+        }
+
+        // traffic selector for packets of type IPv4
+        TrafficSelector.Builder selectorBuilder = DefaultTrafficSelector.builder();
+        selectorBuilder.matchEthType(Ethernet.TYPE_IPV4)
+                .matchEthSrc(this.getPortalMac())
+                .matchIPSrc(this.getPortalIp().iterator().next().toIpPrefix());
+
+        PortNumber outPort = getDstPort(pkt, dstHost);
+        if(outPort == null) {
+            log.warn(byodMarker, String.format("Could not find a path from %s to the portal.",
+                    pkt.receivedFrom().deviceId().toString()));
+            return;
+        }
+
+        // change the destination to portal mac and ip address
+        TrafficTreatment.Builder treatmentBuilder = DefaultTrafficTreatment.builder();
+        treatmentBuilder.setOutput(outPort);
+
+        // create flow rule
+        FlowRule.Builder flowBuilder = DefaultFlowRule.builder();
+        flowBuilder.withSelector(selectorBuilder.build())
+                .withTreatment(treatmentBuilder.build())
+                .fromApp(appId)
+                .makeTemporary(120)
+                .withPriority(1010)
+                .forDevice(context.inPacket().receivedFrom().deviceId());
+
+        flowRuleService.applyFlowRules(flowBuilder.build());
+
+    }
+
+    /**
+     * Removes the flows created by this application
+     */
+    private void removeFlows(){
+        Iterable<FlowRule> flows = flowRuleService.getFlowRulesById(appId);
+        for(FlowRule flow : flows){
+            flowRuleService.removeFlowRules(flow);
+        }
+    }
+
+    /**
+     * Selects a path from the given set that does not lead back to the
+     * specified port if possible.
+     * @param paths a set of paths
+     * @param notToPort source port is different from this port
+     * @return a path with source different from notToPort
+     */
     private Path pickForwardPathIfPossible(Set<Path> paths, PortNumber notToPort) {
         Path lastPath = null;
         for (Path path : paths) {
@@ -301,15 +453,14 @@ public class PortalManager implements PortalService{
         return lastPath;
     }
 
-    // Indicates whether this is a control packet, e.g. LLDP, BDDP
+    /**
+     * Indicates whether this is a control packet, e.g. LLDP, BDDP
+     * @param eth Ethernet packet
+     * @return true if eth is a control packet
+     */
     private boolean isControlPacket(Ethernet eth) {
         short type = eth.getEtherType();
         return type == Ethernet.TYPE_LLDP || type == Ethernet.TYPE_BSN;
-    }
-
-    private void changeSource(PacketContext contex, Host newSource){
-
-
     }
 
     @Override
