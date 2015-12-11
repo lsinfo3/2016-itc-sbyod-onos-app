@@ -21,6 +21,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
 import org.apache.felix.scr.annotations.*;
+import org.onlab.osgi.DefaultServiceDirectory;
 import org.onlab.packet.*;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
@@ -73,11 +74,13 @@ public class PortalManager implements PortalService{
     private Host portal;
     // source and destination pairs of changed packets
     private Map<Host, Host> primaryDst;
+    private PacketRedirectService packetRedirectService;
 
     @Activate
     protected void activate() {
         appId = coreService.registerApplication("uni.wue.app");
         primaryDst = new HashMap<Host, Host>();
+        packetRedirectService = DefaultServiceDirectory.getService(PacketRedirectService.class);
 
         packetService.addProcessor(processor, PacketProcessor.director(3));
 
@@ -89,6 +92,7 @@ public class PortalManager implements PortalService{
         removeFlows();
         packetService.removeProcessor(processor);
         primaryDst = null;
+        packetRedirectService = null;
         processor = null;
         log.info("Stopped");
     }
@@ -123,181 +127,23 @@ public class PortalManager implements PortalService{
             //if portal is defined -> change destination of packet with ipv4 type
             if(portal != null && ethPkt.getEtherType() == Ethernet.TYPE_IPV4){
 
-                // filter out packets from or to the portal
+                // filter out packets from the portal
                 if(ethPkt.getSourceMAC().equals(portal.mac())){
-                    // get the destination host
-                    Set<Host> dst = hostService.getHostsByMac(ethPkt.getDestinationMAC());
-                    if(dst.iterator().hasNext()){
-                        Host dstHost = dst.iterator().next();
-                        // check if the packet of the dstHost was changed before
-                        if(primaryDst.containsKey(dstHost)){
-                            log.debug(byodMarker, "Restore the source of the previous intended packet source");
-                            // restoreSource(context, primaryDst.get(dstHost));
-                            // TODO: rule is not applied, as all IPv4 packets are handled by the sendToPortalFlow!
-                            // TODO: add rule that pushes all unknown portal packets to the controller
-                            preventPortalFlow(context);
-                            // block original outbound packet from being send
-                            context.block();
-                            return;
-                        }
-                    }
+                    packetRedirectService.restoreSource(context);
+                    // TODO: rule is not applied, as all IPv4 packets are handled by the sendToPortalFlow!
+                    // TODO: add rule that pushes all unknown portal packets to the controller
+                    //preventPortalFlow(context);
                     return;
                 } else if(ethPkt.getDestinationMAC().equals(portal.mac())){
                     log.debug(byodMarker, "Do not change the packets with the portal as destination.");
                     return;
                 } else {
-                    // save the destination and source pairs to restore it later
-                    Set<Host> src = hostService.getHostsByMac(ethPkt.getSourceMAC());
-                    Set<Host> dst = hostService.getHostsByMac(ethPkt.getDestinationMAC());
-                    if(src.iterator().hasNext() && dst.iterator().hasNext())
-                        primaryDst.put(src.iterator().next(), dst.iterator().next());
-
-                    //send the packet to destination port of portal
-                    //sendToPortal(context);
-                    sendToPortalFlow(context);
-                    // block original outbound packet from being send
-                    context.block();
+                    packetRedirectService.redirectToPortal(context, portal);
                     return;
                 }
             }
             return;
         }
-    }
-
-    /**
-     * Restores the packet source from the portal to the previous intended source
-     * and send a copy of the packet
-     *
-     * @param context the packet context
-     * @param previousSrc previously intended packet destination
-     */
-    private void restoreSource(PacketContext context, Host previousSrc){
-        checkNotNull(context, "No context defined!");
-        checkNotNull(previousSrc, "No previous host defined!");
-        checkNotNull(previousSrc.ipAddresses().iterator().next(), "No ip address for previous source defined!");
-
-        TrafficTreatment.Builder builder = DefaultTrafficTreatment.builder();
-        InboundPacket pkt = context.inPacket();
-        Ethernet ethPkt = pkt.parsed();
-        Host dstHost;
-        // get the destination host
-        Set<Host> dst = hostService.getHostsByMac(ethPkt.getDestinationMAC());
-        if(dst.iterator().hasNext())
-            dstHost = dst.iterator().next();
-        else
-            throw new NullPointerException(String.format("No dst host found with mac address %s",
-                    ethPkt.getDestinationMAC()));
-
-        // restore the mac address
-        ethPkt.setSourceMACAddress(previousSrc.mac());
-        IPv4 ipPkt = (IPv4)ethPkt.getPayload();
-        // restore the ip address
-        ipPkt.setSourceAddress(previousSrc.ipAddresses().iterator().next().getIp4Address().toInt());
-        ipPkt.resetChecksum();
-        // wrap the packet
-        ByteBuffer buf = ByteBuffer.wrap(ethPkt.serialize());
-
-        // set up the traffic management
-        builder.setIpSrc(previousSrc.ipAddresses().iterator().next())
-                .setEthSrc(previousSrc.mac());
-
-        // packet send from the switch with the destination host connected to
-        if(pkt.receivedFrom().deviceId().equals(dstHost.location().deviceId())){
-            if(!pkt.receivedFrom().port().equals(dstHost.location().port())){
-                builder.setOutput(dstHost.location().port());
-                packetService.emit(new DefaultOutboundPacket(pkt.receivedFrom().deviceId(), builder.build(), buf));
-                log.debug(byodMarker, "Send packet to port " + dstHost.location().port().toString());
-            }
-            return;
-        }
-
-        Set<Path> paths = topologyService.getPaths(topologyService.currentTopology(),
-                pkt.receivedFrom().deviceId(),
-                dstHost.location().deviceId());
-        if(paths.isEmpty()){
-            return;
-        }
-
-        Path path = pickForwardPathIfPossible(paths, pkt.receivedFrom().port());
-        if(path == null){
-            Object[] pathDetails = {pkt.receivedFrom(), ethPkt.getSourceMAC(), ethPkt.getDestinationMAC()};
-            log.warn("Don't know where to go from here {} for {} -> {}", pathDetails);
-            //flood(context);
-            return;
-        }
-
-        // Otherwise forward and be done with it.
-        builder.setOutput(path.src().port());
-        packetService.emit(new DefaultOutboundPacket(pkt.receivedFrom().deviceId(), builder.build(), buf));
-        log.debug(byodMarker, "Send packet to port " + dstHost.location().port().toString());
-    }
-
-    /**
-     * Create new packet and send it to the portal
-     * @param context the packet context
-     */
-    private void sendToPortal(PacketContext context) {
-
-        checkNotNull(portal, "No portal defined!");
-        checkNotNull(portal.ipAddresses().iterator().next(), "Portal has no IP-address!");
-
-        TrafficTreatment.Builder builder = DefaultTrafficTreatment.builder();
-        InboundPacket pkt = context.inPacket();
-        Ethernet ethPkt = pkt.parsed();
-
-        //set the mac address of the portal as destination
-        ethPkt.setDestinationMACAddress(portal.mac());
-        IPv4 ipPkt = (IPv4)ethPkt.getPayload();
-        // set the ip address of the portal as destination
-        ipPkt.setDestinationAddress((portal.ipAddresses().iterator().next().getIp4Address()).toInt());
-        ipPkt.resetChecksum();
-        //wrap the packet as buffer
-        ByteBuffer buf = ByteBuffer.wrap(ethPkt.serialize());
-
-        // set up the traffic management
-        if(portal.ipAddresses().iterator().hasNext())
-            builder.setIpDst(portal.ipAddresses().iterator().next())
-                .setEthDst(portal.mac());
-
-        // Are we on an edge switch that our portal is on? If so,
-        // simply forward out to the destination and bail.
-        if (pkt.receivedFrom().deviceId().equals(portal.location().deviceId())) {
-            // if the packet is not send from the same port as the portal
-            if (!context.inPacket().receivedFrom().port().equals(portal.location().port())) {
-                builder.setOutput(portal.location().port());
-                //send new packet to the device where received packet came from
-                packetService.emit(new DefaultOutboundPacket(pkt.receivedFrom().deviceId(), builder.build(), buf));
-                log.debug(byodMarker, "Send context to port " + portal.location().port().toString());
-            }
-            return;
-        }
-
-        // Otherwise, get a set of paths that lead from here to the
-        // destination edge switch.
-        Set<Path> paths =
-                topologyService.getPaths(topologyService.currentTopology(),
-                        pkt.receivedFrom().deviceId(),
-                        portal.location().deviceId());
-        if (paths.isEmpty()) {
-            // If there are no paths, flood and bail.
-            //flood(context);
-            return;
-        }
-
-        // Otherwise, pick a path that does not lead back to where we
-        // came from; if no such path, flood and bail.
-        Path path = pickForwardPathIfPossible(paths, pkt.receivedFrom().port());
-        if (path == null) {
-            Object[] pathDetails = {pkt.receivedFrom(), ethPkt.getSourceMAC(), ethPkt.getDestinationMAC()};
-            log.warn("Don't know where to go from here {} for {} -> {}", pathDetails);
-            //flood(context);
-            return;
-        }
-
-        // Otherwise forward and be done with it.
-        builder.setOutput(path.src().port());
-        packetService.emit(new DefaultOutboundPacket(pkt.receivedFrom().deviceId(), builder.build(), buf));
-
     }
 
     private PortNumber getDstPort(InboundPacket pkt, Host dstHost){
