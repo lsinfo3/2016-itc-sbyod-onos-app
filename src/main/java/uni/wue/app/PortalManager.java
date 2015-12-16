@@ -53,48 +53,40 @@ public class PortalManager implements PortalService{
     Marker byodMarker = MarkerFactory.getMarker("BYOD");
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected FlowRuleService flowRuleService;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected HostService hostService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected TopologyService topologyService;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected CoreService coreService;
-
-    protected ApplicationId appId;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected PacketService packetService;
 
     private ReactivePacketProcessor processor = new ReactivePacketProcessor();
+    protected ApplicationId appId;
 
+    // host of the captive portal
     private Host portal;
-    // source and destination pairs of changed packets
-    private Map<Host, Host> primaryDst;
+    // service to redirect the incoming packets
     private PacketRedirectService packetRedirectService;
 
     @Activate
     protected void activate() {
         appId = coreService.registerApplication("uni.wue.app");
-        primaryDst = new HashMap<Host, Host>();
-        packetRedirectService = DefaultServiceDirectory.getService(PacketRedirectService.class);
+        packetService.addProcessor(processor, PacketProcessor.director(1));
 
-        packetService.addProcessor(processor, PacketProcessor.director(3));
+        packetRedirectService = DefaultServiceDirectory.getService(PacketRedirectService.class);
 
         log.info("Started PortalManager");
     }
 
     @Deactivate
     protected void deactivate() {
-        removeFlows();
         packetService.removeProcessor(processor);
-        primaryDst = null;
-        packetRedirectService = null;
         processor = null;
-        log.info("Stopped");
+
+        packetRedirectService = null;
+
+        log.info("Stopped PortalManager");
     }
 
     /**
@@ -129,174 +121,20 @@ public class PortalManager implements PortalService{
 
                 // filter out packets from the portal
                 if(ethPkt.getSourceMAC().equals(portal.mac())){
+                    // restore the packet source from the portal address to the previous intended address
                     packetRedirectService.restoreSource(context);
-                    // TODO: rule is not applied, as all IPv4 packets are handled by the sendToPortalFlow!
-                    // TODO: add rule that pushes all unknown portal packets to the controller
-                    //preventPortalFlow(context);
                     return;
                 } else if(ethPkt.getDestinationMAC().equals(portal.mac())){
                     log.debug(byodMarker, "Do not change the packets with the portal as destination.");
                     return;
                 } else {
+                    // change the destination address of the packet to the portal address
                     packetRedirectService.redirectToPortal(context, portal);
                     return;
                 }
             }
             return;
         }
-    }
-
-    private PortNumber getDstPort(InboundPacket pkt, Host dstHost){
-
-        Ethernet ethPkt = pkt.parsed();
-
-        // Are we on an edge switch that our dstHost is on? If so,
-        // simply forward out to the destination.
-        if (pkt.receivedFrom().deviceId().equals(dstHost.location().deviceId())) {
-            // if the packet is not send from the same port as the portal
-            if (!pkt.receivedFrom().port().equals(dstHost.location().port())) {
-                //return the actual port of the portal
-                return dstHost.location().port();
-            } else
-                return null;
-        } else {
-            // Otherwise get a set of paths that lead from here to the
-            // destination edge switch.
-            Set<Path> paths =
-                    topologyService.getPaths(topologyService.currentTopology(),
-                            pkt.receivedFrom().deviceId(),
-                            dstHost.location().deviceId());
-            if (paths.isEmpty()) {
-                // If there are no paths
-                return null;
-            }
-
-            // pick a path that does not lead back to where we came from
-            Path path = pickForwardPathIfPossible(paths, pkt.receivedFrom().port());
-            if (path == null) {
-                Object[] pathDetails = {pkt.receivedFrom(), ethPkt.getSourceMAC(), ethPkt.getDestinationMAC()};
-                log.warn("Don't know where to go from here {} for {} -> {}", pathDetails);
-                // if no such path exists return null
-                return null;
-            } else {
-                // return the first port of the path
-                return path.src().port();
-            }
-        }
-    }
-
-    /**
-     * Add flow table to redirect the packets to the portal
-     * @param context the packet context
-     */
-    private void sendToPortalFlow(PacketContext context){
-
-        InboundPacket pkt = context.inPacket();
-
-        // traffic selector for packets of type IPv4
-        TrafficSelector.Builder selectorBuilder = DefaultTrafficSelector.builder();
-        selectorBuilder.matchEthType(Ethernet.TYPE_IPV4);
-
-        PortNumber outPort = getDstPort(pkt, portal);
-        if(outPort == null) {
-            log.warn(byodMarker, String.format("Could not find a path from %s to the portal.",
-                    pkt.receivedFrom().deviceId().toString()));
-            return;
-        }
-
-        // change the destination to portal mac and ip address
-        TrafficTreatment.Builder treatmentBuilder = DefaultTrafficTreatment.builder();
-        treatmentBuilder.setIpDst(this.getPortalIp().iterator().next())
-                .setEthDst(this.getPortalMac())
-                .setOutput(outPort);
-
-        // create flow rule
-        FlowRule.Builder flowBuilder = DefaultFlowRule.builder();
-        flowBuilder.withSelector(selectorBuilder.build())
-                .withTreatment(treatmentBuilder.build())
-                .fromApp(appId)
-                .makeTemporary(120)
-                .withPriority(1000)
-                .forDevice(context.inPacket().receivedFrom().deviceId());
-
-        flowRuleService.applyFlowRules(flowBuilder.build());
-
-    }
-
-    /**
-     * Prevent the packets coming from the portal to be changed
-     * @param context the packet context
-     */
-    private void preventPortalFlow(PacketContext context){
-
-        InboundPacket pkt = context.inPacket();
-        Ethernet ethPkt = pkt.parsed();
-        Host dstHost;
-        // get destination host
-        Set<Host> hosts = hostService.getHostsByMac(ethPkt.getDestinationMAC());
-        if(hosts.iterator().hasNext())
-            dstHost = hosts.iterator().next();
-        else{
-            log.warn(byodMarker, String.format("No host found with mac %s", ethPkt.getDestinationMAC().toString()));
-            return;
-        }
-
-        // traffic selector for packets of type IPv4
-        TrafficSelector.Builder selectorBuilder = DefaultTrafficSelector.builder();
-        selectorBuilder.matchEthType(Ethernet.TYPE_IPV4)
-                .matchEthSrc(this.getPortalMac())
-                .matchIPSrc(this.getPortalIp().iterator().next().toIpPrefix());
-
-        PortNumber outPort = getDstPort(pkt, dstHost);
-        if(outPort == null) {
-            log.warn(byodMarker, String.format("Could not find a path from %s to the portal.",
-                    pkt.receivedFrom().deviceId().toString()));
-            return;
-        }
-
-        // change the destination to portal mac and ip address
-        TrafficTreatment.Builder treatmentBuilder = DefaultTrafficTreatment.builder();
-        treatmentBuilder.setOutput(outPort);
-
-        // create flow rule
-        FlowRule.Builder flowBuilder = DefaultFlowRule.builder();
-        flowBuilder.withSelector(selectorBuilder.build())
-                .withTreatment(treatmentBuilder.build())
-                .fromApp(appId)
-                .makeTemporary(120)
-                .withPriority(1010)
-                .forDevice(context.inPacket().receivedFrom().deviceId());
-
-        flowRuleService.applyFlowRules(flowBuilder.build());
-
-    }
-
-    /**
-     * Removes the flows created by this application
-     */
-    private void removeFlows(){
-        Iterable<FlowRule> flows = flowRuleService.getFlowRulesById(appId);
-        for(FlowRule flow : flows){
-            flowRuleService.removeFlowRules(flow);
-        }
-    }
-
-    /**
-     * Selects a path from the given set that does not lead back to the
-     * specified port if possible.
-     * @param paths a set of paths
-     * @param notToPort source port is different from this port
-     * @return a path with source different from notToPort
-     */
-    private Path pickForwardPathIfPossible(Set<Path> paths, PortNumber notToPort) {
-        Path lastPath = null;
-        for (Path path : paths) {
-            lastPath = path;
-            if (!path.src().port().equals(notToPort)) {
-                return path;
-            }
-        }
-        return lastPath;
     }
 
     /**

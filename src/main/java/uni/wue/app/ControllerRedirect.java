@@ -190,14 +190,16 @@ public class ControllerRedirect implements PacketRedirectService {
     }
 
     private PortNumber getDstPort(InboundPacket pkt, Host dstHost){
+        return getDstPort(pkt, dstHost, pkt.receivedFrom().port());
+    }
 
-        Ethernet ethPkt = pkt.parsed();
+    private PortNumber getDstPort(InboundPacket pkt, Host dstHost, PortNumber srcPortNr){
 
         // Are we on an edge switch that our dstHost is on? If so,
         // simply forward out to the destination.
         if (pkt.receivedFrom().deviceId().equals(dstHost.location().deviceId())) {
             // if the packet is not send from the same port as the portal
-            if (!pkt.receivedFrom().port().equals(dstHost.location().port())) {
+            if (!srcPortNr.equals(dstHost.location().port())) {
                 //return the actual port of the portal
                 return dstHost.location().port();
             } else
@@ -215,10 +217,10 @@ public class ControllerRedirect implements PacketRedirectService {
             }
 
             // pick a path that does not lead back to where we came from
-            Path path = pickForwardPathIfPossible(paths, pkt.receivedFrom().port());
+            Path path = pickForwardPathIfPossible(paths, srcPortNr);
             if (path == null) {
-                Object[] pathDetails = {pkt.receivedFrom(), ethPkt.getSourceMAC(), ethPkt.getDestinationMAC()};
-                log.warn("Don't know where to go from here {} for {} -> {}", pathDetails);
+                Object[] pathDetails = {pkt.receivedFrom(), dstHost.id()};
+                log.warn("Don't know where to go from here {} to {}", pathDetails);
                 // if no such path exists return null
                 return null;
             } else {

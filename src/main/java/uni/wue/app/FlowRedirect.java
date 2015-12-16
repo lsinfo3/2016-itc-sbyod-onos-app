@@ -23,6 +23,7 @@ import org.onlab.packet.IPv4;
 import org.onlab.packet.IpAddress;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
+import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.Host;
 import org.onosproject.net.Path;
 import org.onosproject.net.PortNumber;
@@ -71,6 +72,7 @@ public class FlowRedirect implements PacketRedirectService {
 
     @Deactivate
     protected void deactivate() {
+        removeFlows();
         log.info("Stopped FlowRedirect");
     }
 
@@ -99,6 +101,12 @@ public class FlowRedirect implements PacketRedirectService {
         return;
     }
 
+
+    /**
+     * Add flow table to redirect the packets to the portal
+     * @param context the packet context
+     * @param portal the portal where the packets are redirected to
+     */
     private void flowToPortal(PacketContext context, Host portal){
         //parse the packet of the context
         InboundPacket pkt = context.inPacket();
@@ -116,6 +124,7 @@ public class FlowRedirect implements PacketRedirectService {
                     pkt.receivedFrom().deviceId().toString()));
             return;
         }
+
         // change the destination to portal mac and ip address
         TrafficTreatment.Builder treatmentBuilder = DefaultTrafficTreatment.builder();
         treatmentBuilder.setIpDst(portal.ipAddresses().iterator().next())
@@ -132,6 +141,8 @@ public class FlowRedirect implements PacketRedirectService {
                 .forDevice(context.inPacket().receivedFrom().deviceId());
 
         flowRuleService.applyFlowRules(flowBuilder.build());
+        // TODO: do not block context, as first packet gets lost!
+        context.block();
     }
 
     private void flowFromPortal(PacketContext context, Host portal){
@@ -141,12 +152,14 @@ public class FlowRedirect implements PacketRedirectService {
         IPv4 ipPkt = (IPv4)ethPkt.getPayload();
 
         // get destination host
+        // use source of the packet for destination, as we are applying this
+        // rule immediately when redirecting the packet to the portal
         Host dstHost;
-        Set<Host> hosts = hostService.getHostsByMac(ethPkt.getDestinationMAC());
+        Set<Host> hosts = hostService.getHostsByMac(ethPkt.getSourceMAC());
         if(hosts.iterator().hasNext())
             dstHost = hosts.iterator().next();
         else{
-            log.warn(byodMarker, String.format("No host found with mac %s", ethPkt.getDestinationMAC().toString()));
+            log.warn(byodMarker, String.format("No host found with mac %s", ethPkt.getSourceMAC().toString()));
             return;
         }
 
@@ -154,11 +167,14 @@ public class FlowRedirect implements PacketRedirectService {
         TrafficSelector.Builder selectorBuilder = DefaultTrafficSelector.builder();
         selectorBuilder.matchEthType(Ethernet.TYPE_IPV4)
                 .matchEthSrc(portal.mac())
-                .matchEthDst(ethPkt.getDestinationMAC());
+                .matchEthDst(ethPkt.getSourceMAC());
 
-        PortNumber outPort = getDstPort(pkt, dstHost);
+        // get the port where the packet from the portal should come from
+        PortNumber fromPort = getDstPort(pkt, portal);
+        // get the port where the packet should be send to
+        PortNumber outPort = getDstPort(pkt, dstHost, fromPort);
         if(outPort == null) {
-            log.warn(byodMarker, String.format("Could not find a path from %s to the portal.",
+            log.warn(byodMarker, String.format("Could not find a path from the portal to dstHost %s.",
                     pkt.receivedFrom().deviceId().toString()));
             return;
         }
@@ -182,14 +198,16 @@ public class FlowRedirect implements PacketRedirectService {
     }
 
     private PortNumber getDstPort(InboundPacket pkt, Host dstHost){
+        return getDstPort(pkt, dstHost, pkt.receivedFrom().port());
+    }
 
-        Ethernet ethPkt = pkt.parsed();
+    private PortNumber getDstPort(InboundPacket pkt, Host dstHost, PortNumber srcPortNr){
 
         // Are we on an edge switch that our dstHost is on? If so,
         // simply forward out to the destination.
         if (pkt.receivedFrom().deviceId().equals(dstHost.location().deviceId())) {
             // if the packet is not send from the same port as the portal
-            if (!pkt.receivedFrom().port().equals(dstHost.location().port())) {
+            if (!srcPortNr.equals(dstHost.location().port())) {
                 //return the actual port of the portal
                 return dstHost.location().port();
             } else
@@ -207,10 +225,10 @@ public class FlowRedirect implements PacketRedirectService {
             }
 
             // pick a path that does not lead back to where we came from
-            Path path = pickForwardPathIfPossible(paths, pkt.receivedFrom().port());
+            Path path = pickForwardPathIfPossible(paths, srcPortNr);
             if (path == null) {
-                Object[] pathDetails = {pkt.receivedFrom(), ethPkt.getSourceMAC(), ethPkt.getDestinationMAC()};
-                log.warn("Don't know where to go from here {} for {} -> {}", pathDetails);
+                Object[] pathDetails = {pkt.receivedFrom(), dstHost.id()};
+                log.warn("Don't know where to go from here {} to {}", pathDetails);
                 // if no such path exists return null
                 return null;
             } else {
@@ -236,5 +254,15 @@ public class FlowRedirect implements PacketRedirectService {
             }
         }
         return lastPath;
+    }
+
+    /**
+     * Removes the flows created by this application
+     */
+    private void removeFlows(){
+        Iterable<FlowRule> flows = flowRuleService.getFlowRulesById(appId);
+        for(FlowRule flow : flows){
+            flowRuleService.removeFlowRules(flow);
+        }
     }
 }
