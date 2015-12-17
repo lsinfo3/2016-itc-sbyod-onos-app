@@ -84,6 +84,7 @@ public class PortalManager implements PortalService{
         packetService.removeProcessor(processor);
         processor = null;
 
+
         packetRedirectService = null;
 
         log.info("Stopped PortalManager");

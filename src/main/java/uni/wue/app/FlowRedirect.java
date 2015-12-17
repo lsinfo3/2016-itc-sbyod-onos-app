@@ -28,15 +28,23 @@ import org.onosproject.net.Host;
 import org.onosproject.net.Path;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.flow.*;
+import org.onosproject.net.flow.instructions.Instruction;
+import org.onosproject.net.flowobjective.DefaultForwardingObjective;
+import org.onosproject.net.flowobjective.ForwardingObjective;
+import org.onosproject.net.flowobjective.FlowObjectiveService;
+import org.onosproject.net.flowobjective.ForwardingObjective;
 import org.onosproject.net.host.HostService;
+import org.onosproject.net.packet.DefaultOutboundPacket;
 import org.onosproject.net.packet.InboundPacket;
 import org.onosproject.net.packet.PacketContext;
+import org.onosproject.net.packet.PacketService;
 import org.onosproject.net.topology.TopologyService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
 
+import java.nio.ByteBuffer;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -44,24 +52,26 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * Created by lorry on 11.12.15.
  */
-@Component(immediate = true)
+@Component(immediate = true, inherit = true)
 @Service
-public class FlowRedirect implements PacketRedirectService {
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected TopologyService topologyService;
+public class FlowRedirect extends PacketRedirect {
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected FlowRuleService flowRuleService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected CoreService coreService;
+    protected PacketService packetService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected HostService hostService;
+    protected FlowObjectiveService flowObjectiveService;
+
+//    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+//    protected CoreService coreService;
+//
+//    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+//    protected HostService hostService;
 
     private final Logger log = LoggerFactory.getLogger(getClass());
-    Marker byodMarker = MarkerFactory.getMarker("BYOD");
     protected ApplicationId appId;
 
     @Activate
@@ -138,11 +148,21 @@ public class FlowRedirect implements PacketRedirectService {
                 .fromApp(appId)
                 .makeTemporary(120)
                 .withPriority(1000)
+                .forTable(0)
                 .forDevice(context.inPacket().receivedFrom().deviceId());
 
         flowRuleService.applyFlowRules(flowBuilder.build());
         // TODO: do not block context, as first packet gets lost!
-        context.block();
+
+//        TrafficTreatment.Builder builder = DefaultTrafficTreatment.builder();
+//        DefaultOutboundPacket outPkt = new DefaultOutboundPacket(pkt.receivedFrom().deviceId(), builder.build(),
+//                ByteBuffer.wrap(ethPkt.serialize()));
+//        packetService.emit(outPkt);
+
+//        context.treatmentBuilder();
+//        context.send();
+//        ForwardingObjective forwardingObjective = DefaultForwardingObjective.builder().add();
+//        flowObjectiveService.forward(pkt.receivedFrom().deviceId(), forwardingObjective);
     }
 
     private void flowFromPortal(PacketContext context, Host portal){
@@ -195,65 +215,6 @@ public class FlowRedirect implements PacketRedirectService {
                 .forDevice(context.inPacket().receivedFrom().deviceId());
 
         flowRuleService.applyFlowRules(flowBuilder.build());
-    }
-
-    private PortNumber getDstPort(InboundPacket pkt, Host dstHost){
-        return getDstPort(pkt, dstHost, pkt.receivedFrom().port());
-    }
-
-    private PortNumber getDstPort(InboundPacket pkt, Host dstHost, PortNumber srcPortNr){
-
-        // Are we on an edge switch that our dstHost is on? If so,
-        // simply forward out to the destination.
-        if (pkt.receivedFrom().deviceId().equals(dstHost.location().deviceId())) {
-            // if the packet is not send from the same port as the portal
-            if (!srcPortNr.equals(dstHost.location().port())) {
-                //return the actual port of the portal
-                return dstHost.location().port();
-            } else
-                return null;
-        } else {
-            // Otherwise get a set of paths that lead from here to the
-            // destination edge switch.
-            Set<Path> paths =
-                    topologyService.getPaths(topologyService.currentTopology(),
-                            pkt.receivedFrom().deviceId(),
-                            dstHost.location().deviceId());
-            if (paths.isEmpty()) {
-                // If there are no paths
-                return null;
-            }
-
-            // pick a path that does not lead back to where we came from
-            Path path = pickForwardPathIfPossible(paths, srcPortNr);
-            if (path == null) {
-                Object[] pathDetails = {pkt.receivedFrom(), dstHost.id()};
-                log.warn("Don't know where to go from here {} to {}", pathDetails);
-                // if no such path exists return null
-                return null;
-            } else {
-                // return the first port of the path
-                return path.src().port();
-            }
-        }
-    }
-
-    /**
-     * Selects a path from the given set that does not lead back to the
-     * specified port if possible.
-     * @param paths a set of paths
-     * @param notToPort source port is different from this port
-     * @return a path with source different from notToPort
-     */
-    private Path pickForwardPathIfPossible(Set<Path> paths, PortNumber notToPort) {
-        Path lastPath = null;
-        for (Path path : paths) {
-            lastPath = path;
-            if (!path.src().port().equals(notToPort)) {
-                return path;
-            }
-        }
-        return lastPath;
     }
 
     /**

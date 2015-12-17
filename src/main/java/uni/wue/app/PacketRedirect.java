@@ -17,12 +17,15 @@
  */
 package uni.wue.app;
 
+import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
 import org.onlab.packet.Ethernet;
+import org.onosproject.core.CoreService;
 import org.onosproject.net.Host;
 import org.onosproject.net.Path;
 import org.onosproject.net.PortNumber;
+import org.onosproject.net.host.HostService;
 import org.onosproject.net.packet.InboundPacket;
 import org.onosproject.net.packet.PacketContext;
 import org.onosproject.net.topology.TopologyService;
@@ -36,13 +39,20 @@ import java.util.Set;
 /**
  * Created by lorry on 11.12.15.
  */
-public abstract class PacketRedirect {
+@Component(componentAbstract = true)
+public abstract class PacketRedirect implements PacketRedirectService {
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected TopologyService topologyService;
 
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected HostService hostService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected CoreService coreService;
+
     private final Logger log = LoggerFactory.getLogger(getClass());
-    Marker byodMarker = MarkerFactory.getMarker("BYOD");
+    protected Marker byodMarker = MarkerFactory.getMarker("BYOD");
 
 
     /**
@@ -57,11 +67,11 @@ public abstract class PacketRedirect {
      */
     public abstract void restoreSource(PacketContext context);
 
-    private PortNumber getDstPort(InboundPacket pkt, Host dstHost){
+    protected PortNumber getDstPort(InboundPacket pkt, Host dstHost){
         return getDstPort(pkt, dstHost, pkt.receivedFrom().port());
     }
 
-    private PortNumber getDstPort(InboundPacket pkt, Host dstHost, PortNumber srcPortNr){
+    protected PortNumber getDstPort(InboundPacket pkt, Host dstHost, PortNumber srcPortNr){
 
         // Are we on an edge switch that our dstHost is on? If so,
         // simply forward out to the destination.
@@ -105,7 +115,7 @@ public abstract class PacketRedirect {
      * @param notToPort source port is different from this port
      * @return a path with source different from notToPort
      */
-    private Path pickForwardPathIfPossible(Set<Path> paths, PortNumber notToPort) {
+    protected Path pickForwardPathIfPossible(Set<Path> paths, PortNumber notToPort) {
         Path lastPath = null;
         for (Path path : paths) {
             lastPath = path;

@@ -48,41 +48,39 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * Created by lorry on 11.12.15.
  */
-@Component(immediate = false)
-public class ControllerRedirect implements PacketRedirectService {
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected HostService hostService;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected TopologyService topologyService;
+@Component(immediate = false, inherit = true)
+public class ControllerRedirect extends PacketRedirect{
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected PacketService packetService;
 
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected CoreService coreService;
+//    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+//    protected HostService hostService;
+//
+//    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+//    protected CoreService coreService;
 
     private final Logger log = LoggerFactory.getLogger(getClass());
-    Marker byodMarker = MarkerFactory.getMarker("BYOD");
 
     protected ApplicationId appId;
-
     // source and destination pairs of changed packets
     private Map<Host, Host> primaryDst;
 
-    public ControllerRedirect() {
+    /*public ControllerRedirect() {
         this.primaryDst = new HashMap<>();
-    }
+    }*/
 
     @Activate
     protected void activate(){
         appId = coreService.registerApplication("uni.wue.app.controllerRedirect");
+        this.primaryDst = new HashMap<>();
+
         log.info("Started ControllerRedirect");
     }
 
     @Deactivate
     protected void deactivate(){
+        this.primaryDst = null;
         log.info("Stopped ControllerRedirect");
     }
 
@@ -187,64 +185,5 @@ public class ControllerRedirect implements PacketRedirectService {
                 }
             }
         }
-    }
-
-    private PortNumber getDstPort(InboundPacket pkt, Host dstHost){
-        return getDstPort(pkt, dstHost, pkt.receivedFrom().port());
-    }
-
-    private PortNumber getDstPort(InboundPacket pkt, Host dstHost, PortNumber srcPortNr){
-
-        // Are we on an edge switch that our dstHost is on? If so,
-        // simply forward out to the destination.
-        if (pkt.receivedFrom().deviceId().equals(dstHost.location().deviceId())) {
-            // if the packet is not send from the same port as the portal
-            if (!srcPortNr.equals(dstHost.location().port())) {
-                //return the actual port of the portal
-                return dstHost.location().port();
-            } else
-                return null;
-        } else {
-            // Otherwise get a set of paths that lead from here to the
-            // destination edge switch.
-            Set<Path> paths =
-                    topologyService.getPaths(topologyService.currentTopology(),
-                            pkt.receivedFrom().deviceId(),
-                            dstHost.location().deviceId());
-            if (paths.isEmpty()) {
-                // If there are no paths
-                return null;
-            }
-
-            // pick a path that does not lead back to where we came from
-            Path path = pickForwardPathIfPossible(paths, srcPortNr);
-            if (path == null) {
-                Object[] pathDetails = {pkt.receivedFrom(), dstHost.id()};
-                log.warn("Don't know where to go from here {} to {}", pathDetails);
-                // if no such path exists return null
-                return null;
-            } else {
-                // return the first port of the path
-                return path.src().port();
-            }
-        }
-    }
-
-    /**
-     * Selects a path from the given set that does not lead back to the
-     * specified port if possible.
-     * @param paths a set of paths
-     * @param notToPort source port is different from this port
-     * @return a path with source different from notToPort
-     */
-    private Path pickForwardPathIfPossible(Set<Path> paths, PortNumber notToPort) {
-        Path lastPath = null;
-        for (Path path : paths) {
-            lastPath = path;
-            if (!path.src().port().equals(notToPort)) {
-                return path;
-            }
-        }
-        return lastPath;
     }
 }
