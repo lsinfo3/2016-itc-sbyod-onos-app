@@ -17,16 +17,16 @@
  */
 package uni.wue.app;
 
+import com.google.common.collect.Sets;
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.Ethernet;
 import org.onlab.packet.IPv4;
 import org.onlab.packet.IpAddress;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
-import org.onosproject.net.ConnectPoint;
-import org.onosproject.net.Host;
-import org.onosproject.net.Path;
-import org.onosproject.net.PortNumber;
+import org.onosproject.net.*;
+import org.onosproject.net.device.DeviceAdminService;
+import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.*;
 import org.onosproject.net.flow.instructions.Instruction;
 import org.onosproject.net.flowobjective.DefaultForwardingObjective;
@@ -45,7 +45,7 @@ import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
 
 import java.nio.ByteBuffer;
-import java.util.Set;
+import java.util.*;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -63,6 +63,9 @@ public class FlowRedirect extends PacketRedirect {
     protected PacketService packetService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected DeviceService deviceService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected FlowObjectiveService flowObjectiveService;
 
 //    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
@@ -71,6 +74,7 @@ public class FlowRedirect extends PacketRedirect {
 //    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
 //    protected HostService hostService;
 
+    protected Host portal;
     private final Logger log = LoggerFactory.getLogger(getClass());
     protected ApplicationId appId;
 
@@ -96,8 +100,10 @@ public class FlowRedirect extends PacketRedirect {
         checkNotNull(context, "No context defined!");
         checkNotNull(portal, "No portal defined!");
 
-        flowToPortal(context, portal);
-        flowFromPortal(context, portal);
+        this.portal = portal;
+        flowToPortal(context);
+        flowFromPortal(context);
+        sendPacket(context);
         return;
     }
 
@@ -108,6 +114,7 @@ public class FlowRedirect extends PacketRedirect {
      */
     @Override
     public void restoreSource(PacketContext context) {
+        // do nothing as we already added the corresponding flow rules
         return;
     }
 
@@ -115,9 +122,8 @@ public class FlowRedirect extends PacketRedirect {
     /**
      * Add flow table to redirect the packets to the portal
      * @param context the packet context
-     * @param portal the portal where the packets are redirected to
      */
-    private void flowToPortal(PacketContext context, Host portal){
+    private void flowToPortal(PacketContext context){
         //parse the packet of the context
         InboundPacket pkt = context.inPacket();
         Ethernet ethPkt = pkt.parsed();
@@ -151,21 +157,18 @@ public class FlowRedirect extends PacketRedirect {
                 .forTable(0)
                 .forDevice(context.inPacket().receivedFrom().deviceId());
 
-        flowRuleService.applyFlowRules(flowBuilder.build());
-        // TODO: do not block context, as first packet gets lost!
+        FlowRule fr = flowBuilder.build();
+        flowRuleService.applyFlowRules(fr);
+        waitForRuleEntry(fr, pkt.receivedFrom().deviceId());
 
-//        TrafficTreatment.Builder builder = DefaultTrafficTreatment.builder();
-//        DefaultOutboundPacket outPkt = new DefaultOutboundPacket(pkt.receivedFrom().deviceId(), builder.build(),
-//                ByteBuffer.wrap(ethPkt.serialize()));
-//        packetService.emit(outPkt);
-
-//        context.treatmentBuilder();
-//        context.send();
-//        ForwardingObjective forwardingObjective = DefaultForwardingObjective.builder().add();
-//        flowObjectiveService.forward(pkt.receivedFrom().deviceId(), forwardingObjective);
+        return;
     }
 
-    private void flowFromPortal(PacketContext context, Host portal){
+    /**
+     * Add flow table to redirect the packets coming from the portal
+     * @param context the packet context
+     */
+    private void flowFromPortal(PacketContext context){
         //parse the packet of the context
         InboundPacket pkt = context.inPacket();
         Ethernet ethPkt = pkt.parsed();
@@ -214,13 +217,70 @@ public class FlowRedirect extends PacketRedirect {
                 .withPriority(1000)
                 .forDevice(context.inPacket().receivedFrom().deviceId());
 
-        flowRuleService.applyFlowRules(flowBuilder.build());
+        FlowRule fr = flowBuilder.build();
+        flowRuleService.applyFlowRules(fr);
+        waitForRuleEntry(fr, pkt.receivedFrom().deviceId());
+        return;
+    }
+
+    /**
+     * Ensures that the flowRule has been added to the device before anything else is done
+     * @param flowRule to be added
+     * @param deviceId of flow entry
+     */
+    private void waitForRuleEntry(FlowRule flowRule, DeviceId deviceId){
+        while(true) {
+            Iterable<FlowEntry> flowEntries = flowRuleService.getFlowEntries(deviceId);
+            for(FlowEntry fe : flowEntries){
+                if(flowRule.id().equals(fe.id())){
+                    return;
+                }
+            }
+        }
+    }
+
+    /**
+     * Send out the handled packet otherwise it would be blocked
+     * @param context packet context to handle
+     */
+    private void sendPacket(PacketContext context) {
+
+        //parse the packet of the context
+        InboundPacket pkt = context.inPacket();
+        Ethernet ethPkt = pkt.parsed();
+        IPv4 ipPkt = (IPv4)ethPkt.getPayload();
+
+        //set the mac address of the portal as destination
+        ethPkt.setDestinationMACAddress(portal.mac());
+        // set the ip address of the portal as destination
+        ipPkt.setDestinationAddress((portal.ipAddresses().iterator().next().getIp4Address()).toInt());
+        ipPkt.resetChecksum();
+        //wrap the packet as buffer
+        ByteBuffer buf = ByteBuffer.wrap(ethPkt.serialize());
+
+        PortNumber outPort = getDstPort(pkt, portal);
+        if(outPort == null) {
+            log.warn(byodMarker, String.format("Could not find a path from %s to the portal.",
+                    pkt.receivedFrom().deviceId().toString()));
+            return;
+        }
+
+        TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder();
+        // set up the traffic management
+        trafficTreatmentBuilder.setIpDst(portal.ipAddresses().iterator().next())
+                .setEthDst(portal.mac())
+                .setOutput(outPort);
+
+        //send new packet to the device where received packet came from
+        packetService.emit(new DefaultOutboundPacket(pkt.receivedFrom().deviceId(), trafficTreatmentBuilder.build(), buf));
+        context.block();
+        return;
     }
 
     /**
      * Removes the flows created by this application
      */
-    private void removeFlows(){
+    public void removeFlows(){
         Iterable<FlowRule> flows = flowRuleService.getFlowRulesById(appId);
         for(FlowRule flow : flows){
             flowRuleService.removeFlowRules(flow);

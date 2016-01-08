@@ -19,23 +19,21 @@ package uni.wue.app.cli;
 
 import org.apache.karaf.shell.commands.Command;
 import org.onosproject.cli.AbstractShellCommand;
-import org.onosproject.net.Host;
-import uni.wue.app.PortalService;
+import uni.wue.app.FlowRedirect;
+import uni.wue.app.PacketRedirectService;
 
 /**
- * Created by lorry on 27.11.15.
+ * Created by lorry on 08.01.16.
  */
-@Command(scope="onos", name="get-portal", description = "Show portal information")
-public class GetCaptivePortalCommand extends AbstractShellCommand {
+@Command(scope="onos", name="reset-portal-flows", description = "Remove the flows leading from and to the captive portal.")
+public class ResetFlows extends AbstractShellCommand {
+
     @Override
     protected void execute() {
-        PortalService portalService = get(PortalService.class);
-        Host portal = portalService.getPortal();
-        if(portal != null && portal.ipAddresses().iterator().hasNext()) {
-            System.out.println(String.format("Portal Mac address: %s\nPortal Ip address: %s",
-                    portal.mac().toString(), portal.ipAddresses().iterator().next().toString()));
-        } else{
-            System.out.println("No portal defined");
+        PacketRedirectService packetRedirect = get(PacketRedirectService.class);
+        if(packetRedirect.getClass().equals(FlowRedirect.class)) {
+            ((FlowRedirect) packetRedirect).removeFlows();
+            System.out.println("Removed portal flows");
         }
     }
 }

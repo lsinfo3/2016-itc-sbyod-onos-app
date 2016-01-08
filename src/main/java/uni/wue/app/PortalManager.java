@@ -117,6 +117,7 @@ public class PortalManager implements PortalService{
                 return;
             }
 
+            // TODO: add IPv6 support
             //if portal is defined -> change destination of packet with ipv4 type
             if(portal != null && ethPkt.getEtherType() == Ethernet.TYPE_IPV4){
 
@@ -126,7 +127,7 @@ public class PortalManager implements PortalService{
                     packetRedirectService.restoreSource(context);
                     return;
                 } else if(ethPkt.getDestinationMAC().equals(portal.mac())){
-                    log.debug(byodMarker, "Do not change the packets with the portal as destination.");
+                    //do nothing
                     return;
                 } else {
                     // change the destination address of the packet to the portal address
