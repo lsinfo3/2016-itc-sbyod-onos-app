@@ -245,6 +245,11 @@ public class FlowRedirect extends PacketRedirect {
      */
     private void sendPacket(PacketContext context) {
 
+        /* TODO: more easy than copying packet?
+        context.treatmentBuilder().setOutput(PortNumber.TABLE);
+        context.send();
+        */
+
         //parse the packet of the context
         InboundPacket pkt = context.inPacket();
         Ethernet ethPkt = pkt.parsed();

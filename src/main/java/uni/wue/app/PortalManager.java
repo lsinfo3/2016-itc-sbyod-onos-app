@@ -61,20 +61,23 @@ public class PortalManager implements PortalService{
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected PacketService packetService;
 
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected PacketRedirectService packetRedirectService;
+
     private ReactivePacketProcessor processor = new ReactivePacketProcessor();
     protected ApplicationId appId;
 
     // host of the captive portal
     private Host portal;
     // service to redirect the incoming packets
-    private PacketRedirectService packetRedirectService;
+    //private PacketRedirectService packetRedirectService;
 
     @Activate
     protected void activate() {
         appId = coreService.registerApplication("uni.wue.app");
         packetService.addProcessor(processor, PacketProcessor.director(1));
 
-        packetRedirectService = DefaultServiceDirectory.getService(PacketRedirectService.class);
+        //packetRedirectService = DefaultServiceDirectory.getService(PacketRedirectService.class);
 
         log.info("Started PortalManager");
     }

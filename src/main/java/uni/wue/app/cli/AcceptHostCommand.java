@@ -17,23 +17,27 @@
  */
 package uni.wue.app.cli;
 
+import org.apache.karaf.shell.commands.Argument;
 import org.apache.karaf.shell.commands.Command;
+import org.onlab.packet.Ip4Address;
 import org.onosproject.cli.AbstractShellCommand;
-import uni.wue.app.FlowRedirect;
-import uni.wue.app.PacketRedirectService;
+import uni.wue.app.AcceptedHostService;
 
 /**
- * Created by lorry on 08.01.16.
+ * Created by lorry on 14.01.16.
  */
-@Command(scope="onos", name="reset-portal-flows", description = "Remove the flows leading from and to the captive portal.")
-public class ResetFlows extends AbstractShellCommand {
+@Command(scope="onos", name="accept-host", description = "Traffic of this host is permitted")
+public class AcceptHostCommand extends AbstractShellCommand{
+
+    @Argument(index=0, name = "host-IPv4", description = "The IPv4 address of the host whose traffic is allowed",
+            required = true, multiValued = false)
+    String hostIpv4 = null;
+
+    private AcceptedHostService acceptedHostService;
 
     @Override
     protected void execute() {
-        PacketRedirectService packetRedirect = get(PacketRedirectService.class);
-        if(packetRedirect.getClass().equals(FlowRedirect.class)) {
-            ((FlowRedirect) packetRedirect).removeFlows();
-            System.out.println("Removed portal flows");
-        }
+        acceptedHostService = get(AcceptedHostService.class);
+        acceptedHostService.allowHost(Ip4Address.valueOf(hostIpv4));
     }
 }

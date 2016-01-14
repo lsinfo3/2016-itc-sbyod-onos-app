@@ -27,10 +27,26 @@
             <action class="uni.wue.app.cli.GetCaptivePortalCommand"/>
         </command>
         <command>
-            <action class="uni.wue.app.cli.ResetFlows"/>
+            <action class="uni.wue.app.cli.ResetFlowsCommand"/>
+        </command>
+        <command>
+            <action class="uni.wue.app.cli.AcceptHostCommand"/>
+            <completers>
+                <ref component-id="hostIpCompleter"/>
+            </completers>
+        </command>
+        <command>
+            <action class="uni.wue.app.cli.BanHostCommand"/>
+            <completers>
+                <ref component-id="hostIpCompleter"/>
+            </completers>
+        </command>
+        <command>
+            <action class="uni.wue.app.cli.ListAcceptedHostsCommand"/>
         </command>
     </command-bundle>
 
     <bean id="hostIdCompleter" class="org.onosproject.cli.net.HostIdCompleter"/>
+    <bean id="hostIpCompleter" class="uni.wue.app.cli.HostIpv4Completer"/>
 
 </blueprint>
