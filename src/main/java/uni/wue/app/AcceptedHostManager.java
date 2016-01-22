@@ -19,9 +19,11 @@ package uni.wue.app;
 
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.Ip4Address;
+import org.onlab.packet.IpAddress;
 import org.onlab.util.KryoNamespace;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
+import org.onosproject.net.Host;
 import org.onosproject.store.service.DistributedSet;
 import org.onosproject.store.service.Serializer;
 import org.onosproject.store.service.StorageService;
@@ -110,4 +112,33 @@ public class AcceptedHostManager implements AcceptedHostService {
         }
         return hostSet;
     }
+
+    /**
+     * Ask if host is part of accepted hosts
+     *
+     * @param host to be accepted
+     * @return true if host ip is accepted
+     */
+    @Override
+    public Boolean contains(Host host) {
+        Set<IpAddress> hostIps = host.ipAddresses();
+        for(IpAddress ip : hostIps){
+            if(contains(ip.getIp4Address())){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Ask if host IPv4 is part of accepted hosts
+     *
+     * @param hostIp to be accepted
+     * @return true if host ip is accepted
+     */
+    @Override
+    public Boolean contains(Ip4Address hostIp) {
+        return acceptedHosts.contains(hostIp);
+    }
+
 }

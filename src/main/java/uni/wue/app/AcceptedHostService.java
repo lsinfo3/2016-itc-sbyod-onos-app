@@ -18,6 +18,7 @@
 package uni.wue.app;
 
 import org.onlab.packet.Ip4Address;
+import org.onosproject.net.Host;
 
 import java.util.Set;
 
@@ -43,4 +44,18 @@ public interface AcceptedHostService {
      * @return a set of IPv4 addresses
      */
     Set<Ip4Address> getAllowedHosts();
+
+    /**
+     * Ask if host is part of accepted hosts
+     * @param host to be accepted
+     * @return true if host ip is accepted
+     */
+    Boolean contains(Host host);
+
+    /**
+     * Ask if host IPv4 is part of accepted hosts
+     * @param hostIp to be accepted
+     * @return true if host ip is accepted
+     */
+    Boolean contains(Ip4Address hostIp);
 }

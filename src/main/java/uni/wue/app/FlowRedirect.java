@@ -91,7 +91,7 @@ public class FlowRedirect extends PacketRedirect {
     }
 
     /**
-     * Change the destination to match with portal
+     * Redirected the context to the portal
      *
      * @param context
      */
@@ -108,7 +108,7 @@ public class FlowRedirect extends PacketRedirect {
     }
 
     /**
-     * Restore the actual source of the packet
+     * Restore the actual source of the context
      *
      * @param context
      */
@@ -215,6 +215,7 @@ public class FlowRedirect extends PacketRedirect {
                 .fromApp(appId)
                 .makeTemporary(120)
                 .withPriority(1000)
+                .forTable(0)
                 .forDevice(context.inPacket().receivedFrom().deviceId());
 
         FlowRule fr = flowBuilder.build();
@@ -229,14 +230,21 @@ public class FlowRedirect extends PacketRedirect {
      * @param deviceId of flow entry
      */
     private void waitForRuleEntry(FlowRule flowRule, DeviceId deviceId){
-        while(true) {
+        for(int count = 0; count < 500; count++) {
             Iterable<FlowEntry> flowEntries = flowRuleService.getFlowEntries(deviceId);
             for(FlowEntry fe : flowEntries){
                 if(flowRule.id().equals(fe.id())){
                     return;
                 }
             }
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
+        log.warn(byodMarker, String.format("FlowRule %s was not yet delivered to device %s",
+                flowRule.toString(), deviceId.toString()));
     }
 
     /**
@@ -245,11 +253,10 @@ public class FlowRedirect extends PacketRedirect {
      */
     private void sendPacket(PacketContext context) {
 
-        /* TODO: more easy than copying packet?
         context.treatmentBuilder().setOutput(PortNumber.TABLE);
         context.send();
-        */
 
+        /*
         //parse the packet of the context
         InboundPacket pkt = context.inPacket();
         Ethernet ethPkt = pkt.parsed();
@@ -280,6 +287,7 @@ public class FlowRedirect extends PacketRedirect {
         packetService.emit(new DefaultOutboundPacket(pkt.receivedFrom().deviceId(), trafficTreatmentBuilder.build(), buf));
         context.block();
         return;
+        */
     }
 
     /**
