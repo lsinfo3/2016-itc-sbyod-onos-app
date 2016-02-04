@@ -19,7 +19,7 @@
         <command>
             <action class="uni.wue.app.cli.SetCaptivePortalCommand"/>
             <completers>
-                <ref component-id="hostIdCompleter"/>
+                <ref component-id="hostIpCompleter"/>
                 <null/>
             </completers>
         </command>

@@ -69,6 +69,8 @@ public class PortalManager implements PortalService{
 
     // host of the captive portal
     private Host portal;
+    // portal IP address
+    private Ip4Address portalIp;
     // service to redirect the incoming packets
     //private PacketRedirectService packetRedirectService;
 
@@ -153,13 +155,23 @@ public class PortalManager implements PortalService{
     }
 
     @Override
-    public void setPortal(String portalId) {
-        checkNotNull(portalId, "Portal-ID can not be null");
+    public void setPortal(String portal) {
+        checkNotNull(portal, "Portal IPv4 address can not be null");
 
-        portal = hostService.getHost(HostId.hostId(portalId));
-        checkNotNull(portal, String.format("No host with host-id %s found", portalId));
+        Ip4Address portalIPv4 = Ip4Address.valueOf(portal);
+        portalIp = portalIPv4;
 
-        System.out.println(String.format("Set portal to %s", portal.id().toString()));
+        // find host of portal IP address
+        Set<Host> portalHosts = hostService.getHostsByIp(portalIPv4);
+        if(portalHosts.size() >= 2){
+            log.warn(String.format("More than one Host with IP address %s!\nCould not assign Host to IP address.",portalIPv4));
+        } else if(portalHosts.size() == 0){
+            log.warn(String.format("No host with IP address %s found.", portalIPv4));
+            System.out.println(String.format("Set portal IPv4 address to %s", portalIPv4.toString()));
+        } else{
+            this.portal = portalHosts.iterator().next();
+            System.out.println(String.format("Set portal to %s", this.portal.id().toString()));
+        }
     }
 
     /**

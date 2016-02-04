@@ -32,15 +32,15 @@ import java.util.regex.Pattern;
 @Command(scope="onos", name="set-portal", description = "Define the captive portal")
 public class SetCaptivePortalCommand extends AbstractShellCommand{
 
-    @Argument(index=0, name = "portal-id", description = "The host-ID of the portal",
+    @Argument(index=0, name = "portal-ipv4", description = "The host-IPv4 address of the portal",
             required = true, multiValued = false)
-    String portalId = null;
+    String portalIPv4 = null;
 
     @Override
     protected void execute() {
 
         PortalService portalService = get(PortalService.class);
-        portalService.setPortal(portalId);
+        portalService.setPortal(portalIPv4);
 
     }
 }
