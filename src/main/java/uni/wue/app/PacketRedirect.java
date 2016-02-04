@@ -21,19 +21,27 @@ import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
 import org.onlab.packet.Ethernet;
+import org.onlab.packet.IPv4;
+import org.onlab.packet.Ip4Address;
+import org.onlab.packet.MacAddress;
 import org.onosproject.core.CoreService;
 import org.onosproject.net.Host;
 import org.onosproject.net.Path;
 import org.onosproject.net.PortNumber;
+import org.onosproject.net.flow.DefaultTrafficTreatment;
+import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.host.HostService;
+import org.onosproject.net.packet.DefaultOutboundPacket;
 import org.onosproject.net.packet.InboundPacket;
 import org.onosproject.net.packet.PacketContext;
+import org.onosproject.net.packet.PacketService;
 import org.onosproject.net.topology.TopologyService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
 
+import java.nio.ByteBuffer;
 import java.util.Set;
 
 /**
@@ -51,6 +59,9 @@ public abstract class PacketRedirect implements PacketRedirectService {
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected CoreService coreService;
 
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected PacketService packetService;
+
     private final Logger log = LoggerFactory.getLogger(getClass());
     protected Marker byodMarker = MarkerFactory.getMarker("BYOD");
 
@@ -64,8 +75,9 @@ public abstract class PacketRedirect implements PacketRedirectService {
     /**
      * Restore the actual source of the packet
      * @param context
+     * @param portal
      */
-    public abstract void restoreSource(PacketContext context);
+    public abstract void restoreSource(PacketContext context, Host portal);
 
     protected PortNumber getDstPort(InboundPacket pkt, Host dstHost){
         return getDstPort(pkt, dstHost, pkt.receivedFrom().port());
@@ -124,5 +136,32 @@ public abstract class PacketRedirect implements PacketRedirectService {
             }
         }
         return lastPath;
+    }
+
+    public void FloodPacket(PacketContext context, Ip4Address hostIp){
+        //parse the packet of the context
+        InboundPacket pkt = context.inPacket();
+        Ethernet ethPkt = pkt.parsed();
+        IPv4 ipPkt = (IPv4)ethPkt.getPayload();
+
+        //set the mac address of the portal as destination
+        ethPkt.setDestinationMACAddress(MacAddress.BROADCAST);
+        // set the ip address of the portal as destination
+        ipPkt.setDestinationAddress(hostIp.toInt());
+        ipPkt.resetChecksum();
+        //wrap the packet as buffer
+        ByteBuffer buf = ByteBuffer.wrap(ethPkt.serialize());
+
+        TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder();
+        // set up the traffic management
+        trafficTreatmentBuilder.setIpDst(hostIp)
+                .setOutput(PortNumber.FLOOD);
+
+        //send new packet to the device where received packet came from
+        // TODO: failure when sending the packet out!
+        packetService.emit(new DefaultOutboundPacket(pkt.receivedFrom().deviceId(), trafficTreatmentBuilder.build(), buf));
+        context.isHandled();
+        context.block();
+        return;
     }
 }

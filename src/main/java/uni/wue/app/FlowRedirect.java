@@ -17,34 +17,22 @@
  */
 package uni.wue.app;
 
-import com.google.common.collect.Sets;
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.Ethernet;
 import org.onlab.packet.IPv4;
+import org.onlab.packet.Ip4Address;
 import org.onlab.packet.IpAddress;
 import org.onosproject.core.ApplicationId;
-import org.onosproject.core.CoreService;
 import org.onosproject.net.*;
-import org.onosproject.net.device.DeviceAdminService;
 import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.*;
-import org.onosproject.net.flow.instructions.Instruction;
-import org.onosproject.net.flowobjective.DefaultForwardingObjective;
-import org.onosproject.net.flowobjective.ForwardingObjective;
 import org.onosproject.net.flowobjective.FlowObjectiveService;
-import org.onosproject.net.flowobjective.ForwardingObjective;
-import org.onosproject.net.host.HostService;
-import org.onosproject.net.packet.DefaultOutboundPacket;
 import org.onosproject.net.packet.InboundPacket;
 import org.onosproject.net.packet.PacketContext;
 import org.onosproject.net.packet.PacketService;
-import org.onosproject.net.topology.TopologyService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.Marker;
-import org.slf4j.MarkerFactory;
 
-import java.nio.ByteBuffer;
 import java.util.*;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -103,7 +91,7 @@ public class FlowRedirect extends PacketRedirect {
         this.portal = portal;
         flowToPortal(context);
         flowFromPortal(context);
-        sendPacket(context);
+        sendPacketToFlowTable(context);
         return;
     }
 
@@ -111,10 +99,12 @@ public class FlowRedirect extends PacketRedirect {
      * Restore the actual source of the context
      *
      * @param context
+     * @param portal
      */
     @Override
-    public void restoreSource(PacketContext context) {
-        // do nothing as we already added the corresponding flow rules
+    public void restoreSource(PacketContext context, Host portal) {
+        // as there seems to be no rule installed yet, do it now
+        redirectToPortal(context, portal);
         return;
     }
 
@@ -251,7 +241,7 @@ public class FlowRedirect extends PacketRedirect {
      * Send out the handled packet otherwise it would be blocked
      * @param context packet context to handle
      */
-    private void sendPacket(PacketContext context) {
+    private void sendPacketToFlowTable(PacketContext context) {
 
         context.treatmentBuilder().setOutput(PortNumber.TABLE);
         context.send();

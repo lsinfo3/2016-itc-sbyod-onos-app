@@ -35,6 +35,6 @@ public interface PacketRedirectService {
      * Restore the actual source of the packet
      * @param context
      */
-    void restoreSource(PacketContext context);
+    void restoreSource(PacketContext context, Host portal);
 
 }

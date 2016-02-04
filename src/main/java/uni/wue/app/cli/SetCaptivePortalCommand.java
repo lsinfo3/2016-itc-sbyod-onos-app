@@ -41,6 +41,6 @@ public class SetCaptivePortalCommand extends AbstractShellCommand{
 
         PortalService portalService = get(PortalService.class);
         portalService.setPortal(portalIPv4);
-
+        System.out.println("Set portal IPv4 address to " + portalIPv4);
     }
 }

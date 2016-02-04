@@ -31,6 +31,7 @@ public class GetCaptivePortalCommand extends AbstractShellCommand {
     protected void execute() {
         PortalService portalService = get(PortalService.class);
         Host portal = portalService.getPortal();
+        // TODO: update with ip address
         if(portal != null && portal.ipAddresses().iterator().hasNext()) {
             System.out.println(String.format("Portal Mac address: %s\nPortal Ip address: %s",
                     portal.mac().toString(), portal.ipAddresses().iterator().next().toString()));

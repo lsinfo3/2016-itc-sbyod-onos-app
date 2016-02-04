@@ -25,8 +25,11 @@ import org.onlab.osgi.DefaultServiceDirectory;
 import org.onlab.packet.*;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
+import org.onosproject.incubator.net.intf.Interface;
+import org.onosproject.incubator.net.intf.InterfaceService;
 import org.onosproject.net.*;
 import org.onosproject.net.flow.*;
+import org.onosproject.net.host.InterfaceIpAddress;
 import org.onosproject.net.packet.*;
 import org.onosproject.net.Host;
 import org.onosproject.net.host.HostService;
@@ -63,6 +66,9 @@ public class PortalManager implements PortalService{
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected PacketRedirectService packetRedirectService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected InterfaceService interfaceService;
 
     private ReactivePacketProcessor processor = new ReactivePacketProcessor();
     protected ApplicationId appId;
@@ -122,22 +128,34 @@ public class PortalManager implements PortalService{
                 return;
             }
 
-            // TODO: add IPv6 support
+            // try to update portal-id
+            if(portal == null){
+                setPortal(portalIp.toString());
+            }
+
+            // TODO: add IPv6 support?
             //if portal is defined -> change destination of packet with ipv4 type
             if(portal != null && ethPkt.getEtherType() == Ethernet.TYPE_IPV4){
 
                 // filter out packets from the portal
                 if(ethPkt.getSourceMAC().equals(portal.mac())){
                     // restore the packet source from the portal address to the previous intended address
-                    packetRedirectService.restoreSource(context);
-                    return;
+                    packetRedirectService.restoreSource(context, portal);
                 } else if(ethPkt.getDestinationMAC().equals(portal.mac())){
                     //do nothing
-                    return;
                 } else {
                     // change the destination address of the packet to the portal address
                     packetRedirectService.redirectToPortal(context, portal);
-                    return;
+                }
+                return;
+            }
+            // portal host is unknown but IP is set
+            else if(portalIp != null && ethPkt.getEtherType() == Ethernet.TYPE_IPV4){
+                IPv4 ipPkt = (IPv4)ethPkt.getPayload();
+                // packets not from portal
+                if(!Ip4Address.valueOf(ipPkt.getSourceAddress()).equals(portalIp)) {
+                    // change destination ip and flood
+                    ((PacketRedirect) packetRedirectService).FloodPacket(context, portalIp);
                 }
             }
             return;
@@ -164,13 +182,13 @@ public class PortalManager implements PortalService{
         // find host of portal IP address
         Set<Host> portalHosts = hostService.getHostsByIp(portalIPv4);
         if(portalHosts.size() >= 2){
-            log.warn(String.format("More than one Host with IP address %s!\nCould not assign Host to IP address.",portalIPv4));
+            log.debug(String.format("More than one Host with IP address %s!\nCould not assign Host to IP address.",portalIPv4));
         } else if(portalHosts.size() == 0){
-            log.warn(String.format("No host with IP address %s found.", portalIPv4));
-            System.out.println(String.format("Set portal IPv4 address to %s", portalIPv4.toString()));
+            log.debug(String.format("No host with IP address %s found.", portalIPv4));
+            log.debug(String.format("Set portal IPv4 address to %s", portalIPv4.toString()));
         } else{
             this.portal = portalHosts.iterator().next();
-            System.out.println(String.format("Set portal to %s", this.portal.id().toString()));
+            log.debug(String.format("Set portal to %s", this.portal.id().toString()));
         }
     }
 

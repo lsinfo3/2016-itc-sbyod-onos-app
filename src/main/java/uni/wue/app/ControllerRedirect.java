@@ -138,7 +138,7 @@ public class ControllerRedirect extends PacketRedirect{
      * @param context the packet context
      */
     @Override
-    public void restoreSource(PacketContext context) {
+    public void restoreSource(PacketContext context, Host portal) {
         checkNotNull(context, "No context defined!");
         //parse the packet of the context
         InboundPacket pkt = context.inPacket();
