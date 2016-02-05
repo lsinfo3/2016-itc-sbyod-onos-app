@@ -124,6 +124,7 @@ public class FlowRedirect extends PacketRedirect {
                 .matchEthSrc(ethPkt.getSourceMAC())
                 .matchEthDst(ethPkt.getDestinationMAC());
 
+        // TODO: no port is found as long as the portal is not present to the controller
         PortNumber outPort = getDstPort(pkt, portal);
         if(outPort == null) {
             log.warn(byodMarker, String.format("Could not find a path from %s to the portal.",

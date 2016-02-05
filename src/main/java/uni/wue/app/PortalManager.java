@@ -20,6 +20,7 @@ package uni.wue.app;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
+import com.google.common.collect.Sets;
 import org.apache.felix.scr.annotations.*;
 import org.onlab.osgi.DefaultServiceDirectory;
 import org.onlab.packet.*;
@@ -33,6 +34,7 @@ import org.onosproject.net.host.InterfaceIpAddress;
 import org.onosproject.net.packet.*;
 import org.onosproject.net.Host;
 import org.onosproject.net.host.HostService;
+import org.onosproject.net.provider.ProviderId;
 import org.onosproject.net.topology.TopologyService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +43,7 @@ import org.slf4j.MarkerFactory;
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -75,10 +78,6 @@ public class PortalManager implements PortalService{
 
     // host of the captive portal
     private Host portal;
-    // portal IP address
-    private Ip4Address portalIp;
-    // service to redirect the incoming packets
-    //private PacketRedirectService packetRedirectService;
 
     @Activate
     protected void activate() {
@@ -128,9 +127,9 @@ public class PortalManager implements PortalService{
                 return;
             }
 
-            // try to update portal-id
-            if(portal == null){
-                setPortal(portalIp.toString());
+            // update portal if it is not the real portal
+            if(portal.annotations().keys().contains("DUMMY")){
+                setPortal(portal.ipAddresses().iterator().next().toString(), portal.mac().toString());
             }
 
             // TODO: add IPv6 support?
@@ -149,15 +148,7 @@ public class PortalManager implements PortalService{
                 }
                 return;
             }
-            // portal host is unknown but IP is set
-            else if(portalIp != null && ethPkt.getEtherType() == Ethernet.TYPE_IPV4){
-                IPv4 ipPkt = (IPv4)ethPkt.getPayload();
-                // packets not from portal
-                if(!Ip4Address.valueOf(ipPkt.getSourceAddress()).equals(portalIp)) {
-                    // change destination ip and flood
-                    ((PacketRedirect) packetRedirectService).FloodPacket(context, portalIp);
-                }
-            }
+
             return;
         }
     }
@@ -173,19 +164,25 @@ public class PortalManager implements PortalService{
     }
 
     @Override
-    public void setPortal(String portal) {
-        checkNotNull(portal, "Portal IPv4 address can not be null");
+    public void setPortal(String pIp, String pMac) {
+        checkNotNull(pIp, "Portal IPv4 address can not be null");
+        checkNotNull(pMac, "Portal MAC address can not be null");
 
-        Ip4Address portalIPv4 = Ip4Address.valueOf(portal);
-        portalIp = portalIPv4;
+        // TODO: have to send out arp request as the flowRedirect does not find correct path
+        Ip4Address portalIPv4 = Ip4Address.valueOf(pIp);
+        MacAddress portalMac = MacAddress.valueOf(pMac);
 
-        // find host of portal IP address
+        // find host with portal IP address
         Set<Host> portalHosts = hostService.getHostsByIp(portalIPv4);
         if(portalHosts.size() >= 2){
-            log.debug(String.format("More than one Host with IP address %s!\nCould not assign Host to IP address.",portalIPv4));
+            log.debug(String.format("More than one Host with IP address %s!" +
+                    "\nCould not assign Host to IP address.",portalIPv4));
         } else if(portalHosts.size() == 0){
-            log.debug(String.format("No host with IP address %s found.", portalIPv4));
-            log.debug(String.format("Set portal IPv4 address to %s", portalIPv4.toString()));
+            portal = new DefaultHost(ProviderId.NONE, HostId.hostId(portalMac), portalMac, VlanId.NONE,
+                    HostLocation.NONE, Sets.newHashSet(portalIPv4),
+                    DefaultAnnotations.builder().set("DUMMY", "true").build());
+            log.debug(String.format("No host with IP address %s found." +
+                    "\nCreated new Host %s.", portalIPv4, portal.toString()));
         } else{
             this.portal = portalHosts.iterator().next();
             log.debug(String.format("Set portal to %s", this.portal.id().toString()));

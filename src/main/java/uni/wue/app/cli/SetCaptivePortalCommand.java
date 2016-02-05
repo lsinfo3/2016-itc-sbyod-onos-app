@@ -36,11 +36,15 @@ public class SetCaptivePortalCommand extends AbstractShellCommand{
             required = true, multiValued = false)
     String portalIPv4 = null;
 
+    @Argument(index=1, name = "portal-mac", description = "The host MAC address of the portal",
+            required = true, multiValued = false)
+    String portalMac = null;
+
     @Override
     protected void execute() {
 
         PortalService portalService = get(PortalService.class);
-        portalService.setPortal(portalIPv4);
-        System.out.println("Set portal IPv4 address to " + portalIPv4);
+        portalService.setPortal(portalIPv4, portalMac);
+        System.out.println(String.format("Set portal IPv4 address to %s and mac to %s.", portalIPv4, portalMac));
     }
 }

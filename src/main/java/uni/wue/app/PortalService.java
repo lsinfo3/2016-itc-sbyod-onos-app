@@ -31,9 +31,10 @@ public interface PortalService {
     /**
      * Define the MAC address of the captive portal
      *
-     * @param portal portal MAC
+     * @param portalIp portal Ip address
+     * @param portalMac portal Mac address
      */
-    void setPortal(String portal);
+    void setPortal(String portalIp, String portalMac);
 
     /**
      * Get the Mac Address of the portal
