@@ -29,12 +29,25 @@ import java.util.Set;
 public interface PortalService {
 
     /**
-     * Define the MAC address of the captive portal
+     * Set the captive portal
      *
-     * @param portalIp portal Ip address
-     * @param portalMac portal Mac address
+     * @param portalIp Ip address of the portal
+     *
+     * @return true if the portal was set correctly
      */
-    void setPortal(String portalIp, String portalMac);
+    boolean setPortal(String portalIp);
+
+    /**
+     * Define the captive portal and it's location in the network
+     *
+     * @param portalIp Ip address of the portal
+     * @param portalMac Mac address of the portal
+     * @param deviceId ID of the switch device the portal is connected to
+     * @param devicePort port number of the switch where the portal is connected to
+     *
+     * @return true if the portal was set correctly
+     */
+    boolean setPortal(String portalIp, String portalMac, String deviceId, String devicePort);
 
     /**
      * Get the Mac Address of the portal

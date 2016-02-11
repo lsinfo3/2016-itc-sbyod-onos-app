@@ -29,12 +29,13 @@ import org.onosproject.core.CoreService;
 import org.onosproject.incubator.net.intf.Interface;
 import org.onosproject.incubator.net.intf.InterfaceService;
 import org.onosproject.net.*;
+import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.*;
-import org.onosproject.net.host.InterfaceIpAddress;
+import org.onosproject.net.host.*;
 import org.onosproject.net.packet.*;
 import org.onosproject.net.Host;
-import org.onosproject.net.host.HostService;
 import org.onosproject.net.provider.ProviderId;
+import org.onosproject.net.proxyarp.ProxyArpService;
 import org.onosproject.net.topology.TopologyService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +43,7 @@ import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
 
 import java.nio.ByteBuffer;
+import java.sql.Time;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -72,6 +74,15 @@ public class PortalManager implements PortalService{
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected InterfaceService interfaceService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected ProxyArpService proxyArpService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected DeviceService deviceService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected HostStore hostStore;
 
     private ReactivePacketProcessor processor = new ReactivePacketProcessor();
     protected ApplicationId appId;
@@ -127,11 +138,6 @@ public class PortalManager implements PortalService{
                 return;
             }
 
-            // update portal if it is not the real portal
-            if(portal.annotations().keys().contains("DUMMY")){
-                setPortal(portal.ipAddresses().iterator().next().toString(), portal.mac().toString());
-            }
-
             // TODO: add IPv6 support?
             //if portal is defined -> change destination of packet with ipv4 type
             if(portal != null && ethPkt.getEtherType() == Ethernet.TYPE_IPV4){
@@ -164,29 +170,57 @@ public class PortalManager implements PortalService{
     }
 
     @Override
-    public void setPortal(String pIp, String pMac) {
+    public boolean setPortal(String pIp){
         checkNotNull(pIp, "Portal IPv4 address can not be null");
-        checkNotNull(pMac, "Portal MAC address can not be null");
-
-        // TODO: have to send out arp request as the flowRedirect does not find correct path
+        // parse IP address
         Ip4Address portalIPv4 = Ip4Address.valueOf(pIp);
-        MacAddress portalMac = MacAddress.valueOf(pMac);
+
+        // find hosts with portal IP address
+        Set<Host> portalHosts = hostService.getHostsByIp(portalIPv4);
+        if(portalHosts.size() == 1) {
+            this.portal = portalHosts.iterator().next();
+            log.debug(String.format("Set portal to %s", this.portal.id().toString()));
+            return true;
+        }
+
+        log.warn(String.format("Could not set portal. No host defined with IP %s!", portalIPv4.toString()));
+        return false;
+    }
+
+    @Override
+    public boolean setPortal(String pIp, String pMac, String dId, String dPort) {
+        checkNotNull(pIp, "Portal IPv4 address can not be null!");
+        Ip4Address portalIPv4 = Ip4Address.valueOf(pIp);
 
         // find host with portal IP address
         Set<Host> portalHosts = hostService.getHostsByIp(portalIPv4);
-        if(portalHosts.size() >= 2){
-            log.debug(String.format("More than one Host with IP address %s!" +
-                    "\nCould not assign Host to IP address.",portalIPv4));
+        if(portalHosts.size() == 1) {
+            return setPortal(pIp);
         } else if(portalHosts.size() == 0){
-            portal = new DefaultHost(ProviderId.NONE, HostId.hostId(portalMac), portalMac, VlanId.NONE,
-                    HostLocation.NONE, Sets.newHashSet(portalIPv4),
-                    DefaultAnnotations.builder().set("DUMMY", "true").build());
+
+            checkNotNull(pMac, "Portal MAC address can not be null!");
+            MacAddress portalMac = MacAddress.valueOf(pMac);
+            checkNotNull(dId, "Device ID can not be null!");
+            Device switchDevice = deviceService.getDevice(DeviceId.deviceId(dId));
+            checkNotNull(dPort, "Device port number can not be null!");
+            PortNumber portNumber = PortNumber.portNumber(Long.valueOf(dPort));
+
+            // Create new Host:
+            HostLocation hostLocation = new HostLocation(switchDevice.id(), portNumber, System.nanoTime());
+            HostDescription hostDescription = new DefaultHostDescription(portalMac, VlanId.NONE, hostLocation,
+                    Sets.newHashSet(portalIPv4));
+
+            hostStore.createOrUpdateHost(ProviderId.NONE, HostId.hostId(portalMac, VlanId.NONE), hostDescription, true);
+            portal = hostService.getHostsByIp(portalIPv4).iterator().next();
+
             log.debug(String.format("No host with IP address %s found." +
                     "\nCreated new Host %s.", portalIPv4, portal.toString()));
-        } else{
-            this.portal = portalHosts.iterator().next();
-            log.debug(String.format("Set portal to %s", this.portal.id().toString()));
+
+            return true;
         }
+
+        log.warn(String.format("Could not set portal. More than one hosts with IP %s found.", portalIPv4.toString()));
+        return false;
     }
 
     /**

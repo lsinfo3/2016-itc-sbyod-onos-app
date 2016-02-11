@@ -15,11 +15,10 @@
  *
  *
  */
-package uni.wue.app.cli;
+package uni.wue.app.cli.completer;
 
 import org.apache.karaf.shell.console.Completer;
 import org.apache.karaf.shell.console.completer.StringsCompleter;
-import org.onlab.packet.IpAddress;
 import org.onosproject.cli.AbstractShellCommand;
 import org.onosproject.net.Host;
 import org.onosproject.net.host.HostService;
@@ -29,10 +28,9 @@ import java.util.List;
 import java.util.SortedSet;
 
 /**
- * Created by lorry on 14.01.16.
+ * Created by lorry on 11.02.16.
  */
-public class HostIpv4Completer implements Completer {
-
+public class MacCompleter implements Completer {
     @Override
     public int complete(String buffer, int cursor, List<String> candidates) {
         //Delegate string completer
@@ -42,9 +40,7 @@ public class HostIpv4Completer implements Completer {
         Iterator<Host> it = service.getHosts().iterator();
         SortedSet<String> strings = delegate.getStrings();
         while (it.hasNext()) {
-            Iterator<IpAddress> itIp = it.next().ipAddresses().iterator();
-            while(itIp.hasNext())
-            strings.add(itIp.next().toString());
+            strings.add(it.next().mac().toString());
         }
 
         // Now let the completer do the work for figuring out what to offer.
