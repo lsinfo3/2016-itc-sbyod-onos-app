@@ -18,7 +18,17 @@
 package uni.wue.app.rest;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.onlab.packet.IPv4;
+import org.onlab.packet.Ip4Address;
+import org.onlab.packet.MacAddress;
+import org.onosproject.net.PortNumber;
+import org.onosproject.net.intent.IntentService;
 import org.onosproject.rest.AbstractWebResource;
+import org.apache.felix.scr.annotations.*;
+import uni.wue.app.AcceptedHostManager;
+
+import org.slf4j.Logger;
+import static org.slf4j.LoggerFactory.getLogger;
 
 import javax.ws.rs.PUT;
 import javax.ws.rs.POST;
@@ -33,30 +43,59 @@ import javax.ws.rs.core.Response;
 @Path("sample")
 public class AppWebResource extends AbstractWebResource {
 
+    private static final Logger log = getLogger(uni.wue.app.PortalManager.class);
+
+    private static final String INVALID_PARAMETER = "INVALID_PARAMETER\n";
+    private static final String OPERATION_INSTALLED = "INSTALLED\n";
+    private static final String OPERATION_FAILED = "FAILED\n";
+    private static final String OPERATION_WITHDRAWN = "WITHDRAWN\n";
+
     /**
-     * Get hello world greeting.
+     * Allow a host with srcIP_ and srcMac_ to send packets to dstPort_ on dstIp_
      *
-     * @return 200 OK
+     * @param srcIp_ source IP address
+     * @param srcMac_ source Mac address
+     * @param dstIp_ destination IP address
+     * @param dstPort_ destination port
+     * @return Intent state "INSTALLED" if successful,
+     *         server error or "FAILED" if failed to add traffic rule
      */
-    @GET
-    @Path("/greeting")
-    public Response getGreeting() {
-        ObjectNode node = mapper().createObjectNode().put("hello", "world");
-        return ok(node).build();
-    }
-
-    @POST
-    @Path("/post/foo/{bar}")
-    public Response postFoo(@PathParam("bar") String bar){
-        ObjectNode node = mapper().createObjectNode().put("PostBar", bar);
-        return Response.ok(node).build();
-    }
-
     @PUT
-    @Path("/put/foo/{bar}")
-    public Response putFoo(@PathParam("bar") String bar){
-        ObjectNode node = mapper().createObjectNode().put("PutBar", bar);
-        return Response.ok(node).build();
+    @Path("/{ip}/{mac}/{destIp}/{destPort}")
+    public Response allowHostTraffic(@PathParam("ip") String srcIp_,
+                                    @PathParam("mac") String srcMac_,
+                                    @PathParam("destIp") String dstIp_,
+                                    @PathParam("destPort") String dstPort_){
+        log.info("adding flow: src ip = {}, src mac = {} -> dst ip = {}, dst port = {}",
+                new String[]{srcIp_, srcMac_, dstIp_, dstPort_});
+
+        if(srcIp_ == null || srcMac_ == null || dstIp_ == null || dstPort_ == null)
+            return Response.ok(INVALID_PARAMETER).build();
+
+        Ip4Address srcIp, dstIp;
+        MacAddress srcMac;
+        PortNumber dstPort;
+
+        try{
+            srcIp = Ip4Address.valueOf(srcIp_);
+            srcMac = MacAddress.valueOf(srcMac_);
+            dstIp = Ip4Address.valueOf(dstIp_);
+            dstPort = PortNumber.portNumber(dstPort_);
+        } catch (Exception e){
+            return Response.ok(INVALID_PARAMETER).build();
+        }
+
+        //Todo: add flow to devices, save information in rule service
+
+        return Response.ok(OPERATION_INSTALLED).build();
     }
 
+    @GET
+    @Path("/rules")
+    public Response showRules(){
+
+        //TODO: get rules from rule service, build JSON response
+
+        return Response.ok().build();
+    }
 }
