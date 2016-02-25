@@ -73,12 +73,6 @@ public class PortalManager implements PortalService{
     protected PacketRedirectService packetRedirectService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected InterfaceService interfaceService;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected ProxyArpService proxyArpService;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected DeviceService deviceService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
