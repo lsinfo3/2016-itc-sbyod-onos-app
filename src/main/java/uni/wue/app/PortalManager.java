@@ -31,6 +31,7 @@ import org.onosproject.incubator.net.intf.InterfaceService;
 import org.onosproject.net.*;
 import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.*;
+import org.onosproject.net.flow.criteria.Criteria;
 import org.onosproject.net.host.*;
 import org.onosproject.net.packet.*;
 import org.onosproject.net.Host;
@@ -41,6 +42,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
+import sun.net.util.IPAddressUtil;
+import sun.security.krb5.internal.crypto.EType;
 
 import java.nio.ByteBuffer;
 import java.sql.Time;
@@ -76,6 +79,9 @@ public class PortalManager implements PortalService{
     protected DeviceService deviceService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected FlowRuleService flowRuleService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected HostStore hostStore;
 
     private ReactivePacketProcessor processor = new ReactivePacketProcessor();
@@ -84,25 +90,100 @@ public class PortalManager implements PortalService{
     // host of the captive portal
     private Host portal;
 
+
     @Activate
     protected void activate() {
         appId = coreService.registerApplication("uni.wue.app");
-        packetService.addProcessor(processor, PacketProcessor.director(1));
+
+        //TODO: Test flow rule functionality
+        installBasicRules();
+
+        //packetService.addProcessor(processor, PacketProcessor.director(1));
 
         //packetRedirectService = DefaultServiceDirectory.getService(PacketRedirectService.class);
 
-        log.info("Started PortalManager");
+        log.info("Started PortalManager {}", appId.toString());
     }
 
     @Deactivate
     protected void deactivate() {
-        packetService.removeProcessor(processor);
+        //packetService.removeProcessor(processor);
         processor = null;
 
 
         packetRedirectService = null;
 
-        log.info("Stopped PortalManager");
+        log.info("Stopped PortalManager {}", appId.toString());
+    }
+
+    /**
+     * Install two rules on every network device:
+     * First rule:  drops everything
+     * Second rule: sends packet to controller
+     */
+    private void installBasicRules() {
+
+        FlowRule.Builder dropRuleBuilder = getDropRuleBuilder();
+        FlowRule.Builder controllerRuleBuilder = getControllerRuleBuilder();
+
+        Iterable<Device> devices = deviceService.getDevices();
+        for(Device device : devices){
+            flowRuleService.applyFlowRules(dropRuleBuilder.forDevice(device.id()).build());
+            flowRuleService.applyFlowRules(controllerRuleBuilder.forDevice(device.id()).build());
+        }
+
+    }
+
+    /**
+     * Generate a permanent rule to drop every packet with priority of 100
+     *
+     * @return a flow rule builder for the dropping rule
+     */
+    private FlowRule.Builder getDropRuleBuilder(){
+
+        TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
+                .matchInPort(PortNumber.ALL);
+
+        TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder().drop();
+
+        FlowRule.Builder flowRuleBuilder = DefaultFlowRule.builder();
+        flowRuleBuilder.withSelector(trafficSelectorBuilder.build())
+                .withTreatment(trafficTreatmentBuilder.build())
+                .withPriority(100)
+                .fromApp(appId)
+                .makePermanent();
+
+        return flowRuleBuilder;
+    }
+
+    /**
+     * Generate a permanent rule to send packets with IPv4 type and TCP destination port 80
+     * with priority of 200 to the controller
+     *
+     * @return a flow rule builder for the controller rule
+     */
+    private FlowRule.Builder getControllerRuleBuilder() {
+
+        TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
+                .matchEthType(Ethernet.TYPE_IPV4)
+                .matchTcpDst(TpPort.tpPort(80))
+                .matchUdpDst(TpPort.tpPort(80));
+
+        TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
+                .setOutput(PortNumber.CONTROLLER);
+
+        FlowRule.Builder flowRuleBuilder = DefaultFlowRule.builder();
+        flowRuleBuilder.withSelector(trafficSelectorBuilder.build())
+                .withTreatment(trafficTreatmentBuilder.build())
+                .withPriority(200)
+                .fromApp(appId)
+                .makePermanent();
+
+        return flowRuleBuilder;
+    }
+
+    private void installControllerRule(Device device){
+
     }
 
     /**
