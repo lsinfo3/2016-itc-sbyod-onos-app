@@ -84,6 +84,10 @@ public class PortalManager implements PortalService{
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected HostStore hostStore;
 
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected HostConnectionService hostConnectionService;
+
+
     private ReactivePacketProcessor processor = new ReactivePacketProcessor();
     protected ApplicationId appId;
 
@@ -98,7 +102,7 @@ public class PortalManager implements PortalService{
         //TODO: Test flow rule functionality
         installBasicRules();
 
-        //packetService.addProcessor(processor, PacketProcessor.director(1));
+        packetService.addProcessor(processor, PacketProcessor.director(2));
 
         //packetRedirectService = DefaultServiceDirectory.getService(PacketRedirectService.class);
 
@@ -107,9 +111,9 @@ public class PortalManager implements PortalService{
 
     @Deactivate
     protected void deactivate() {
+        flowRuleService.removeFlowRulesById(appId);
         //packetService.removeProcessor(processor);
         processor = null;
-
 
         packetRedirectService = null;
 
@@ -164,10 +168,10 @@ public class PortalManager implements PortalService{
      */
     private FlowRule.Builder getControllerRuleBuilder() {
 
+        //TODO: second rule matching on UPD port 80?
         TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
                 .matchEthType(Ethernet.TYPE_IPV4)
-                .matchTcpDst(TpPort.tpPort(80))
-                .matchUdpDst(TpPort.tpPort(80));
+                .matchTcpDst(TpPort.tpPort(80));
 
         TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
                 .setOutput(PortNumber.CONTROLLER);
@@ -182,12 +186,8 @@ public class PortalManager implements PortalService{
         return flowRuleBuilder;
     }
 
-    private void installControllerRule(Device device){
-
-    }
-
     /**
-     * Packet processor responsible for forwarding packets along their paths.
+     * Packet processor establishing connection to the portal.
      */
     private class ReactivePacketProcessor implements PacketProcessor {
 
@@ -203,6 +203,7 @@ public class PortalManager implements PortalService{
             //parse the packet of the context
             InboundPacket pkt = context.inPacket();
             Ethernet ethPkt = pkt.parsed();
+            IPv4 ipPkt = (IPv4) ethPkt.getPayload();
 
             if (ethPkt == null) {
                 return;
@@ -213,22 +214,22 @@ public class PortalManager implements PortalService{
                 return;
             }
 
-            // TODO: add IPv6 support?
-            //if portal is defined -> change destination of packet with ipv4 type
-            if(portal != null && ethPkt.getEtherType() == Ethernet.TYPE_IPV4){
-
-                // filter out packets from the portal
-                if(ethPkt.getSourceMAC().equals(portal.mac())){
-                    // restore the packet source from the portal address to the previous intended address
-                    packetRedirectService.restoreSource(context, portal);
-                } else if(ethPkt.getDestinationMAC().equals(portal.mac())){
-                    //do nothing
-                } else {
-                    // change the destination address of the packet to the portal address
-                    packetRedirectService.redirectToPortal(context, portal);
-                }
+            // get IPv4 address of the portal
+            // TODO: what to do if portal has more than one IP address?
+            Ip4Address serviceIp = null;
+            for(IpAddress ipAddress : portal.ipAddresses())
+                    if(ipAddress.isIp4()) {
+                        serviceIp = ipAddress.getIp4Address();
+                        break;
+                    }
+            if(serviceIp == null){
+                log.warn("PortalManager: Portal has no valid IPv4 address!");
                 return;
             }
+
+            // add rules to device realizing the connection between user and portal
+            hostConnectionService.addConnection(Ip4Address.valueOf(ipPkt.getSourceAddress()) ,ethPkt.getSourceMAC(),
+                    serviceIp, TpPort.tpPort(80));
 
             return;
         }
