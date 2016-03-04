@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.onlab.packet.IPv4;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.MacAddress;
+import org.onlab.packet.TpPort;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.intent.IntentService;
 import org.onosproject.rest.AbstractWebResource;
@@ -28,6 +29,8 @@ import org.apache.felix.scr.annotations.*;
 import uni.wue.app.AcceptedHostManager;
 
 import org.slf4j.Logger;
+import uni.wue.app.HostConnectionService;
+
 import static org.slf4j.LoggerFactory.getLogger;
 
 import javax.ws.rs.PUT;
@@ -50,42 +53,47 @@ public class AppWebResource extends AbstractWebResource {
     private static final String OPERATION_FAILED = "FAILED\n";
     private static final String OPERATION_WITHDRAWN = "WITHDRAWN\n";
 
+    private HostConnectionService hostConnectionService = null;
+
+
     /**
      * Allow a host with srcIP_ and srcMac_ to send packets to dstPort_ on dstIp_
      *
      * @param srcIp_ source IP address
      * @param srcMac_ source Mac address
      * @param dstIp_ destination IP address
-     * @param dstPort_ destination port
+     * @param dstTpPort_ destination transport protocol port
      * @return Intent state "INSTALLED" if successful,
      *         server error or "FAILED" if failed to add traffic rule
      */
     @PUT
-    @Path("/{ip}/{mac}/{destIp}/{destPort}")
+    @Path("/{ip}/{mac}/{destIp}/{destTpPort}")
     public Response allowHostTraffic(@PathParam("ip") String srcIp_,
                                     @PathParam("mac") String srcMac_,
                                     @PathParam("destIp") String dstIp_,
-                                    @PathParam("destPort") String dstPort_){
-        log.info("adding flow: src ip = {}, src mac = {} -> dst ip = {}, dst port = {}",
-                new String[]{srcIp_, srcMac_, dstIp_, dstPort_});
+                                    @PathParam("destTpPort") String dstTpPort_){
+        log.info("adding flow: src ip = {}, src mac = {} -> dst ip = {}, dst TpPort = {}",
+                new String[]{srcIp_, srcMac_, dstIp_, dstTpPort_});
 
-        if(srcIp_ == null || srcMac_ == null || dstIp_ == null || dstPort_ == null)
+        if(srcIp_ == null || srcMac_ == null || dstIp_ == null || dstTpPort_ == null)
             return Response.ok(INVALID_PARAMETER).build();
 
         Ip4Address srcIp, dstIp;
         MacAddress srcMac;
-        PortNumber dstPort;
+        TpPort dstTpPort;
 
         try{
             srcIp = Ip4Address.valueOf(srcIp_);
             srcMac = MacAddress.valueOf(srcMac_);
             dstIp = Ip4Address.valueOf(dstIp_);
-            dstPort = PortNumber.portNumber(dstPort_);
+            dstTpPort = TpPort.tpPort(Integer.valueOf(dstTpPort_));
         } catch (Exception e){
             return Response.ok(INVALID_PARAMETER).build();
         }
 
-        //Todo: add flow to devices, save information in rule service
+        //Todo: test functionality, save information in rule service
+        hostConnectionService = get(HostConnectionService.class);
+        hostConnectionService.addConnection(srcIp, srcMac, dstIp, dstTpPort);
 
         return Response.ok(OPERATION_INSTALLED).build();
     }

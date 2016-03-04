@@ -28,8 +28,7 @@ import org.onosproject.net.host.HostService;
 import org.onosproject.net.topology.TopologyService;
 import org.slf4j.Logger;
 
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import static org.slf4j.LoggerFactory.getLogger;
 
@@ -71,24 +70,33 @@ public class DefaultHostConnectionService implements HostConnectionService {
 
 
     /**
-     * Establish a connection between the user with userIp and userMac and a service with serviceIp and servicePort
+     * Establish a connection between the user with user IP and MAC address and
+     * a service with service IP address and transport layer port
      *
      * @param userIp      the IP address of the user
      * @param userMac     the MAC address of the user
      * @param serviceIp   the IP address of the service
-     * @param servicePort the port of the service
+     * @param serviceTpPort the transport layer port of the service
      */
     @Override
-    public void addConnection(Ip4Address userIp, MacAddress userMac, Ip4Address serviceIp, TpPort servicePort) {
+    public void addConnection(Ip4Address userIp, MacAddress userMac, Ip4Address serviceIp, TpPort serviceTpPort) {
 
-        if(userIp == null || userMac == null || serviceIp == null || servicePort == null){
+        if(userIp == null || userMac == null || serviceIp == null || serviceTpPort == null){
             log.warn("HostConnectionService: Connection not added -> invalid parameter!");
             return;
         } else
             log.info("HostConnectionService: Adding connection between user with IP={} MAC={} " +
                             "and service with IP={} Port={}",
-                    new String[]{userIp.toString(), userMac.toString(), serviceIp.toString(), servicePort.toString()});
+                    new String[]{userIp.toString(), userMac.toString(), serviceIp.toString(), serviceTpPort.toString()});
 
+        // simplifying the "addFlows" method
+        Map<String, Object> constraints = new HashMap<>();
+        constraints.put("userIp", userIp);
+        constraints.put("userMac", userMac);
+        constraints.put("serviceIp", serviceIp);
+        constraints.put("serviceTpPort", serviceTpPort);
+
+        // get the host with corresponding IP address
         Set<Host> users = hostService.getHostsByIp(userIp);
         Set<Host> services = hostService.getHostsByIp(serviceIp);
         if(users.size() != 1 || services.size() != 1) {
@@ -96,50 +104,135 @@ public class DefaultHostConnectionService implements HostConnectionService {
                     userIp.toString(), serviceIp.toString());
             return;
         }
-
         HostLocation userLocation = users.iterator().next().location();
         HostLocation serviceLocation = services.iterator().next().location();
-        // FIXME: How does ONOS find a path, if there is no connection?
-        Set<Path> paths = topologyService.getPaths(topologyService.currentTopology(),
-                userLocation.deviceId(), serviceLocation.deviceId());
-        if(paths.isEmpty()) {
-            log.warn("HostConnectionService: No path found between {} and {}",
-                    userLocation.toString(), serviceLocation.toString());
+
+        // if user and service is connected to the same network device
+        if(userLocation.deviceId().equals(serviceLocation.deviceId())){
+            log.debug("HostConnectionService: Installing flow rule only on device {}",
+                    userLocation.deviceId().toString());
+
+            // add one rule directing the traffic from user port to service port on device
+            addFlows(userLocation.port(), serviceLocation.port(), userLocation.deviceId(), constraints);
+
             return;
+        } else {
+            // get a path between the connected devices
+            Set<Path> paths = topologyService.getPaths(topologyService.currentTopology(),
+                    userLocation.deviceId(), serviceLocation.deviceId());
+            if (paths.isEmpty()) {
+                log.warn("HostConnectionService: No path found between {} and {}",
+                        userLocation.toString(), serviceLocation.toString());
+                return;
+            } else {
+                log.debug("HostConnectionService: Installing connection between {} and {}",
+                        userLocation.deviceId().toString(), serviceLocation.deviceId().toString());
+                Path path = paths.iterator().next();
+
+                // rule for first device
+                Iterator<Link> currentLinkIter = path.links().iterator();
+                Link currentLink = currentLinkIter.next();
+                addFlows(userLocation.port(), currentLink.src().port(), userLocation.deviceId(), constraints);
+
+                // rule for every pair of links
+                Iterator<Link> previousLinkIter = path.links().iterator();
+                while(currentLinkIter.hasNext()){
+                    Link previousLink = previousLinkIter.next();
+                    currentLink = currentLinkIter.next();
+
+                    addFlows(previousLink.dst().port(), currentLink.src().port(),
+                            currentLink.src().deviceId(), constraints);
+                }
+
+                // rule for last device
+                addFlows(currentLink.dst().port(), serviceLocation.port(), serviceLocation.deviceId(),
+                        constraints);
+            }
         }
 
-        Path path = paths.iterator().next();
-        for(Link link : path.links()){
-            // for every link, add a flow rule to the source of the link,
-            // routing the packet to the port of destination of the link
-            addFlowToDevice(link.src().port(), link.src().deviceId(), userIp, userMac, serviceIp, servicePort);
-        }
-
-        // for the last device, add the rule directing the traffic to the service device port
-        // TODO: check if the port and device is correct
-        addFlowToDevice(path.dst().port(), path.dst().deviceId(), userIp, userMac, serviceIp, servicePort);
+        return;
     }
 
-    private void addFlowToDevice(PortNumber port, DeviceId deviceId, Ip4Address userIp, MacAddress userMac,
-                                 Ip4Address serviceIp, TpPort servicePort) {
+    /**
+     * Adds two flows to every device
+     * One for the direction user -> service
+     * Another for the direction service -> user
+     *
+     * @param userSidePort port directing towards the user
+     * @param serviceSidePort port directing towards the service
+     * @param forDeviceId device flow rule should be added to
+     * @param constraints map containing "userIp", "userMac", "serviceIp" and "serviceTpPort"
+     */
+    private void addFlows(PortNumber userSidePort, PortNumber serviceSidePort, DeviceId forDeviceId,
+                          Map<String, Object> constraints){
+        addFlowToDevicePortalDirection(userSidePort, serviceSidePort, forDeviceId, constraints);
+        addFlowToDeviceUserDirection(serviceSidePort, userSidePort, forDeviceId, constraints);
+    }
+
+    private void addFlowToDevicePortalDirection(PortNumber inPort, PortNumber outPort, DeviceId forDeviceId,
+                                                Map<String, Object> constraints){
+
+        try {
+            Ip4Address userIp = (Ip4Address) constraints.get("userIp");
+            MacAddress userMac = (MacAddress) constraints.get("userMac");
+            Ip4Address serviceIp = (Ip4Address) constraints.get("serviceIp");
+            TpPort serviceTpPort = (TpPort) constraints.get("serviceTpPort");
 
         TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
+                .matchInPort(inPort)
                 .matchIPSrc(userIp.toIpPrefix())
                 .matchEthSrc(userMac)
                 .matchIPDst(serviceIp.toIpPrefix())
-                .matchTcpDst(servicePort);
+                .matchTcpDst(serviceTpPort);
 
         TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
-                .setOutput(port);
+                .setOutput(outPort);
 
         FlowRule.Builder flowRuleBuilder = DefaultFlowRule.builder()
                 .withSelector(trafficSelectorBuilder.build())
                 .withTreatment(trafficTreatmentBuilder.build())
-                .forDevice(deviceId)
+                .forDevice(forDeviceId)
                 .withPriority(FLOW_PRIORITY)
                 .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
                 .makeTemporary(TIMEOUT);
 
         flowRuleService.applyFlowRules(flowRuleBuilder.build());
+
+        } catch (Exception e){
+            log.warn("HostConnectionService: Could not add flow for user -> service direction. Missing constraint!");
+            return;
+        }
+    }
+
+    private void addFlowToDeviceUserDirection(PortNumber inPort, PortNumber outPort, DeviceId forDeviceId,
+                                              Map<String, Object> constraints){
+        try {
+            Ip4Address userIp = (Ip4Address) constraints.get("userIp");
+            MacAddress userMac = (MacAddress) constraints.get("userMac");
+            Ip4Address serviceIp = (Ip4Address) constraints.get("serviceIp");
+
+        TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
+                .matchInPort(inPort)
+                .matchIPSrc(serviceIp.toIpPrefix())
+                .matchEthDst(userMac)
+                .matchIPDst(userIp.toIpPrefix());
+
+        TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
+                .setOutput(outPort);
+
+        FlowRule.Builder flowRuleBuilder = DefaultFlowRule.builder()
+                .withSelector(trafficSelectorBuilder.build())
+                .withTreatment(trafficTreatmentBuilder.build())
+                .forDevice(forDeviceId)
+                .withPriority(FLOW_PRIORITY)
+                .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
+                .makeTemporary(TIMEOUT);
+
+        flowRuleService.applyFlowRules(flowRuleBuilder.build());
+
+        } catch (Exception e){
+            log.warn("HostConnectionService: Could not add flow for service -> user direction. Missing constraint!");
+            return;
+        }
     }
 }

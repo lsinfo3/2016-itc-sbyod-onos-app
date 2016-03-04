@@ -186,7 +186,7 @@ public class PortalManager implements PortalService{
             }
 
             IPacket iPkt = ethPkt.getPayload();
-            IPv4 ipPkt = iPkt instanceof IPv4 ? ((IPv4) iPkt) : null;
+            IPv4 ipPkt;
             if(iPkt instanceof IPv4)
                 ipPkt = (IPv4) iPkt;
             else{
@@ -194,6 +194,8 @@ public class PortalManager implements PortalService{
                 return;
             }
 
+            // TODO: adding rule for every IPv4 request, even if not on TpPort 80
+            // TODO: PENDING_ADD for rules in devices, but rules are present and do work!
             // add rules to routing devices enabling the connection between user and portal
             hostConnectionService.addConnection(Ip4Address.valueOf(ipPkt.getSourceAddress()) ,ethPkt.getSourceMAC(),
                     serviceIp, TpPort.tpPort(80));
