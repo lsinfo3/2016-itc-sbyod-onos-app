@@ -99,6 +99,7 @@ public class DefaultHostConnectionService implements HostConnectionService {
 
         HostLocation userLocation = users.iterator().next().location();
         HostLocation serviceLocation = services.iterator().next().location();
+        // FIXME: How does ONOS find a path, if there is no connection?
         Set<Path> paths = topologyService.getPaths(topologyService.currentTopology(),
                 userLocation.deviceId(), serviceLocation.deviceId());
         if(paths.isEmpty()) {

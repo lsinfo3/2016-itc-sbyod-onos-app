@@ -61,7 +61,8 @@ import java.util.Set;
 public class PortalManager implements PortalService{
 
     private final Logger log = LoggerFactory.getLogger(getClass());
-    Marker byodMarker = MarkerFactory.getMarker("BYOD");
+    protected ApplicationId appId;
+
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected HostService hostService;
@@ -73,9 +74,6 @@ public class PortalManager implements PortalService{
     protected PacketService packetService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected PacketRedirectService packetRedirectService;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected DeviceService deviceService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
@@ -84,12 +82,18 @@ public class PortalManager implements PortalService{
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected HostStore hostStore;
 
+    // own services
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected PacketRedirectService packetRedirectService;
+
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected HostConnectionService hostConnectionService;
 
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected BasicRuleInstaller basicRuleInstaller;
+
 
     private ReactivePacketProcessor processor = new ReactivePacketProcessor();
-    protected ApplicationId appId;
 
     // host of the captive portal
     private Host portal;
@@ -100,90 +104,45 @@ public class PortalManager implements PortalService{
         appId = coreService.registerApplication("uni.wue.app");
 
         //TODO: Test flow rule functionality
-        installBasicRules();
-
+        basicRuleInstaller.installRules();
         packetService.addProcessor(processor, PacketProcessor.director(2));
-
-        //packetRedirectService = DefaultServiceDirectory.getService(PacketRedirectService.class);
+        requestIntercepts();
+        // just for development reasons -> better user netcfghostprovider
+        setPortal("10.0.0.3", "00:00:00:00:00:03", "of:0000000000000001", "3");
 
         log.info("Started PortalManager {}", appId.toString());
     }
 
     @Deactivate
     protected void deactivate() {
+        withdrawIntercepts();
         flowRuleService.removeFlowRulesById(appId);
-        //packetService.removeProcessor(processor);
+        packetService.removeProcessor(processor);
         processor = null;
-
-        packetRedirectService = null;
 
         log.info("Stopped PortalManager {}", appId.toString());
     }
 
     /**
-     * Install two rules on every network device:
-     * First rule:  drops everything
-     * Second rule: sends packet to controller
+     * Request packet in via packet service.
      */
-    private void installBasicRules() {
-
-        FlowRule.Builder dropRuleBuilder = getDropRuleBuilder();
-        FlowRule.Builder controllerRuleBuilder = getControllerRuleBuilder();
-
-        Iterable<Device> devices = deviceService.getDevices();
-        for(Device device : devices){
-            flowRuleService.applyFlowRules(dropRuleBuilder.forDevice(device.id()).build());
-            flowRuleService.applyFlowRules(controllerRuleBuilder.forDevice(device.id()).build());
-        }
-
+    private void requestIntercepts() {
+        TrafficSelector.Builder selector = DefaultTrafficSelector.builder();
+        selector.matchEthType(Ethernet.TYPE_IPV4);
+        packetService.requestPackets(selector.build(), PacketPriority.REACTIVE, appId);
+        selector.matchEthType(Ethernet.TYPE_ARP);
+        packetService.requestPackets(selector.build(), PacketPriority.REACTIVE, appId);
     }
 
     /**
-     * Generate a permanent rule to drop every packet with priority of 100
-     *
-     * @return a flow rule builder for the dropping rule
+     * Cancel request for packet in via packet service.
      */
-    private FlowRule.Builder getDropRuleBuilder(){
-
-        TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
-                .matchInPort(PortNumber.ALL);
-
-        TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder().drop();
-
-        FlowRule.Builder flowRuleBuilder = DefaultFlowRule.builder();
-        flowRuleBuilder.withSelector(trafficSelectorBuilder.build())
-                .withTreatment(trafficTreatmentBuilder.build())
-                .withPriority(100)
-                .fromApp(appId)
-                .makePermanent();
-
-        return flowRuleBuilder;
-    }
-
-    /**
-     * Generate a permanent rule to send packets with IPv4 type and TCP destination port 80
-     * with priority of 200 to the controller
-     *
-     * @return a flow rule builder for the controller rule
-     */
-    private FlowRule.Builder getControllerRuleBuilder() {
-
-        //TODO: second rule matching on UPD port 80?
-        TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
-                .matchEthType(Ethernet.TYPE_IPV4)
-                .matchTcpDst(TpPort.tpPort(80));
-
-        TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
-                .setOutput(PortNumber.CONTROLLER);
-
-        FlowRule.Builder flowRuleBuilder = DefaultFlowRule.builder();
-        flowRuleBuilder.withSelector(trafficSelectorBuilder.build())
-                .withTreatment(trafficTreatmentBuilder.build())
-                .withPriority(200)
-                .fromApp(appId)
-                .makePermanent();
-
-        return flowRuleBuilder;
+    private void withdrawIntercepts() {
+        TrafficSelector.Builder selector = DefaultTrafficSelector.builder();
+        selector.matchEthType(Ethernet.TYPE_IPV4);
+        packetService.cancelPackets(selector.build(), PacketPriority.REACTIVE, appId);
+        selector.matchEthType(Ethernet.TYPE_ARP);
+        packetService.cancelPackets(selector.build(), PacketPriority.REACTIVE, appId);
     }
 
     /**
@@ -203,7 +162,6 @@ public class PortalManager implements PortalService{
             //parse the packet of the context
             InboundPacket pkt = context.inPacket();
             Ethernet ethPkt = pkt.parsed();
-            IPv4 ipPkt = (IPv4) ethPkt.getPayload();
 
             if (ethPkt == null) {
                 return;
@@ -214,8 +172,8 @@ public class PortalManager implements PortalService{
                 return;
             }
 
-            // get IPv4 address of the portal
             // TODO: what to do if portal has more than one IP address?
+            // get IPv4 address of the portal
             Ip4Address serviceIp = null;
             for(IpAddress ipAddress : portal.ipAddresses())
                     if(ipAddress.isIp4()) {
@@ -227,7 +185,16 @@ public class PortalManager implements PortalService{
                 return;
             }
 
-            // add rules to device realizing the connection between user and portal
+            IPacket iPkt = ethPkt.getPayload();
+            IPv4 ipPkt = iPkt instanceof IPv4 ? ((IPv4) iPkt) : null;
+            if(iPkt instanceof IPv4)
+                ipPkt = (IPv4) iPkt;
+            else{
+                log.debug("PortalManager: Payload of {} is no IPv4 packet.", ethPkt.toString());
+                return;
+            }
+
+            // add rules to routing devices enabling the connection between user and portal
             hostConnectionService.addConnection(Ip4Address.valueOf(ipPkt.getSourceAddress()) ,ethPkt.getSourceMAC(),
                     serviceIp, TpPort.tpPort(80));
 
