@@ -20,16 +20,13 @@ package uni.wue.app;
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.Ethernet;
 import org.onlab.packet.IPv4;
-import org.onlab.packet.Ip4Address;
 import org.onlab.packet.IpAddress;
 import org.onosproject.core.ApplicationId;
+import org.onosproject.core.ApplicationIdStore;
 import org.onosproject.net.*;
-import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.*;
-import org.onosproject.net.flowobjective.FlowObjectiveService;
 import org.onosproject.net.packet.InboundPacket;
 import org.onosproject.net.packet.PacketContext;
-import org.onosproject.net.packet.PacketService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,37 +41,27 @@ import static com.google.common.base.Preconditions.checkNotNull;
 @Service
 public class FlowRedirect extends PacketRedirect {
 
+    private static String APPLICATION_ID = "uni.wue.app";
+
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected FlowRuleService flowRuleService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected PacketService packetService;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected DeviceService deviceService;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected FlowObjectiveService flowObjectiveService;
-
-//    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-//    protected CoreService coreService;
-//
-//    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-//    protected HostService hostService;
+    protected ApplicationIdStore applicationIdStore;
 
     protected Host portal;
     private final Logger log = LoggerFactory.getLogger(getClass());
     protected ApplicationId appId;
 
+
     @Activate
     protected void activate() {
-        appId = coreService.registerApplication("uni.wue.app.flowRedirect");
+        appId = applicationIdStore.getAppId(APPLICATION_ID);
         log.info("Started FlowRedirect");
     }
 
     @Deactivate
     protected void deactivate() {
-        removeFlows();
         log.info("Stopped FlowRedirect");
     }
 
@@ -246,48 +233,6 @@ public class FlowRedirect extends PacketRedirect {
 
         context.treatmentBuilder().setOutput(PortNumber.TABLE);
         context.send();
-
-        /*
-        //parse the packet of the context
-        InboundPacket pkt = context.inPacket();
-        Ethernet ethPkt = pkt.parsed();
-        IPv4 ipPkt = (IPv4)ethPkt.getPayload();
-
-        //set the mac address of the portal as destination
-        ethPkt.setDestinationMACAddress(portal.mac());
-        // set the ip address of the portal as destination
-        ipPkt.setDestinationAddress((portal.ipAddresses().iterator().next().getIp4Address()).toInt());
-        ipPkt.resetChecksum();
-        //wrap the packet as buffer
-        ByteBuffer buf = ByteBuffer.wrap(ethPkt.serialize());
-
-        PortNumber outPort = getDstPort(pkt, portal);
-        if(outPort == null) {
-            log.warn(byodMarker, String.format("Could not find a path from %s to the portal.",
-                    pkt.receivedFrom().deviceId().toString()));
-            return;
-        }
-
-        TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder();
-        // set up the traffic management
-        trafficTreatmentBuilder.setIpDst(portal.ipAddresses().iterator().next())
-                .setEthDst(portal.mac())
-                .setOutput(outPort);
-
-        //send new packet to the device where received packet came from
-        packetService.emit(new DefaultOutboundPacket(pkt.receivedFrom().deviceId(), trafficTreatmentBuilder.build(), buf));
-        context.block();
-        return;
-        */
     }
 
-    /**
-     * Removes the flows created by this application
-     */
-    public void removeFlows(){
-        Iterable<FlowRule> flows = flowRuleService.getFlowRulesById(appId);
-        for(FlowRule flow : flows){
-            flowRuleService.removeFlowRules(flow);
-        }
-    }
 }

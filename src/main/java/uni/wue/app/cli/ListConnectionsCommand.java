@@ -22,22 +22,27 @@ import org.apache.karaf.shell.commands.Command;
 import org.onlab.packet.Ip4Address;
 import org.onosproject.cli.AbstractShellCommand;
 import uni.wue.app.AcceptedHostService;
+import uni.wue.app.Connection;
+import uni.wue.app.ConnectionStoreService;
+
+import java.util.Iterator;
+import java.util.Set;
 
 /**
  * Created by lorry on 14.01.16.
  */
-@Command(scope="onos", name="accept-host", description = "Traffic of this host is permitted")
-public class AcceptHostCommand extends AbstractShellCommand{
+@Command(scope="onos", name="list-registered-connections", description = "List the registered connections")
+public class ListConnectionsCommand extends AbstractShellCommand {
 
-    @Argument(index=0, name = "host-IPv4", description = "The IPv4 address of the host whose traffic is allowed",
-            required = true, multiValued = false)
-    String hostIpv4 = null;
-
-    private AcceptedHostService acceptedHostService;
+    private ConnectionStoreService connectionStoreService;
 
     @Override
     protected void execute() {
-        acceptedHostService = get(AcceptedHostService.class);
-        acceptedHostService.allowHost(Ip4Address.valueOf(hostIpv4));
+        connectionStoreService = get(ConnectionStoreService.class);
+        Iterator<Connection> connectionIterator = connectionStoreService.getConnections().iterator();
+        print("List of all registered connections:");
+        while(connectionIterator.hasNext()){
+            print(connectionIterator.next().toString());
+        }
     }
 }

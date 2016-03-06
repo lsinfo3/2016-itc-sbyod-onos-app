@@ -20,7 +20,6 @@ package uni.wue.app;
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.IpAddress;
-import org.onlab.util.KryoNamespace;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.net.Host;

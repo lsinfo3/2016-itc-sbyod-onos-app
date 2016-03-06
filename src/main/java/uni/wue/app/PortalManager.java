@@ -194,11 +194,22 @@ public class PortalManager implements PortalService{
                 return;
             }
 
-            // TODO: adding rule for every IPv4 request, even if not on TpPort 80
-            // TODO: PENDING_ADD for rules in devices, but rules are present and do work!
+            // FIXME: adding rule for every IPv4 request, even if not on TpPort 80
+            // FIXME: rules are stuck in PENDING_ADD state, but they are present and do work!
             // add rules to routing devices enabling the connection between user and portal
             hostConnectionService.addConnection(Ip4Address.valueOf(ipPkt.getSourceAddress()) ,ethPkt.getSourceMAC(),
                     serviceIp, TpPort.tpPort(80));
+
+            // TODO: push context to flow table?
+
+            Boolean addressDiffersFromPortal = true;
+            for(IpAddress portalAddress : portal.ipAddresses()){
+                addressDiffersFromPortal = IpAddress.valueOf(ipPkt.getDestinationAddress())
+                        .equals(portalAddress) ? false : addressDiffersFromPortal;
+            }
+            if(addressDiffersFromPortal){
+                // TODO: install redirect rules
+            }
 
             return;
         }

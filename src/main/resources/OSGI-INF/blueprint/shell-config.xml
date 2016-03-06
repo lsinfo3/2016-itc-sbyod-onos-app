@@ -20,7 +20,7 @@
             <action class="uni.wue.app.cli.SetCaptivePortalCommand"/>
             <completers>
                 <ref component-id="hostIpCompleter"/>
-                <ref component-id="macCompleter"/>
+                <ref component-id="hostMacCompleter"/>
                 <ref component-id="deviceIdCompleter"/>
                 <ref component-id="devicePortNumberCompleter"/>
                 <null/>
@@ -30,28 +30,26 @@
             <action class="uni.wue.app.cli.GetCaptivePortalCommand"/>
         </command>
         <command>
-            <action class="uni.wue.app.cli.ResetFlowsCommand"/>
+            <action class="uni.wue.app.cli.RegisterConnectionCommand"/>
+            <completers>
+                <ref component-id="hostIpCompleter"/>
+                <ref component-id="hostMacCompleter" />
+            </completers>
         </command>
         <command>
-            <action class="uni.wue.app.cli.AcceptHostCommand"/>
+            <action class="uni.wue.app.cli.UnregisterConnectionCommand"/>
             <completers>
                 <ref component-id="hostIpCompleter"/>
             </completers>
         </command>
         <command>
-            <action class="uni.wue.app.cli.BanHostCommand"/>
-            <completers>
-                <ref component-id="hostIpCompleter"/>
-            </completers>
-        </command>
-        <command>
-            <action class="uni.wue.app.cli.ListAcceptedHostsCommand"/>
+            <action class="uni.wue.app.cli.ListConnectionsCommand"/>
         </command>
     </command-bundle>
 
     <bean id="hostIdCompleter" class="org.onosproject.cli.net.HostIdCompleter"/>
     <bean id="hostIpCompleter" class="uni.wue.app.cli.completer.HostIpv4Completer"/>
-    <bean id="macCompleter" class="uni.wue.app.cli.completer.MacCompleter"/>
+    <bean id="hostMacCompleter" class="uni.wue.app.cli.completer.HostMacCompleter"/>
     <bean id="devicePortNumberCompleter" class="uni.wue.app.cli.completer.DevicePortNumberCompleter"/>
     <bean id="deviceIdCompleter" class="uni.wue.app.cli.completer.DeviceIdCompleter"/>
 

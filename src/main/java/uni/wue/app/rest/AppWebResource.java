@@ -17,24 +17,19 @@
  */
 package uni.wue.app.rest;
 
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.onlab.packet.IPv4;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.MacAddress;
 import org.onlab.packet.TpPort;
-import org.onosproject.net.PortNumber;
-import org.onosproject.net.intent.IntentService;
 import org.onosproject.rest.AbstractWebResource;
-import org.apache.felix.scr.annotations.*;
-import uni.wue.app.AcceptedHostManager;
 
 import org.slf4j.Logger;
+import uni.wue.app.Connection;
+import uni.wue.app.ConnectionStoreService;
 import uni.wue.app.HostConnectionService;
 
 import static org.slf4j.LoggerFactory.getLogger;
 
 import javax.ws.rs.PUT;
-import javax.ws.rs.POST;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -53,7 +48,7 @@ public class AppWebResource extends AbstractWebResource {
     private static final String OPERATION_FAILED = "FAILED\n";
     private static final String OPERATION_WITHDRAWN = "WITHDRAWN\n";
 
-    private HostConnectionService hostConnectionService = null;
+    private ConnectionStoreService connectionStoreService = null;
 
 
     /**
@@ -91,9 +86,8 @@ public class AppWebResource extends AbstractWebResource {
             return Response.ok(INVALID_PARAMETER).build();
         }
 
-        //Todo: test functionality, save information in rule service
-        hostConnectionService = get(HostConnectionService.class);
-        hostConnectionService.addConnection(srcIp, srcMac, dstIp, dstTpPort);
+        connectionStoreService = get(ConnectionStoreService.class);
+        connectionStoreService.addConnection(new Connection(srcIp, srcMac, dstIp, dstTpPort));
 
         return Response.ok(OPERATION_INSTALLED).build();
     }

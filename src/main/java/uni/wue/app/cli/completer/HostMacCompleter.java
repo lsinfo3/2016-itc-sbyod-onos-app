@@ -30,7 +30,7 @@ import java.util.SortedSet;
 /**
  * Created by lorry on 11.02.16.
  */
-public class MacCompleter implements Completer {
+public class HostMacCompleter implements Completer {
     @Override
     public int complete(String buffer, int cursor, List<String> candidates) {
         //Delegate string completer
