@@ -34,6 +34,8 @@ import org.onosproject.net.Host;
 import org.onosproject.net.provider.ProviderId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uni.wue.app.connection.ConnectionStoreService;
+import uni.wue.app.connection.DefaultConnection;
 import uni.wue.app.connection.HostConnectionService;
 import uni.wue.app.redirect.PacketRedirectService;
 
@@ -71,10 +73,7 @@ public class PortalManager implements PortalService{
 
     // own services
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected PacketRedirectService packetRedirectService;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected HostConnectionService hostConnectionService;
+    protected ConnectionStoreService connectionStoreService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected BasicRuleInstaller basicRuleInstaller;
@@ -184,8 +183,12 @@ public class PortalManager implements PortalService{
             // FIXME: adding rule for every IPv4 request, even if not on TpPort 80
             // FIXME: rules are stuck in PENDING_ADD state, but they are present and do work!
             // add rules to routing devices enabling the connection between user and portal
-            hostConnectionService.addConnection(Ip4Address.valueOf(ipPkt.getSourceAddress())
-            );
+            connectionStoreService.addConnection(new DefaultConnection(
+                    Ip4Address.valueOf(ipPkt.getSourceAddress()),
+                    ethPkt.getSourceMAC(),
+                    serviceIp,
+                    TpPort.tpPort(80)
+                    ));
 
             // TODO: push context to flow table?
 
@@ -198,6 +201,8 @@ public class PortalManager implements PortalService{
                 // TODO: install redirect rules
             }
 
+            context.treatmentBuilder().setOutput(PortNumber.TABLE);
+            context.send();
             return;
         }
     }

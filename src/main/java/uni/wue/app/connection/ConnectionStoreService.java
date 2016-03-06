@@ -32,7 +32,7 @@ public interface ConnectionStoreService {
      * Add a new connection to the service
      * @param connection
      */
-    void addConnection(DefaultConnection connection);
+    void addConnection(Connection connection);
 
     /**
      * Get the set of connections for source IP and source MAC
@@ -40,7 +40,7 @@ public interface ConnectionStoreService {
      * @param srcMac
      * @return set of connections
      */
-    Set<DefaultConnection> getConnections(Ip4Address srcIp, MacAddress srcMac);
+    Set<Connection> getConnections(Ip4Address srcIp, MacAddress srcMac);
 
     /**
      * Get the set of connections for destination IP and destination traffic protocol port
@@ -48,12 +48,12 @@ public interface ConnectionStoreService {
      * @param dstTpPort
      * @return set of connections
      */
-    Set<DefaultConnection> getConnections(Ip4Address dstIp, TpPort dstTpPort);
+    Set<Connection> getConnections(Ip4Address dstIp, TpPort dstTpPort);
 
     /**
      * Get all registered connections
      * @return set of connections
      */
-    Set<DefaultConnection> getConnections();
+    Set<Connection> getConnections();
 
 }

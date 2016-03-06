@@ -78,7 +78,10 @@ public class FlowRedirect extends PacketRedirect {
         this.portal = portal;
         flowToPortal(context);
         flowFromPortal(context);
-        sendPacketToFlowTable(context);
+
+        context.treatmentBuilder().setOutput(PortNumber.TABLE);
+        context.send();
+
         return;
     }
 
@@ -223,16 +226,6 @@ public class FlowRedirect extends PacketRedirect {
         }
         log.warn(byodMarker, String.format("FlowRule %s was not yet delivered to device %s",
                 flowRule.toString(), deviceId.toString()));
-    }
-
-    /**
-     * Send out the handled packet otherwise it would be blocked
-     * @param context packet context to handle
-     */
-    private void sendPacketToFlowTable(PacketContext context) {
-
-        context.treatmentBuilder().setOutput(PortNumber.TABLE);
-        context.send();
     }
 
 }
