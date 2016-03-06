@@ -15,7 +15,7 @@
  *
  *
  */
-package uni.wue.app;
+package uni.wue.app.redirect;
 
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.Ethernet;

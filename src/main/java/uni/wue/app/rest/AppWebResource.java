@@ -23,9 +23,8 @@ import org.onlab.packet.TpPort;
 import org.onosproject.rest.AbstractWebResource;
 
 import org.slf4j.Logger;
-import uni.wue.app.Connection;
-import uni.wue.app.ConnectionStoreService;
-import uni.wue.app.HostConnectionService;
+import uni.wue.app.connection.DefaultConnection;
+import uni.wue.app.connection.ConnectionStoreService;
 
 import static org.slf4j.LoggerFactory.getLogger;
 
@@ -87,7 +86,7 @@ public class AppWebResource extends AbstractWebResource {
         }
 
         connectionStoreService = get(ConnectionStoreService.class);
-        connectionStoreService.addConnection(new Connection(srcIp, srcMac, dstIp, dstTpPort));
+        connectionStoreService.addConnection(new DefaultConnection(srcIp, srcMac, dstIp, dstTpPort));
 
         return Response.ok(OPERATION_INSTALLED).build();
     }

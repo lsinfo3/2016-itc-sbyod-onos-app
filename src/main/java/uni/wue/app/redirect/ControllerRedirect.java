@@ -15,28 +15,22 @@
  *
  *
  */
-package uni.wue.app;
+package uni.wue.app.redirect;
 
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.Ethernet;
 import org.onlab.packet.IPv4;
 import org.onosproject.core.ApplicationId;
-import org.onosproject.core.CoreService;
 import org.onosproject.net.Host;
-import org.onosproject.net.Path;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.TrafficTreatment;
-import org.onosproject.net.host.HostService;
 import org.onosproject.net.packet.DefaultOutboundPacket;
 import org.onosproject.net.packet.InboundPacket;
 import org.onosproject.net.packet.PacketContext;
 import org.onosproject.net.packet.PacketService;
-import org.onosproject.net.topology.TopologyService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.Marker;
-import org.slf4j.MarkerFactory;
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;
@@ -49,7 +43,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * Created by lorry on 11.12.15.
  */
 //@Component(immediate = false, inherit = true)
-public class ControllerRedirect extends PacketRedirect{
+public class ControllerRedirect extends PacketRedirect {
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected PacketService packetService;

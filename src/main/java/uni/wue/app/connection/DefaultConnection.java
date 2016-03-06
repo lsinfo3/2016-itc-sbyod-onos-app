@@ -15,7 +15,7 @@
  *
  *
  */
-package uni.wue.app;
+package uni.wue.app.connection;
 
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.MacAddress;
@@ -29,7 +29,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 /**
  * Created by lorry on 06.03.16.
  */
-public class Connection {
+public class DefaultConnection implements Connection{
 
     private static final Logger log = getLogger(uni.wue.app.PortalManager.class);
 
@@ -37,10 +37,10 @@ public class Connection {
     private MacAddress srcMac;
     private TpPort dstTpPort;
 
-    public Connection(Ip4Address srcIp, MacAddress srcMac, Ip4Address dstIp, TpPort dstTpPort){
+    public DefaultConnection(Ip4Address srcIp, MacAddress srcMac, Ip4Address dstIp, TpPort dstTpPort){
 
         if(srcIp == null || srcMac == null || dstIp == null || dstTpPort == null){
-            log.warn("Connection: Invalid parameter");
+            log.warn("DefaultConnection: Invalid parameter");
             throw new InvalidParameterException(String.format("Invalid parameter in class : {}",
                     this.getClass().toString()));
         }
@@ -52,7 +52,6 @@ public class Connection {
     }
 
     public Ip4Address getSrcIp() {
-
         return srcIp;
     }
 
@@ -73,7 +72,7 @@ public class Connection {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        Connection that = (Connection) o;
+        DefaultConnection that = (DefaultConnection) o;
 
         if (srcIp != null ? !srcIp.equals(that.srcIp) : that.srcIp != null) return false;
         if (dstIp != null ? !dstIp.equals(that.dstIp) : that.dstIp != null) return false;
@@ -93,7 +92,7 @@ public class Connection {
 
     @Override
     public String toString() {
-        return "Connection{" +
+        return "DefaultConnection{" +
                 "srcIp=" + srcIp +
                 ", dstIp=" + dstIp +
                 ", srcMac=" + srcMac +

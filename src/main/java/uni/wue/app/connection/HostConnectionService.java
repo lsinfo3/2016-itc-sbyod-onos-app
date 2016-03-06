@@ -15,26 +15,23 @@
  *
  *
  */
-package uni.wue.app;
+package uni.wue.app.connection;
 
+import org.onlab.packet.Ip4Address;
+import org.onlab.packet.MacAddress;
+import org.onlab.packet.TpPort;
 import org.onosproject.net.Host;
-import org.onosproject.net.packet.PacketContext;
 
 /**
- * Created by lorry on 11.12.15.
+ * Created by lorry on 01.03.16.
  */
-public interface PacketRedirectService {
+public interface HostConnectionService {
 
     /**
-     * Change the destination to match with portal
-     * @param context
+     * Establish a connection between the user and the service
+     *
+     * @param connection
      */
-    void redirectToPortal(PacketContext context, Host portal);
-
-    /**
-     * Restore the actual source of the packet
-     * @param context
-     */
-    void restoreSource(PacketContext context, Host portal);
+    void addConnection(Connection connection);
 
 }

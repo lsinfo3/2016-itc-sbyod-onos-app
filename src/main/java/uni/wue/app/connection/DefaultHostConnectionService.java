@@ -15,7 +15,7 @@
  *
  *
  */
-package uni.wue.app;
+package uni.wue.app.connection;
 
 import org.apache.felix.scr.annotations.*;
 import org.onosproject.core.ApplicationIdStore;
@@ -70,38 +70,28 @@ public class DefaultHostConnectionService implements HostConnectionService {
 
 
     /**
-     * Establish a connection between the user with user IP and MAC address and
-     * a service with service IP address and transport layer port
+     * Establish a connection between the user and the service
      *
-     * @param userIp      the IP address of the user
-     * @param userMac     the MAC address of the user
-     * @param serviceIp   the IP address of the service
-     * @param serviceTpPort the transport layer port of the service
+     * @param connection
      */
     @Override
-    public void addConnection(Ip4Address userIp, MacAddress userMac, Ip4Address serviceIp, TpPort serviceTpPort) {
+    public void addConnection(Connection connection) {
 
-        if(userIp == null || userMac == null || serviceIp == null || serviceTpPort == null){
-            log.warn("HostConnectionService: Connection not added -> invalid parameter!");
+        if(connection == null){
+            log.warn("HostConnectionService: DefaultConnection not added -> invalid parameter!");
             return;
         } else
             log.info("HostConnectionService: Adding connection between user with IP={} MAC={} " +
                             "and service with IP={} Port={}",
-                    new String[]{userIp.toString(), userMac.toString(), serviceIp.toString(), serviceTpPort.toString()});
-
-        // simplifying the "addFlows" method
-        Map<String, Object> constraints = new HashMap<>();
-        constraints.put("userIp", userIp);
-        constraints.put("userMac", userMac);
-        constraints.put("serviceIp", serviceIp);
-        constraints.put("serviceTpPort", serviceTpPort);
+                    new String[]{connection.getSrcIp().toString(), connection.getSrcMac().toString(),
+                            connection.getDstIp().toString(), connection.getDstTpPort().toString()});
 
         // get the host with corresponding IP address
-        Set<Host> users = hostService.getHostsByIp(userIp);
-        Set<Host> services = hostService.getHostsByIp(serviceIp);
+        Set<Host> users = hostService.getHostsByIp(connection.getSrcIp());
+        Set<Host> services = hostService.getHostsByIp(connection.getDstIp());
         if(users.size() != 1 || services.size() != 1) {
             log.warn("HostConnectionService: More than one user with IP={} or service with IP={}",
-                    userIp.toString(), serviceIp.toString());
+                    connection.getSrcIp().toString(), connection.getDstIp().toString());
             return;
         }
         HostLocation userLocation = users.iterator().next().location();
@@ -113,7 +103,7 @@ public class DefaultHostConnectionService implements HostConnectionService {
                     userLocation.deviceId().toString());
 
             // add one rule directing the traffic from user port to service port on device
-            addFlows(userLocation.port(), serviceLocation.port(), userLocation.deviceId(), constraints);
+            addFlows(userLocation.port(), serviceLocation.port(), userLocation.deviceId(), connection);
 
             return;
         } else {
@@ -132,7 +122,7 @@ public class DefaultHostConnectionService implements HostConnectionService {
                 // rule for first device
                 Iterator<Link> currentLinkIter = path.links().iterator();
                 Link currentLink = currentLinkIter.next();
-                addFlows(userLocation.port(), currentLink.src().port(), userLocation.deviceId(), constraints);
+                addFlows(userLocation.port(), currentLink.src().port(), userLocation.deviceId(), connection);
 
                 // rule for every pair of links
                 Iterator<Link> previousLinkIter = path.links().iterator();
@@ -141,12 +131,12 @@ public class DefaultHostConnectionService implements HostConnectionService {
                     currentLink = currentLinkIter.next();
 
                     addFlows(previousLink.dst().port(), currentLink.src().port(),
-                            currentLink.src().deviceId(), constraints);
+                            currentLink.src().deviceId(), connection);
                 }
 
                 // rule for last device
                 addFlows(currentLink.dst().port(), serviceLocation.port(), serviceLocation.deviceId(),
-                        constraints);
+                        connection);
             }
         }
 
@@ -161,29 +151,23 @@ public class DefaultHostConnectionService implements HostConnectionService {
      * @param userSidePort port directing towards the user
      * @param serviceSidePort port directing towards the service
      * @param forDeviceId device flow rule should be added to
-     * @param constraints map containing "userIp", "userMac", "serviceIp" and "serviceTpPort"
+     * @param connection between user and service
      */
     private void addFlows(PortNumber userSidePort, PortNumber serviceSidePort, DeviceId forDeviceId,
-                          Map<String, Object> constraints){
-        addFlowToDevicePortalDirection(userSidePort, serviceSidePort, forDeviceId, constraints);
-        addFlowToDeviceUserDirection(serviceSidePort, userSidePort, forDeviceId, constraints);
+                          Connection connection){
+        addFlowToDevicePortalDirection(userSidePort, serviceSidePort, forDeviceId, connection);
+        addFlowToDeviceUserDirection(serviceSidePort, userSidePort, forDeviceId, connection);
     }
 
     private void addFlowToDevicePortalDirection(PortNumber inPort, PortNumber outPort, DeviceId forDeviceId,
-                                                Map<String, Object> constraints){
-
-        try {
-            Ip4Address userIp = (Ip4Address) constraints.get("userIp");
-            MacAddress userMac = (MacAddress) constraints.get("userMac");
-            Ip4Address serviceIp = (Ip4Address) constraints.get("serviceIp");
-            TpPort serviceTpPort = (TpPort) constraints.get("serviceTpPort");
+                                                Connection connection){
 
         TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
                 .matchInPort(inPort)
-                .matchIPSrc(userIp.toIpPrefix())
-                .matchEthSrc(userMac)
-                .matchIPDst(serviceIp.toIpPrefix())
-                .matchTcpDst(serviceTpPort);
+                .matchIPSrc(connection.getSrcIp().toIpPrefix())
+                .matchEthSrc(connection.getSrcMac())
+                .matchIPDst(connection.getDstIp().toIpPrefix())
+                .matchTcpDst(connection.getDstTpPort());
 
         TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
                 .setOutput(outPort);
@@ -197,25 +181,16 @@ public class DefaultHostConnectionService implements HostConnectionService {
                 .makeTemporary(TIMEOUT);
 
         flowRuleService.applyFlowRules(flowRuleBuilder.build());
-
-        } catch (Exception e){
-            log.warn("HostConnectionService: Could not add flow for user -> service direction. Missing constraint!");
-            return;
-        }
     }
 
     private void addFlowToDeviceUserDirection(PortNumber inPort, PortNumber outPort, DeviceId forDeviceId,
-                                              Map<String, Object> constraints){
-        try {
-            Ip4Address userIp = (Ip4Address) constraints.get("userIp");
-            MacAddress userMac = (MacAddress) constraints.get("userMac");
-            Ip4Address serviceIp = (Ip4Address) constraints.get("serviceIp");
+                                              Connection connection){
 
         TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
                 .matchInPort(inPort)
-                .matchIPSrc(serviceIp.toIpPrefix())
-                .matchEthDst(userMac)
-                .matchIPDst(userIp.toIpPrefix());
+                .matchIPSrc(connection.getDstIp().toIpPrefix())
+                .matchEthDst(connection.getSrcMac())
+                .matchIPDst(connection.getSrcIp().toIpPrefix());
 
         TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
                 .setOutput(outPort);
@@ -229,10 +204,5 @@ public class DefaultHostConnectionService implements HostConnectionService {
                 .makeTemporary(TIMEOUT);
 
         flowRuleService.applyFlowRules(flowRuleBuilder.build());
-
-        } catch (Exception e){
-            log.warn("HostConnectionService: Could not add flow for service -> user direction. Missing constraint!");
-            return;
-        }
     }
 }

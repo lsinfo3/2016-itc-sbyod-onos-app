@@ -17,13 +17,10 @@
  */
 package uni.wue.app.cli;
 
-import org.apache.karaf.shell.commands.Argument;
 import org.apache.karaf.shell.commands.Command;
 import org.apache.karaf.shell.commands.Option;
-import org.onlab.packet.Ip4Address;
 import org.onosproject.cli.AbstractShellCommand;
-import uni.wue.app.AcceptedHostService;
-import uni.wue.app.ConnectionStoreService;
+import uni.wue.app.connection.ConnectionStoreService;
 
 /**
  * Created by lorry on 14.01.16.

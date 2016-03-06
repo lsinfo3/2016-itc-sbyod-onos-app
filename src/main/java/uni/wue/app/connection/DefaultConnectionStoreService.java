@@ -15,9 +15,8 @@
  *
  *
  */
-package uni.wue.app;
+package uni.wue.app.connection;
 
-import com.google.common.collect.Sets;
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.MacAddress;
@@ -30,13 +29,7 @@ import org.onosproject.store.service.StorageService;
 import org.slf4j.Logger;
 
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.Set;
-import java.util.function.BiConsumer;
-import java.util.function.BinaryOperator;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import static org.slf4j.LoggerFactory.getLogger;
@@ -60,11 +53,11 @@ public class DefaultConnectionStoreService implements ConnectionStoreService {
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected StorageService storageService;
 
-    private DistributedSet<Connection> connections;
+    private DistributedSet<DefaultConnection> connections;
 
     @Activate
     protected void activate(){
-        connections = storageService.<Connection>setBuilder()
+        connections = storageService.<DefaultConnection>setBuilder()
                 .withApplicationId(applicationIdStore.getAppId(APPLICATION_ID))
                 .withSerializer(Serializer.using(KryoNamespaces.API))
                 .withName("connections")
@@ -86,11 +79,11 @@ public class DefaultConnectionStoreService implements ConnectionStoreService {
      * @param connection
      */
     @Override
-    public void addConnection(Connection connection) {
+    public void addConnection(DefaultConnection connection) {
         connections.add(connection);
         //Todo: test functionality
-        hostConnectionService.addConnection(connection.getSrcIp(), connection.getSrcMac(),
-                connection.getDstIp(), connection.getDstTpPort());
+        hostConnectionService.addConnection(connection.getSrcIp()
+        );
 
         log.debug("Added connection {}", connection.toString());
     }
@@ -103,10 +96,10 @@ public class DefaultConnectionStoreService implements ConnectionStoreService {
      * @return set of connections
      */
     @Override
-    public Set<Connection> getConnections(Ip4Address srcIp, MacAddress srcMac) {
+    public Set<DefaultConnection> getConnections(Ip4Address srcIp, MacAddress srcMac) {
         return connections.stream()
                 .filter(c -> (c.getSrcIp().equals(srcIp) && c.getSrcMac().equals(srcMac)))
-                .sorted(Comparator.comparing(Connection::getDstIp))
+                .sorted(Comparator.comparing(DefaultConnection::getDstIp))
                 .collect(Collectors.toSet());
     }
 
@@ -118,18 +111,18 @@ public class DefaultConnectionStoreService implements ConnectionStoreService {
      * @return set of connections
      */
     @Override
-    public Set<Connection> getConnections(Ip4Address dstIp, TpPort dstTpPort) {
+    public Set<DefaultConnection> getConnections(Ip4Address dstIp, TpPort dstTpPort) {
         return connections.stream()
                 .filter(c -> (c.getDstIp().equals(dstIp) && c.getDstTpPort().equals(dstTpPort)))
-                .sorted(Comparator.comparing(Connection::getSrcIp))
+                .sorted(Comparator.comparing(DefaultConnection::getSrcIp))
                 .collect(Collectors.toSet());
     }
 
     @Override
-    public Set<Connection> getConnections(){
+    public Set<DefaultConnection> getConnections(){
         return connections.stream()
-                .sorted(Comparator.comparing(Connection::getSrcIp)
-                        .thenComparing(Comparator.comparing(Connection::getDstIp)))
+                .sorted(Comparator.comparing(DefaultConnection::getSrcIp)
+                        .thenComparing(Comparator.comparing(DefaultConnection::getDstIp)))
                 .collect(Collectors.toSet());
     }
 }

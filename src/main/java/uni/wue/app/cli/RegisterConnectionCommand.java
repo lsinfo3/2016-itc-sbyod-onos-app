@@ -17,16 +17,14 @@
  */
 package uni.wue.app.cli;
 
-import org.apache.karaf.shell.commands.Argument;
 import org.apache.karaf.shell.commands.Command;
 import org.apache.karaf.shell.commands.Option;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.MacAddress;
 import org.onlab.packet.TpPort;
 import org.onosproject.cli.AbstractShellCommand;
-import uni.wue.app.AcceptedHostService;
-import uni.wue.app.Connection;
-import uni.wue.app.ConnectionStoreService;
+import uni.wue.app.connection.DefaultConnection;
+import uni.wue.app.connection.ConnectionStoreService;
 
 /**
  * Created by lorry on 14.01.16.
@@ -62,7 +60,7 @@ public class RegisterConnectionCommand extends AbstractShellCommand{
             TpPort dstTpPort = TpPort.tpPort(Integer.valueOf(dstTpPort_));
 
             connectionStoreService = get(ConnectionStoreService.class);
-            connectionStoreService.addConnection(new Connection(srcIp, srcMac, dstIp, dstTpPort));
+            connectionStoreService.addConnection(new DefaultConnection(srcIp, srcMac, dstIp, dstTpPort));
 
             System.out.println(String.format("Added connection between user with IP = {} and MAC = {} " +
                     "and service with IP = {} and TpPort = {}",

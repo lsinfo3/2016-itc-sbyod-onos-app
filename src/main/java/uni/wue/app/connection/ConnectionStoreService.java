@@ -15,7 +15,7 @@
  *
  *
  */
-package uni.wue.app;
+package uni.wue.app.connection;
 
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.MacAddress;
@@ -32,7 +32,7 @@ public interface ConnectionStoreService {
      * Add a new connection to the service
      * @param connection
      */
-    void addConnection(Connection connection);
+    void addConnection(DefaultConnection connection);
 
     /**
      * Get the set of connections for source IP and source MAC
@@ -40,7 +40,7 @@ public interface ConnectionStoreService {
      * @param srcMac
      * @return set of connections
      */
-    Set<Connection> getConnections(Ip4Address srcIp, MacAddress srcMac);
+    Set<DefaultConnection> getConnections(Ip4Address srcIp, MacAddress srcMac);
 
     /**
      * Get the set of connections for destination IP and destination traffic protocol port
@@ -48,12 +48,12 @@ public interface ConnectionStoreService {
      * @param dstTpPort
      * @return set of connections
      */
-    Set<Connection> getConnections(Ip4Address dstIp, TpPort dstTpPort);
+    Set<DefaultConnection> getConnections(Ip4Address dstIp, TpPort dstTpPort);
 
     /**
      * Get all registered connections
      * @return set of connections
      */
-    Set<Connection> getConnections();
+    Set<DefaultConnection> getConnections();
 
 }

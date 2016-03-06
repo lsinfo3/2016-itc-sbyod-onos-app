@@ -15,25 +15,42 @@
  *
  *
  */
-package uni.wue.app;
+package uni.wue.app.connection;
 
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.MacAddress;
 import org.onlab.packet.TpPort;
-import org.onosproject.net.Host;
 
 /**
- * Created by lorry on 01.03.16.
+ * Created by lorry on 06.03.16.
  */
-public interface HostConnectionService {
+public interface Connection {
 
     /**
-     * Establish a connection between the user with userIp and userMac and a service with serviceIp and servicePort
-     * @param userIp the IP address of the user
-     * @param userMac the MAC address of the user
-     * @param serviceIp the IP address of the service
-     * @param servicePort the port of the service
+     * Get the source IP address of the connection
+     *
+     * @return source Ip4Address
      */
-    void addConnection(Ip4Address userIp, MacAddress userMac, Ip4Address serviceIp, TpPort servicePort);
+    Ip4Address getSrcIp();
 
+    /**
+     * Get the source MAC address of the connection
+     *
+     * @return source MacAddress
+     */
+    MacAddress getSrcMac();
+
+    /**
+     * Get the destination IP address of the connection
+     *
+     * @return destination Ip4Address
+     */
+    Ip4Address getDstIp();
+
+    /**
+     * Get the destination transport protocol port
+     *
+     * @return destination TpPort
+     */
+    TpPort getDstTpPort();
 }

@@ -22,34 +22,21 @@ import static com.google.common.base.Preconditions.checkState;
 
 import com.google.common.collect.Sets;
 import org.apache.felix.scr.annotations.*;
-import org.onlab.osgi.DefaultServiceDirectory;
 import org.onlab.packet.*;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
-import org.onosproject.incubator.net.intf.Interface;
-import org.onosproject.incubator.net.intf.InterfaceService;
 import org.onosproject.net.*;
 import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.*;
-import org.onosproject.net.flow.criteria.Criteria;
 import org.onosproject.net.host.*;
 import org.onosproject.net.packet.*;
 import org.onosproject.net.Host;
 import org.onosproject.net.provider.ProviderId;
-import org.onosproject.net.proxyarp.ProxyArpService;
-import org.onosproject.net.topology.TopologyService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.Marker;
-import org.slf4j.MarkerFactory;
-import sun.net.util.IPAddressUtil;
-import sun.security.krb5.internal.crypto.EType;
+import uni.wue.app.connection.HostConnectionService;
+import uni.wue.app.redirect.PacketRedirectService;
 
-import java.nio.ByteBuffer;
-import java.sql.Time;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 
@@ -197,8 +184,8 @@ public class PortalManager implements PortalService{
             // FIXME: adding rule for every IPv4 request, even if not on TpPort 80
             // FIXME: rules are stuck in PENDING_ADD state, but they are present and do work!
             // add rules to routing devices enabling the connection between user and portal
-            hostConnectionService.addConnection(Ip4Address.valueOf(ipPkt.getSourceAddress()) ,ethPkt.getSourceMAC(),
-                    serviceIp, TpPort.tpPort(80));
+            hostConnectionService.addConnection(Ip4Address.valueOf(ipPkt.getSourceAddress())
+            );
 
             // TODO: push context to flow table?
 
