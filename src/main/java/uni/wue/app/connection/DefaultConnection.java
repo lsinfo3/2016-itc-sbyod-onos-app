@@ -37,6 +37,15 @@ public class DefaultConnection implements Connection{
     private MacAddress srcMac;
     private TpPort dstTpPort;
 
+
+    /**
+     * Create a connection between an user and a service
+     *
+     * @param srcIp source IP address of the user
+     * @param srcMac source Mac address of the user
+     * @param dstIp destination Ip address of the service
+     * @param dstTpPort destination transport protocol port of the service
+     */
     public DefaultConnection(Ip4Address srcIp, MacAddress srcMac, Ip4Address dstIp, TpPort dstTpPort){
 
         if(srcIp == null || srcMac == null || dstIp == null || dstTpPort == null){

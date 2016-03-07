@@ -94,7 +94,7 @@ public class PortalManager implements PortalService{
         packetService.addProcessor(processor, PacketProcessor.director(2));
         requestIntercepts();
         // just for development reasons -> better user netcfghostprovider
-        setPortal("10.0.0.3", "00:00:00:00:00:03", "of:0000000000000001", "3");
+        setPortal("10.0.0.3", "00:00:00:00:00:03", "of:0000000000000003", "1");
 
         log.info("Started PortalManager {}", appId.toString());
     }

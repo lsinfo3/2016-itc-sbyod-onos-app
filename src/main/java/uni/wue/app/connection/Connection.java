@@ -20,11 +20,14 @@ package uni.wue.app.connection;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.MacAddress;
 import org.onlab.packet.TpPort;
+import org.onosproject.net.Element;
+
+import javax.xml.stream.events.EndElement;
 
 /**
  * Created by lorry on 06.03.16.
  */
-public interface Connection {
+public interface Connection{
 
     /**
      * Get the source IP address of the connection

@@ -23,6 +23,7 @@ import org.onlab.packet.TpPort;
 import org.onosproject.rest.AbstractWebResource;
 
 import org.slf4j.Logger;
+import uni.wue.app.connection.Connection;
 import uni.wue.app.connection.DefaultConnection;
 import uni.wue.app.connection.ConnectionStoreService;
 
@@ -37,7 +38,7 @@ import javax.ws.rs.core.Response;
 /**
  * Sample web resource.
  */
-@Path("sample")
+@Path("byod")
 public class AppWebResource extends AbstractWebResource {
 
     private static final Logger log = getLogger(uni.wue.app.PortalManager.class);
@@ -46,8 +47,6 @@ public class AppWebResource extends AbstractWebResource {
     private static final String OPERATION_INSTALLED = "INSTALLED\n";
     private static final String OPERATION_FAILED = "FAILED\n";
     private static final String OPERATION_WITHDRAWN = "WITHDRAWN\n";
-
-    private ConnectionStoreService connectionStoreService = null;
 
 
     /**
@@ -61,7 +60,7 @@ public class AppWebResource extends AbstractWebResource {
      *         server error or "FAILED" if failed to add traffic rule
      */
     @PUT
-    @Path("/{ip}/{mac}/{destIp}/{destTpPort}")
+    @Path("/add/{ip}/{mac}/{destIp}/{destTpPort}")
     public Response allowHostTraffic(@PathParam("ip") String srcIp_,
                                     @PathParam("mac") String srcMac_,
                                     @PathParam("destIp") String dstIp_,
@@ -85,18 +84,16 @@ public class AppWebResource extends AbstractWebResource {
             return Response.ok(INVALID_PARAMETER).build();
         }
 
-        connectionStoreService = get(ConnectionStoreService.class);
-        connectionStoreService.addConnection(new DefaultConnection(srcIp, srcMac, dstIp, dstTpPort));
+        get(ConnectionStoreService.class).addConnection(new DefaultConnection(srcIp, srcMac, dstIp, dstTpPort));
 
         return Response.ok(OPERATION_INSTALLED).build();
     }
 
     @GET
-    @Path("/rules")
+    @Path("/get")
     public Response showRules(){
 
-        //TODO: get rules from rule service, build JSON response
-
-        return Response.ok().build();
+        Iterable<Connection> connections = get(ConnectionStoreService.class).getConnections();
+        return Response.ok(encodeArray(Connection.class, "connections", connections)).build();
     }
 }

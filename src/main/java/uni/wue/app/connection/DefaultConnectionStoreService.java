@@ -23,6 +23,7 @@ import org.onlab.packet.Ip4Address;
 import org.onlab.packet.MacAddress;
 import org.onlab.packet.TpPort;
 import org.onlab.util.KryoNamespace;
+import org.onosproject.codec.CodecService;
 import org.onosproject.core.ApplicationIdStore;
 import org.onosproject.store.serializers.KryoNamespaces;
 import org.onosproject.store.service.DistributedSet;
@@ -55,6 +56,9 @@ public class DefaultConnectionStoreService implements ConnectionStoreService {
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected StorageService storageService;
 
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected CodecService codecService;
+
     private DistributedSet<Connection> connections;
 
     @Activate
@@ -72,6 +76,8 @@ public class DefaultConnectionStoreService implements ConnectionStoreService {
                 .withName("connections")
                 .build();
         connections.clear();
+
+        codecService.registerCodec(Connection.class, new ConnectionCodec());
 
         log.info("Started ConnectionManager");
     }
