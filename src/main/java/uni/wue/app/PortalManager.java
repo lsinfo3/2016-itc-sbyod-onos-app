@@ -37,6 +37,7 @@ import org.slf4j.LoggerFactory;
 import uni.wue.app.connection.ConnectionStoreService;
 import uni.wue.app.connection.DefaultConnection;
 import uni.wue.app.connection.HostConnectionService;
+import uni.wue.app.redirect.PacketRedirect;
 import uni.wue.app.redirect.PacketRedirectService;
 
 import java.util.Set;
@@ -72,6 +73,9 @@ public class PortalManager implements PortalService{
     protected HostStore hostStore;
 
     // own services
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected PacketRedirectService packetRedirectService;
+
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected ConnectionStoreService connectionStoreService;
 
@@ -181,7 +185,7 @@ public class PortalManager implements PortalService{
             }
 
             // FIXME: adding rule for every IPv4 request, even if not on TpPort 80
-            // FIXME: rules are stuck in PENDING_ADD state, but they are present and do work!
+            // FIXME: rules are stuck in PENDING_ADD state, but they are installed and do work!
             // add rules to routing devices enabling the connection between user and portal
             connectionStoreService.addConnection(new DefaultConnection(
                     Ip4Address.valueOf(ipPkt.getSourceAddress()),
@@ -190,17 +194,19 @@ public class PortalManager implements PortalService{
                     TpPort.tpPort(80)
                     ));
 
-            // TODO: push context to flow table?
-
+            // check if a redirect flow rule is necessary
+            // (the destination of the packet differs from the portal addresses)
             Boolean addressDiffersFromPortal = true;
             for(IpAddress portalAddress : portal.ipAddresses()){
                 addressDiffersFromPortal = IpAddress.valueOf(ipPkt.getDestinationAddress())
                         .equals(portalAddress) ? false : addressDiffersFromPortal;
             }
             if(addressDiffersFromPortal){
-                // TODO: install redirect rules
+                // install redirect rules in the network device flow table
+                packetRedirectService.redirectToPortal(context, portal);
             }
 
+            // send context to flow table, where it should be handled
             context.treatmentBuilder().setOutput(PortNumber.TABLE);
             context.send();
             return;

@@ -98,7 +98,7 @@ public class AppWebResource extends AbstractWebResource {
     }
 
     @GET
-    @Path("/get/{srcIp}/{srcMac}")
+    @Path("/getUser/{srcIp}/{srcMac}")
     public Response getUserRules(@PathParam("srcIp") String srcIp_,
                              @PathParam("srcMac") String srcMac_){
         log.debug("Getting rules for srcIp = {} and srcMac = {}", srcIp_, srcMac_);
@@ -119,7 +119,7 @@ public class AppWebResource extends AbstractWebResource {
     }
 
     @GET
-    @Path("/get/{dstIp}/{dstTpPort}")
+    @Path("/getService/{dstIp}/{dstTpPort}")
     public Response getServiceRules(@PathParam("dstIp") String dstIp_,
                                     @PathParam("dstTpPort") String dstTpPort_){
         log.debug("Getting rules for dstIp = {} and dstTpPort = {}", dstIp_, dstTpPort_);

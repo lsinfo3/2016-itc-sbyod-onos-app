@@ -31,6 +31,10 @@ import org.onosproject.net.PortNumber;
 import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.*;
 
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
 /**
  * Created by lorry on 03.03.16.
  */
@@ -38,10 +42,13 @@ import org.onosproject.net.flow.*;
 @Service
 public class DefaultBasicRuleInstaller implements BasicRuleInstaller {
 
-    private static String APPLICATION_ID = "uni.wue.app";
-    private static int DROP_RULE_PRIORITY = 100;
-    private static int CONTROLLER_RULE_PRIORITY = 200;
-    private static TpPort PORTAL_TCP_PORT = TpPort.tpPort(80);
+    private static final String APPLICATION_ID = "uni.wue.app";
+    private static final int DROP_RULE_PRIORITY = 100;
+    private static final int CONTROLLER_RULE_PRIORITY = 200;
+    private static final TpPort PORTAL_TCP_PORT = TpPort.tpPort(80);
+
+    private final Lock lock = new ReentrantLock();
+    private final Condition ruleAdded = lock.newCondition();
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected DeviceService deviceService;
@@ -63,52 +70,52 @@ public class DefaultBasicRuleInstaller implements BasicRuleInstaller {
 
         FlowRule.Builder dropRuleBuilder = getDropRuleBuilder();
         for(Device device : devices){
-            FlowRule rule = dropRuleBuilder.forDevice(device.id()).build();
-            flowRuleService.applyFlowRules(rule);
 
-            /*flowRuleService.addListener(new InternalFlowRuleListener(rule, this.getClass()));
+            // get flow rule to drop packets
+            FlowRule rule = dropRuleBuilder.forDevice(device.id()).build();
+
+            // add a listener, that notifies if rule has been added in device
+            InternalFlowRuleListener internalFlowRuleListener = new InternalFlowRuleListener(rule);
+            flowRuleService.addListener(internalFlowRuleListener);
+
+            lock.lock();
             try {
-                flowRuleService.wait();
+                // apply flow rule
+                flowRuleService.applyFlowRules(rule);
+                // wait for rule state "ADDED" in device
+                ruleAdded.await();
             } catch (InterruptedException e) {
                 e.printStackTrace();
-            }*/
+            } finally {
+                lock.unlock();
+                flowRuleService.removeListener(internalFlowRuleListener);
+            }
         }
 
         FlowRule.Builder controllerRuleBuilder = getControllerRuleBuilder();
         for(Device device : devices){
             // TODO: PENDING_ADD in FlowRuleManager -> "Adding rule in store, but not on switch"
-            flowRuleService.applyFlowRules(controllerRuleBuilder.forDevice(device.id()).build());
-        }
+            // get flow rule sending packet to controller
+            FlowRule rule = controllerRuleBuilder.forDevice(device.id()).build();
 
-    }
+            // add a listener, that notifies if rule has been added in device
+            InternalFlowRuleListener internalFlowRuleListener = new InternalFlowRuleListener(rule);
+            flowRuleService.addListener(internalFlowRuleListener);
 
-    public class InternalFlowRuleListener implements FlowRuleListener{
-
-        private FlowRule flowRule;
-        private Class toNotify;
-        public InternalFlowRuleListener(FlowRule flowRule, Class toNotify){
-            this.flowRule = flowRule;
-            this.toNotify = toNotify;
-        }
-
-        /**
-         * Reacts to the specified event.
-         *
-         * @param event event to be processed
-         */
-        @Override
-        public void event(FlowRuleEvent event) {
-            if (event instanceof FlowRuleEvent) {
-                FlowRuleEvent flowRuleEvent = (FlowRuleEvent) event;
-                if (flowRuleEvent.type() == FlowRuleEvent.Type.RULE_ADDED) {
-                    if(flowRuleEvent.subject().exactMatch(flowRule)){
-                        // FIXME: notify() produces Error
-                        notify();
-                        flowRuleService.removeListener(this);
-                    }
-                }
+            lock.lock();
+            try{
+                // apply flow rule
+                flowRuleService.applyFlowRules(rule);
+                // wait for rule state "ADDED" in device
+                ruleAdded.await();
+            } catch (InterruptedException e){
+                e.printStackTrace();
+            } finally {
+                lock.unlock();
+                flowRuleService.removeListener(internalFlowRuleListener);
             }
         }
+
     }
 
     /**
@@ -159,6 +166,31 @@ public class DefaultBasicRuleInstaller implements BasicRuleInstaller {
                 .makePermanent();
 
         return flowRuleBuilder;
+    }
+
+
+    public class InternalFlowRuleListener implements FlowRuleListener{
+
+        private FlowRule flowRule;
+        public InternalFlowRuleListener(FlowRule flowRule){
+            this.flowRule = flowRule;
+        }
+
+        /**
+         * Reacts to the specified event.
+         *
+         * @param event event to be processed
+         */
+        @Override
+        public void event(FlowRuleEvent event) {
+            if (event.type() == FlowRuleEvent.Type.RULE_ADDED) {
+                if (event.subject().exactMatch(flowRule)) {
+                    lock.lock();
+                    ruleAdded.signalAll();
+                    lock.unlock();
+                }
+            }
+        }
     }
 
 }

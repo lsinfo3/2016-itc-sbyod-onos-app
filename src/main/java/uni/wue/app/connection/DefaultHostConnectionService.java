@@ -39,9 +39,9 @@ import static org.slf4j.LoggerFactory.getLogger;
 @Service
 public class DefaultHostConnectionService implements HostConnectionService {
 
-    private static int FLOW_PRIORITY = 300;
-    private static int TIMEOUT = 5*60; //seconds
-    private static String APPLICATION_ID = "uni.wue.app";
+    private static final int FLOW_PRIORITY = 300;
+    private static final int TIMEOUT = 5*60; //seconds
+    private static final String APPLICATION_ID = "uni.wue.app";
 
     private static final Logger log = getLogger(uni.wue.app.PortalManager.class);
 

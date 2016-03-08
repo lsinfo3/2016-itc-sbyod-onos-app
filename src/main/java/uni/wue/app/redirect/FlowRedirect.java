@@ -29,8 +29,12 @@ import org.onosproject.net.packet.InboundPacket;
 import org.onosproject.net.packet.PacketContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uni.wue.app.DefaultBasicRuleInstaller;
 
 import java.util.*;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -41,7 +45,13 @@ import static com.google.common.base.Preconditions.checkNotNull;
 @Service
 public class FlowRedirect extends PacketRedirect {
 
-    private static String APPLICATION_ID = "uni.wue.app";
+    private static final String APPLICATION_ID = "uni.wue.app";
+    private static final int TIMEOUT = 60; //seconds
+    private static final int RULE_PRIORITY = 300;
+
+
+    private final Lock lock = new ReentrantLock();
+    private final Condition ruleAdded = lock.newCondition();
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected FlowRuleService flowRuleService;
@@ -133,14 +143,29 @@ public class FlowRedirect extends PacketRedirect {
         flowBuilder.withSelector(selectorBuilder.build())
                 .withTreatment(treatmentBuilder.build())
                 .fromApp(appId)
-                .makeTemporary(120)
-                .withPriority(1000)
+                .makeTemporary(TIMEOUT)
+                .withPriority(RULE_PRIORITY)
                 .forTable(0)
                 .forDevice(context.inPacket().receivedFrom().deviceId());
 
         FlowRule fr = flowBuilder.build();
-        flowRuleService.applyFlowRules(fr);
-        waitForRuleEntry(fr, pkt.receivedFrom().deviceId());
+
+        /*
+        InternalFlowRuleListener internalFlowRuleListener = new InternalFlowRuleListener(fr);
+        flowRuleService.addListener(internalFlowRuleListener);
+        lock.lock();
+        try {
+            */
+            flowRuleService.applyFlowRules(fr);
+            /*
+            ruleAdded.await();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            lock.unlock();
+            flowRuleService.removeListener(internalFlowRuleListener);
+        }
+        */
 
         return;
     }
@@ -194,38 +219,56 @@ public class FlowRedirect extends PacketRedirect {
         flowBuilder.withSelector(selectorBuilder.build())
                 .withTreatment(treatmentBuilder.build())
                 .fromApp(appId)
-                .makeTemporary(120)
-                .withPriority(1000)
+                .makeTemporary(TIMEOUT)
+                .withPriority(RULE_PRIORITY)
                 .forTable(0)
                 .forDevice(context.inPacket().receivedFrom().deviceId());
 
         FlowRule fr = flowBuilder.build();
-        flowRuleService.applyFlowRules(fr);
-        waitForRuleEntry(fr, pkt.receivedFrom().deviceId());
+
+        /*
+        InternalFlowRuleListener internalFlowRuleListener = new InternalFlowRuleListener(fr);
+        flowRuleService.addListener(internalFlowRuleListener);
+        lock.lock();
+        try {
+            */
+            flowRuleService.applyFlowRules(fr);
+            /*
+            ruleAdded.await();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            lock.unlock();
+            flowRuleService.removeListener(internalFlowRuleListener);
+        }
+        */
+
         return;
     }
 
-    /**
-     * Ensures that the flowRule has been added to the device before anything else is done
-     * @param flowRule to be added
-     * @param deviceId of flow entry
-     */
-    private void waitForRuleEntry(FlowRule flowRule, DeviceId deviceId){
-        for(int count = 0; count < 500; count++) {
-            Iterable<FlowEntry> flowEntries = flowRuleService.getFlowEntries(deviceId);
-            for(FlowEntry fe : flowEntries){
-                if(flowRule.id().equals(fe.id())){
-                    return;
+    public class InternalFlowRuleListener implements FlowRuleListener{
+
+        private FlowRule flowRule;
+        public InternalFlowRuleListener(FlowRule flowRule){
+            this.flowRule = flowRule;
+        }
+
+        /**
+         * Reacts to the specified event.
+         *
+         * @param event event to be processed
+         */
+        @Override
+        public void event(FlowRuleEvent event) {
+            if (event.type() == FlowRuleEvent.Type.RULE_ADDED) {
+                if (event.subject().exactMatch(flowRule)) {
+                    // Notify the waiting class
+                    lock.lock();
+                    ruleAdded.signalAll();
+                    lock.unlock();
                 }
             }
-            try {
-                Thread.sleep(10);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
         }
-        log.warn(byodMarker, String.format("FlowRule %s was not yet delivered to device %s",
-                flowRule.toString(), deviceId.toString()));
     }
 
 }
