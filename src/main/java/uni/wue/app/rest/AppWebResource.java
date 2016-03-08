@@ -96,4 +96,46 @@ public class AppWebResource extends AbstractWebResource {
         Iterable<Connection> connections = get(ConnectionStoreService.class).getConnections();
         return Response.ok(encodeArray(Connection.class, "connections", connections)).build();
     }
+
+    @GET
+    @Path("/get/{srcIp}/{srcMac}")
+    public Response getUserRules(@PathParam("srcIp") String srcIp_,
+                             @PathParam("srcMac") String srcMac_){
+        log.debug("Getting rules for srcIp = {} and srcMac = {}", srcIp_, srcMac_);
+        if(srcIp_ == null || srcMac_ == null)
+            return Response.ok(INVALID_PARAMETER).build();
+
+        Ip4Address srcIp;
+        MacAddress srcMac;
+        try{
+            srcIp = Ip4Address.valueOf(srcIp_);
+            srcMac = MacAddress.valueOf(srcMac_);
+        } catch (Exception e){
+            return Response.ok(INVALID_PARAMETER).build();
+        }
+
+        Iterable<Connection> connections = get(ConnectionStoreService.class).getConnections(srcIp, srcMac);
+        return Response.ok(encodeArray(Connection.class, "connections", connections)).build();
+    }
+
+    @GET
+    @Path("/get/{dstIp}/{dstTpPort}")
+    public Response getServiceRules(@PathParam("dstIp") String dstIp_,
+                                    @PathParam("dstTpPort") String dstTpPort_){
+        log.debug("Getting rules for dstIp = {} and dstTpPort = {}", dstIp_, dstTpPort_);
+        if(dstIp_ == null || dstTpPort_ == null)
+            return Response.ok(INVALID_PARAMETER).build();
+
+        Ip4Address dstIp;
+        TpPort dstTpPort;
+        try{
+            dstIp = Ip4Address.valueOf(dstIp_);
+            dstTpPort = TpPort.tpPort(Integer.valueOf(dstTpPort_));
+        } catch (Exception e){
+            return Response.ok(INVALID_PARAMETER).build();
+        }
+
+        Iterable<Connection> connections = get(ConnectionStoreService.class).getConnections(dstIp, dstTpPort);
+        return Response.ok(encodeArray(Connection.class, "connections", connections)).build();
+    }
 }
