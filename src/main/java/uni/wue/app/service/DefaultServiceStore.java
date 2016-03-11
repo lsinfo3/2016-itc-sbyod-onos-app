@@ -172,7 +172,7 @@ public class DefaultServiceStore implements ServiceStore {
     @Override
     public Set<Service> getService(Ip4Address ip4Address) {
         return services.stream()
-                .filter(s -> s.getIpv4().contains(ip4Address))
+                .filter(s -> s.getHost().ipAddresses().contains(ip4Address))
                 .collect(Collectors.toSet());
     }
 

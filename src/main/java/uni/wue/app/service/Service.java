@@ -53,18 +53,6 @@ public interface Service extends Element{
     ServiceId id();
 
     /**
-     * Get the MAC address of the service
-     * @return MacAddress
-     */
-    MacAddress getMac();
-
-    /**
-     * Get the IPv4 addresses of the service
-     * @return Ip4Address
-     */
-    Set<Ip4Address> getIpv4();
-
-    /**
      * Get the transport protocol port of the service
      * @return TpPort
      */

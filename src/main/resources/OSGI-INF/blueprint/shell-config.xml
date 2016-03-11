@@ -32,8 +32,7 @@
         <command>
             <action class="uni.wue.app.cli.RegisterConnectionCommand"/>
             <completers>
-                <ref component-id="hostIpCompleter"/>
-                <ref component-id="hostMacCompleter" />
+                <ref component-id="hostIdCompleter"/>
             </completers>
         </command>
         <command>

@@ -104,30 +104,6 @@ public class DefaultService extends AbstractElement implements Service {
         return name;
     }
 
-
-    /**
-     * Get the MAC address of the service
-     *
-     * @return MacAddress
-     */
-    @Override
-    public MacAddress getMac() {
-        return host.mac();
-    }
-
-    /**
-     * Get the IPv4 address of the service
-     *
-     * @return Ip4Address
-     */
-    @Override
-    public Set<Ip4Address> getIpv4() {
-        return host.ipAddresses().stream()
-                .filter(ip -> ip.isIp4())
-                .map(ip4 -> ip4.getIp4Address())
-                .collect(Collectors.toSet());
-    }
-
     /**
      * Returns the network service identifier.
      *
