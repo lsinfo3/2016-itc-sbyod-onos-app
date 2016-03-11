@@ -20,7 +20,6 @@ package uni.wue.app.service;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.onosproject.codec.CodecContext;
 import org.onosproject.codec.JsonCodec;
-import uni.wue.app.connection.Connection;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -30,16 +29,18 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class ServiceCodec extends JsonCodec<Service> {
 
     // JSON field names
-    private static final String serviceName = "serviceName";
-    private static final String serviceId = "serviceId";
+    private static final String name = "serviceName";
+    private static final String id = "serviceId";
+    private static final String tpPort = "serviceTpPort";
 
     @Override
     public ObjectNode encode(Service service, CodecContext context){
         checkNotNull(service, "Service can not be null");
 
         ObjectNode result = context.mapper().createObjectNode()
-                .put(serviceName, service.getName())
-                .put(serviceId, service.id().toString());
+                .put(name, service.getName())
+                .put(id, service.id().toString())
+                .put(tpPort, service.getTpPort().toString());
 
         return result;
     }

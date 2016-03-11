@@ -17,6 +17,8 @@
  */
 package uni.wue.app.rest;
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.collect.Sets;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.MacAddress;
 import org.onlab.packet.TpPort;
@@ -29,6 +31,7 @@ import uni.wue.app.connection.Connection;
 import uni.wue.app.connection.DefaultConnection;
 import uni.wue.app.connection.ConnectionStoreService;
 import uni.wue.app.service.Service;
+import uni.wue.app.service.ServiceId;
 import uni.wue.app.service.ServiceStore;
 
 import static org.slf4j.LoggerFactory.getLogger;
@@ -39,119 +42,168 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Response;
+import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
- * Sample web resource.
+ * Web resource.
  */
-@Path("byod")
+@Path("")
 public class AppWebResource extends AbstractWebResource {
 
     private static final Logger log = getLogger(uni.wue.app.PortalManager.class);
 
     private static final String INVALID_PARAMETER = "INVALID_PARAMETER\n";
-    private static final String OPERATION_INSTALLED = "INSTALLED\n";
-    private static final String OPERATION_FAILED = "FAILED\n";
-    private static final String OPERATION_WITHDRAWN = "WITHDRAWN\n";
+    private final ObjectNode ENABLED_TRUE = mapper().createObjectNode().put("enabled", true);
+    private final ObjectNode ENABLED_FALSE = mapper().createObjectNode().put("enabled", false);
 
+    /**
+     * Get all registered services.
+     *
+     * @return array of services
+     */
     @GET
-    @Path("/service/{serviceName}")
-    public Response getService(@PathParam("serviceName") String serviceName_){
-        if(serviceName_ == null)
-            return Response.ok(INVALID_PARAMETER).build();
+    @Path("/service")
+    public Response getServices(){
+        log.debug("AppWebResource: Getting all services");
 
-        Iterable<Service> services = get(ServiceStore.class).getService(serviceName_);
-        return Response.ok(encodeArray(Service.class, "service", services)).build();
-    }
-
-    @GET
-    @Path("/user/{srcIp}")
-    public Response getUserRules(@PathParam("srcIp") String srcIp_){
-        log.debug("Getting rules for srcIp = {}", srcIp_);
-        if(srcIp_ == null)
-            return Response.ok(INVALID_PARAMETER).build();
-
-        Ip4Address srcIp;
-        try{
-            srcIp = Ip4Address.valueOf(srcIp_);
-        } catch (Exception e){
-            return Response.ok(INVALID_PARAMETER).build();
-        }
-
-        Iterable<Connection> connections = get(ConnectionStoreService.class).getConnections(srcIp);
-        return Response.ok(encodeArray(Connection.class, "connections", connections)).build();
-    }
-
-    @GET
-    @Path("/user/{srcIp}/service/{serviceName}")
-    public Response getUserServices(@PathParam("srcIp") String srcIp_,
-                                    @PathParam("serviceName") String serviceName_){
-
-        if(srcIp_ == null || serviceName_ == null)
-            return Response.ok(INVALID_PARAMETER).build();
-
-        Ip4Address srcIp;
-        String serviceName;
-        try{
-            srcIp = Ip4Address.valueOf(srcIp_);
-            serviceName = serviceName_;
-        } catch (Exception e){
-            return Response.ok(INVALID_PARAMETER).build();
-        }
-
-        Set<Connection> result = get(ConnectionStoreService.class).getConnections(srcIp);
-        if(result.stream()
-                .filter(c -> c.getService().getName().equals(serviceName))
-                .count() != 0){
-            return Response.ok(mapper().createObjectNode().put("enabled", true)).build();
-        }
-        return Response.ok(mapper().createObjectNode().put("enabled", false)).build();
+        Iterable<Service> services = get(ServiceStore.class).getServices();
+        return Response.ok(encodeArray(Service.class, "services", services)).build();
     }
 
     /**
-     * Allow a host with srcIP_ and srcMac_ to send packets to dstPort_ on dstIp_
+     * Get the service with serviceId.
      *
-     * @param srcIp_ source IP address
-     * @param serviceName_ the service name
-     * @return Intent state "INSTALLED" if successful,
-     *         server error or "FAILED" if failed to add traffic rule
+     * @param serviceId_ the ID of the service
+     * @return INVALID_PARAMETER if some parameter was wrong
+     *          service
      */
-    @POST
-    @Path("/user/{srcIp}/service/{serviceName}")
-    public Response allowHostTraffic(@PathParam("srcIp") String srcIp_,
-                                    @PathParam("serviceName") String serviceName_){
-        log.info("adding flow: src ip = {} -> service = {}",
-                new String[]{srcIp_, serviceName_});
+    @GET
+    @Path("/service/{serviceId}")
+    public Response getService(@PathParam("serviceId") String serviceId_){
+        log.debug("AppWebResource: Getting service with name = {}", serviceId_);
 
-        if(srcIp_ == null || serviceName_ == null)
+        if(serviceId_ == null)
             return Response.ok(INVALID_PARAMETER).build();
 
-        Ip4Address srcIp;
-        Set<Service> services;
-        Host srcHost;
+        Service service = get(ServiceStore.class).getService(ServiceId.serviceId(serviceId_));
+        Set<Service> result = (service == null) ? Sets.newHashSet() : Sets.newHashSet(service);
 
+        return Response.ok(encodeArray(Service.class, "services", (Iterable)result)).build();
+    }
+
+    /**
+     * Get the services the user with userIp is connected to.
+     *
+     * @param userIp_ the IP address of the user
+     * @return INVALID_PARAMETER if some parameter was wrong
+     *          array of services
+     */
+    @GET
+    @Path("/user/{userIp}")
+    public Response getUserRules(@PathParam("userIp") String userIp_){
+        log.debug("AppWebResource: Getting services for userIp = {}", userIp_);
+
+        if(userIp_ == null)
+            return Response.ok(INVALID_PARAMETER).build();
+
+        Ip4Address userIp;
         try{
-            srcIp = Ip4Address.valueOf(srcIp_);
-            srcHost = get(HostService.class).getHostsByIp(srcIp).iterator().next();
-            services = get(ServiceStore.class).getService(serviceName_);
+            userIp = Ip4Address.valueOf(userIp_);
         } catch (Exception e){
             return Response.ok(INVALID_PARAMETER).build();
         }
 
-        if(services.isEmpty()) {
-            log.warn("AppWebResource: No service found with name = {}", serviceName_);
-            return Response.notModified(OPERATION_FAILED).build();
+        Iterable<Service> services = get(ConnectionStoreService.class).getConnections(userIp).stream()
+                .map(c -> c.getService())
+                .collect(Collectors.toSet());
+        return Response.ok(encodeArray(Service.class, "services", services)).build();
+    }
+
+    /**
+     * Ask if a user with userIp has a access to the service with serviceId.
+     *
+     * @param userIp_ the IP address of the user
+     * @param serviceId_ the ID of the service
+     * @return INVALID_PARAMETER if some parameter was wrong
+     *          "enabled : false" if service is disabled
+     *          "enabled : true" if service is enabled
+     */
+    @GET
+    @Path("/user/{userIp}/service/{serviceId}")
+    public Response getUserServices(@PathParam("userIp") String userIp_,
+                                    @PathParam("serviceId") String serviceId_){
+        log.debug("AppWebResource: Getting rules for userIp = {} and serviceId = {}", userIp_, serviceId_);
+
+        if(userIp_ == null || serviceId_ == null)
+            return Response.ok(INVALID_PARAMETER).build();
+
+        Ip4Address userIp;
+        ServiceId serviceId;
+        try{
+            userIp = Ip4Address.valueOf(userIp_);
+            serviceId = ServiceId.serviceId(serviceId_);
+        } catch (Exception e){
+            return Response.ok(INVALID_PARAMETER).build();
         }
 
-        for(Service service : services) {
-            Connection connection = new DefaultConnection(srcIp, srcHost.mac(),service);
-            // if the connection does not already exist
-            if(!get(ConnectionStoreService.class).contains(connection)){
-                log.debug("Installing connection: {}", connection.toString());
-                get(ConnectionStoreService.class).addConnection(connection);
-            }
+        Set<Connection> result = get(ConnectionStoreService.class).getConnections(userIp);
+        if(result.stream()
+                .filter(c -> c.getService().id().equals(serviceId))
+                .count() != 0){
+            return Response.ok(ENABLED_TRUE).build();
+        }
+        return Response.ok(ENABLED_FALSE).build();
+    }
+
+    /**
+     * Allow a host with userIP to send packets to service with serviceId.
+     *
+     * @param userIp_ the IP address of the user
+     * @param serviceId_ the ID of the service
+     * @return INVALID_PARAMETER if some parameter was wrong
+     *          "enabled : false" if service connection went wrong
+     *          "enabled : true" if service is enabled
+     */
+    @POST
+    @Path("/user/{userIp}/service/{serviceId}")
+    public Response allowHostTraffic(@PathParam("userIp") String userIp_,
+                                    @PathParam("serviceId") String serviceId_){
+        log.debug("AppWebResource: Adding connection between user ip = {} and serviceId = {}",
+                new String[]{userIp_, serviceId_});
+
+        if(userIp_ == null || serviceId_ == null)
+            return Response.ok(INVALID_PARAMETER).build();
+
+        Ip4Address userIp;
+        Service service;
+        Set<Host> srcHosts;
+        try{
+            userIp = Ip4Address.valueOf(userIp_);
+            srcHosts = get(HostService.class).getHostsByIp(userIp);
+            service = get(ServiceStore.class).getService(ServiceId.serviceId(serviceId_));
+        } catch (Exception e){
+            return Response.ok(INVALID_PARAMETER).build();
         }
 
-        return Response.ok(OPERATION_INSTALLED).build();
+        if(service == null) {
+            log.debug("AppWebResource: No service found with id = {}", serviceId_);
+            return Response.ok(ENABLED_FALSE).build();
+        }
+
+        // install connection for every host and service
+        for(Host srcHost : srcHosts) {
+                Connection connection = new DefaultConnection(userIp, srcHost.mac(), service);
+                // if the connection does not already exist
+                if (!get(ConnectionStoreService.class).contains(connection)) {
+                    log.debug("AppWebResource: Installing connection {}", connection.toString());
+                    get(ConnectionStoreService.class).addConnection(connection);
+                } else{
+                    log.debug("AppWebResource: Connection {} already exists", connection.toString());
+                }
+        }
+
+        return Response.ok(ENABLED_TRUE).build();
     }
 }

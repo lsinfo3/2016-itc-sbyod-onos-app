@@ -27,6 +27,8 @@ import org.onosproject.net.Host;
 import org.onosproject.net.provider.ProviderId;
 import org.slf4j.Logger;
 
+import java.net.URI;
+import java.security.Timestamp;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -60,7 +62,7 @@ public class DefaultService extends AbstractElement implements Service {
      * @param annotations optional key/value annotations
      */
     public DefaultService(Host host, TpPort tpPort, String name, ProviderId providerId, Annotations... annotations){
-        super(providerId, ServiceId.serviceId(name, host.ipAddresses()), annotations);
+        super(providerId, ServiceId.serviceId(URI.create(name + System.currentTimeMillis())), annotations);
 
         if(host == null || tpPort == null || name == null) {
             log.warn("DefaultService: Illegal Arguments");
@@ -126,6 +128,16 @@ public class DefaultService extends AbstractElement implements Service {
                 .collect(Collectors.toSet());
     }
 
+    /**
+     * Returns the network service identifier.
+     *
+     * @return service identifier
+     */
+    @Override
+    public ServiceId id() {
+        return (ServiceId) this.id;
+    }
+
 
     @Override
     public boolean equals(Object o) {
@@ -152,15 +164,5 @@ public class DefaultService extends AbstractElement implements Service {
                 "host=" + host +
                 ", tpPort=" + tpPort +
                 '}';
-    }
-
-    /**
-     * Returns the network element identifier.
-     *
-     * @return element identifier
-     */
-    @Override
-    public ElementId id() {
-        return this.id;
     }
 }

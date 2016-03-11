@@ -79,9 +79,6 @@ public class PortalManager implements PortalService{
 
     // own services
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected PacketRedirectService packetRedirectService;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected ConnectionStoreService connectionStoreService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
@@ -89,6 +86,9 @@ public class PortalManager implements PortalService{
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected BasicRuleInstaller basicRuleInstaller;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected PacketRedirectService packetRedirectService;
 
 
     private ReactivePacketProcessor processor = new ReactivePacketProcessor();
@@ -101,16 +101,12 @@ public class PortalManager implements PortalService{
     protected void activate() {
         appId = coreService.registerApplication("uni.wue.app");
 
-        //TODO: Test flow rule functionality
         basicRuleInstaller.installRules();
         packetService.addProcessor(processor, PacketProcessor.director(2));
         requestIntercepts();
-        // just for development reasons -> better use netcfghostprovider
-        setPortal("10.0.0.3", "00:00:00:00:00:03", "of:0000000000000003", "1");
-        // add some services to the serviceStore
-        Host host = hostService.getHostsByIp(IpAddress.valueOf("10.0.0.3")).iterator().next();
-        Service service = new DefaultService(host, TpPort.tpPort(80), "PortalService", ProviderId.NONE);
-        serviceStore.addService(service);
+
+        // initiate a test setup
+        testSetup();
 
         log.info("Started PortalManager {}", appId.toString());
     }
@@ -255,6 +251,7 @@ public class PortalManager implements PortalService{
         return false;
     }
 
+    // better define hosts in network-cfg.json
     @Override
     public boolean setPortal(String pIp, String pMac, String dId, String dPort) {
         checkNotNull(pIp, "Portal IPv4 address can not be null!");
@@ -317,6 +314,24 @@ public class PortalManager implements PortalService{
     @Override
     public Host getPortal() {
         return portal;
+    }
+
+    /**
+     * Initiate a test setup
+     */
+    private void testSetup(){
+        // just for development reasons -> better use netcfghostprovider
+        setPortal("10.0.0.3");
+        // add some services to the serviceStore
+        Host host = hostService.getHostsByIp(IpAddress.valueOf("10.0.0.3")).iterator().next();
+        Service service = new DefaultService(host, TpPort.tpPort(80), "PortalService", ProviderId.NONE);
+        serviceStore.addService(service);
+        host = hostService.getHostsByIp(IpAddress.valueOf("10.0.0.4")).iterator().next();
+        service = new DefaultService(host, TpPort.tpPort(80), "TestService1", ProviderId.NONE);
+        serviceStore.addService(service);
+        host = hostService.getHostsByIp(IpAddress.valueOf("10.0.0.4")).iterator().next();
+        service = new DefaultService(host, TpPort.tpPort(22), "TestService2", ProviderId.NONE);
+        serviceStore.addService(service);
     }
 
 }

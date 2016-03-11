@@ -33,7 +33,7 @@
         <api.description>BYOD REST API</api.description>
         <api.version>1.0.0</api.version>
         <api.package>uni.wue.app</api.package>
-        <api.title>Sample BYOD REST API</api.title>
+        <api.title>BYOD REST API</api.title>
         <!-- rest end -->
     </properties>
 

@@ -50,7 +50,7 @@ public interface Service extends Element{
      * @return element id
      */
     @Override
-    ElementId id();
+    ServiceId id();
 
     /**
      * Get the MAC address of the service

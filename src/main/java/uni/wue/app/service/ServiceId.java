@@ -20,6 +20,8 @@ package uni.wue.app.service;
 import org.onlab.packet.IpAddress;
 import org.onosproject.net.ElementId;
 
+import java.net.URI;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -27,50 +29,64 @@ import java.util.Set;
  */
 public class ServiceId extends ElementId {
 
-    private final String name;
-    private final Set<IpAddress> ipAddresses;
+    private final URI uri;
+    private final String str;
 
-    private ServiceId(String name, Set<IpAddress> ip4Address){
-        this.name = name;
-        this.ipAddresses = ip4Address;
+    private ServiceId(URI uri){
+        this.uri = uri;
+        this.str = uri.toString().toLowerCase();
     }
 
-    public static ServiceId serviceId(String name, Set<IpAddress> ip4Address){
-        return new ServiceId(name, ip4Address);
+    /**
+     * Creates a service id using the supplied URI.
+     *
+     * @param uri service URI
+     * @return ServiceId
+     */
+    public static ServiceId serviceId(URI uri){
+        return new ServiceId(uri);
     }
 
-    public String name(){
-        return name;
+    /**
+     * Creates a service id using the supplied URI string.
+     *
+     * @param string service URI string
+     * @return ServiceId
+     */
+    public static ServiceId serviceId(String string){
+        return serviceId(URI.create(string));
     }
 
-    public Set<IpAddress> ip4Address(){
-        return ipAddresses;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        ServiceId serviceId = (ServiceId) o;
-
-        if (name != null ? !name.equals(serviceId.name) : serviceId.name != null) return false;
-        return !(ipAddresses != null ? !ipAddresses.equals(serviceId.ipAddresses) : serviceId.ipAddresses != null);
-
+    /**
+     * Returns the backing URI.
+     *
+     * @return backing URI
+     */
+    public URI uri() {
+        return uri;
     }
 
     @Override
     public int hashCode() {
-        int result = name != null ? name.hashCode() : 0;
-        result = 31 * result + (ipAddresses != null ? ipAddresses.hashCode() : 0);
-        return result;
+        return str.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj instanceof ServiceId) {
+            final ServiceId that = (ServiceId) obj;
+            return this.getClass() == that.getClass() &&
+                    Objects.equals(this.str, that.str);
+        }
+        return false;
     }
 
     @Override
     public String toString() {
-        return "ServiceId{" +
-                "name='" + name + '\'' +
-                ", ipAddresses=" + ipAddresses +
-                '}';
+        return str;
     }
+
 }

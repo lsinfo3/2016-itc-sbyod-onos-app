@@ -41,6 +41,14 @@ public interface ServiceStore {
     Set<Service> getServices();
 
     /**
+     * Get the service with serviceId
+     * @param serviceId ID of the service
+     * @return null if service with serviceId not found
+     *          else return service
+     */
+    Service getService(ServiceId serviceId);
+
+    /**
      * Get the services with IP address
      * @param ip4Address of the service
      * @return Set of services

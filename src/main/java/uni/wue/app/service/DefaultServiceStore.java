@@ -140,6 +140,30 @@ public class DefaultServiceStore implements ServiceStore {
     }
 
     /**
+     * Get the service with serviceId
+     *
+     * @param serviceId ID of the service
+     * @return service
+     */
+    @Override
+    public Service getService(ServiceId serviceId) {
+
+        Set<Service> result = services.stream()
+                .filter(s -> s.id().equals(serviceId))
+                .collect(Collectors.toSet());
+
+        if(result.size() == 0){
+            log.debug("ServiceStore: No service found with serviceId = {}", serviceId.toString());
+            return null;
+        }
+        else if(result.size() > 1){
+            log.warn("ServiceStore: More than one service with serviceId = {}", serviceId.toString());
+            return null;
+        }
+        return result.iterator().next();
+    }
+
+    /**
      * Get the services with IP address
      *
      * @param ip4Address of the service
