@@ -18,6 +18,7 @@
 package uni.wue.app.connection;
 
 import org.apache.felix.scr.annotations.*;
+import org.onlab.packet.IpAddress;
 import org.onosproject.core.ApplicationIdStore;
 import org.onosproject.net.*;
 import org.onlab.packet.Ip4Address;
@@ -83,19 +84,14 @@ public class DefaultHostConnectionService implements HostConnectionService {
         } else
             log.info("HostConnectionService: Adding connection between user with IP={} MAC={} " +
                             "and service with IP={} Port={}",
-                    new String[]{connection.getSrcIp().toString(), connection.getSrcMac().toString(),
-                            connection.getDstIp().toString(), connection.getDstTpPort().toString()});
+                    new String[]{connection.getUser().ipAddresses().toString(),
+                            connection.getUser().mac().toString(),
+                            connection.getService().getHost().ipAddresses().toString(),
+                            connection.getService().getTpPort().toString()});
 
-        // get the host with corresponding IP address
-        Set<Host> users = hostService.getHostsByIp(connection.getSrcIp());
-        Set<Host> services = hostService.getHostsByIp(connection.getDstIp());
-        if(users.size() != 1 || services.size() != 1) {
-            log.warn("HostConnectionService: More than one user with IP={} or service with IP={}",
-                    connection.getSrcIp().toString(), connection.getDstIp().toString());
-            return;
-        }
-        HostLocation userLocation = users.iterator().next().location();
-        HostLocation serviceLocation = services.iterator().next().location();
+
+        HostLocation userLocation = connection.getUser().location();
+        HostLocation serviceLocation = connection.getService().getHost().location();
 
         // if user and service is connected to the same network device
         if(userLocation.deviceId().equals(serviceLocation.deviceId())){
@@ -162,47 +158,55 @@ public class DefaultHostConnectionService implements HostConnectionService {
     private void addFlowToDevicePortalDirection(PortNumber inPort, PortNumber outPort, DeviceId forDeviceId,
                                                 Connection connection){
 
-        TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
-                .matchInPort(inPort)
-                .matchIPSrc(connection.getSrcIp().toIpPrefix())
-                .matchEthSrc(connection.getSrcMac())
-                .matchIPDst(connection.getDstIp().toIpPrefix())
-                .matchTcpDst(connection.getDstTpPort());
+        for(IpAddress userIp : connection.getUser().ipAddresses())
+            for(IpAddress serviceIp : connection.getService().getHost().ipAddresses())
+                if(userIp.isIp4() && serviceIp.isIp4()) {
+                    TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
+                            .matchInPort(inPort)
+                            .matchIPSrc(userIp.toIpPrefix())
+                            .matchEthSrc(connection.getUser().mac())
+                            .matchIPDst(serviceIp.toIpPrefix())
+                            .matchTcpDst(connection.getService().getTpPort());
 
-        TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
-                .setOutput(outPort);
+                    TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
+                            .setOutput(outPort);
 
-        FlowRule.Builder flowRuleBuilder = DefaultFlowRule.builder()
-                .withSelector(trafficSelectorBuilder.build())
-                .withTreatment(trafficTreatmentBuilder.build())
-                .forDevice(forDeviceId)
-                .withPriority(FLOW_PRIORITY)
-                .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
-                .makeTemporary(TIMEOUT);
+                    FlowRule.Builder flowRuleBuilder = DefaultFlowRule.builder()
+                            .withSelector(trafficSelectorBuilder.build())
+                            .withTreatment(trafficTreatmentBuilder.build())
+                            .forDevice(forDeviceId)
+                            .withPriority(FLOW_PRIORITY)
+                            .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
+                            .makeTemporary(TIMEOUT);
 
-        flowRuleService.applyFlowRules(flowRuleBuilder.build());
+                    flowRuleService.applyFlowRules(flowRuleBuilder.build());
+                }
     }
 
     private void addFlowToDeviceUserDirection(PortNumber inPort, PortNumber outPort, DeviceId forDeviceId,
                                               Connection connection){
 
-        TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
-                .matchInPort(inPort)
-                .matchIPSrc(connection.getDstIp().toIpPrefix())
-                .matchEthDst(connection.getSrcMac())
-                .matchIPDst(connection.getSrcIp().toIpPrefix());
+        for(IpAddress userIp : connection.getUser().ipAddresses())
+            for(IpAddress serviceIp : connection.getService().getHost().ipAddresses())
+                if(userIp.isIp4() && serviceIp.isIp4()) {
+                    TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
+                            .matchInPort(inPort)
+                            .matchIPSrc(serviceIp.toIpPrefix())
+                            .matchEthDst(connection.getUser().mac())
+                            .matchIPDst(userIp.toIpPrefix());
 
-        TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
-                .setOutput(outPort);
+                    TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
+                            .setOutput(outPort);
 
-        FlowRule.Builder flowRuleBuilder = DefaultFlowRule.builder()
-                .withSelector(trafficSelectorBuilder.build())
-                .withTreatment(trafficTreatmentBuilder.build())
-                .forDevice(forDeviceId)
-                .withPriority(FLOW_PRIORITY)
-                .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
-                .makeTemporary(TIMEOUT);
+                    FlowRule.Builder flowRuleBuilder = DefaultFlowRule.builder()
+                            .withSelector(trafficSelectorBuilder.build())
+                            .withTreatment(trafficTreatmentBuilder.build())
+                            .forDevice(forDeviceId)
+                            .withPriority(FLOW_PRIORITY)
+                            .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
+                            .makeTemporary(TIMEOUT);
 
-        flowRuleService.applyFlowRules(flowRuleBuilder.build());
+                    flowRuleService.applyFlowRules(flowRuleBuilder.build());
+                }
     }
 }

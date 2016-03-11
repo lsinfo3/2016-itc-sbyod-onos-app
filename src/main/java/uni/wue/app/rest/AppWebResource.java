@@ -20,8 +20,6 @@ package uni.wue.app.rest;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Sets;
 import org.onlab.packet.Ip4Address;
-import org.onlab.packet.MacAddress;
-import org.onlab.packet.TpPort;
 import org.onosproject.net.Host;
 import org.onosproject.net.host.HostService;
 import org.onosproject.rest.AbstractWebResource;
@@ -36,13 +34,11 @@ import uni.wue.app.service.ServiceStore;
 
 import static org.slf4j.LoggerFactory.getLogger;
 
-import javax.ws.rs.PUT;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Response;
-import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -115,7 +111,7 @@ public class AppWebResource extends AbstractWebResource {
             return Response.ok(INVALID_PARAMETER).build();
         }
 
-        Iterable<Service> services = get(ConnectionStoreService.class).getConnections(userIp).stream()
+        Iterable<Service> services = get(ConnectionStoreService.class).getUserConnections(userIp).stream()
                 .map(c -> c.getService())
                 .collect(Collectors.toSet());
         return Response.ok(encodeArray(Service.class, "services", services)).build();
@@ -148,7 +144,7 @@ public class AppWebResource extends AbstractWebResource {
             return Response.ok(INVALID_PARAMETER).build();
         }
 
-        Set<Connection> result = get(ConnectionStoreService.class).getConnections(userIp);
+        Set<Connection> result = get(ConnectionStoreService.class).getUserConnections(userIp);
         if(result.stream()
                 .filter(c -> c.getService().id().equals(serviceId))
                 .count() != 0){
@@ -176,11 +172,10 @@ public class AppWebResource extends AbstractWebResource {
         if(userIp_ == null || serviceId_ == null)
             return Response.ok(INVALID_PARAMETER).build();
 
-        Ip4Address userIp;
         Service service;
         Set<Host> srcHosts;
         try{
-            userIp = Ip4Address.valueOf(userIp_);
+            Ip4Address userIp = Ip4Address.valueOf(userIp_);
             srcHosts = get(HostService.class).getHostsByIp(userIp);
             service = get(ServiceStore.class).getService(ServiceId.serviceId(serviceId_));
         } catch (Exception e){
@@ -194,7 +189,7 @@ public class AppWebResource extends AbstractWebResource {
 
         // install connection for every host and service
         for(Host srcHost : srcHosts) {
-                Connection connection = new DefaultConnection(userIp, srcHost.mac(), service);
+                Connection connection = new DefaultConnection(srcHost, service);
                 // if the connection does not already exist
                 if (!get(ConnectionStoreService.class).contains(connection)) {
                     log.debug("AppWebResource: Installing connection {}", connection.toString());

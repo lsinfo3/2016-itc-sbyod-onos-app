@@ -41,7 +41,7 @@ public interface ConnectionStoreService {
      * @param srcIp IPv4 address of the user
      * @return set of connections
      */
-    Set<Connection> getConnections(Ip4Address srcIp);
+    Set<Connection> getUserConnections(Ip4Address srcIp);
 
     /**
      * Get the set of connections for source IP and source MAC
@@ -50,7 +50,7 @@ public interface ConnectionStoreService {
      * @param srcMac
      * @return set of connections
      */
-    Set<Connection> getConnections(Ip4Address srcIp, MacAddress srcMac);
+    Set<Connection> getUserConnections(Ip4Address srcIp, MacAddress srcMac);
 
     /**
      * Get the set of connections for destination IP and destination traffic protocol port
@@ -59,7 +59,7 @@ public interface ConnectionStoreService {
      * @param dstTpPort
      * @return set of connections
      */
-    Set<Connection> getConnections(Ip4Address dstIp, TpPort dstTpPort);
+    Set<Connection> getUserConnections(Ip4Address dstIp, TpPort dstTpPort);
 
     /**
      * Get all registered connections

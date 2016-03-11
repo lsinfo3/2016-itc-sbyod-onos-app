@@ -34,6 +34,7 @@ import org.onosproject.net.Host;
 import org.onosproject.net.provider.ProviderId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uni.wue.app.connection.Connection;
 import uni.wue.app.connection.ConnectionStoreService;
 import uni.wue.app.connection.DefaultConnection;
 import uni.wue.app.connection.HostConnectionService;
@@ -93,8 +94,8 @@ public class PortalManager implements PortalService{
 
     private ReactivePacketProcessor processor = new ReactivePacketProcessor();
 
-    // host of the captive portal
-    private Host portal;
+    // ID of the portal service
+    ServiceId portalId = null;
 
 
     @Activate
@@ -171,49 +172,39 @@ public class PortalManager implements PortalService{
             }
 
             // get the portal service
-            Service portalService = serviceStore.getService("PortalService").iterator().next();
-
-            // TODO: what to do if portal has more than one IP address?
-            // get IPv4 address of the portal
-            Ip4Address serviceIp = null;
-            for(IpAddress ipAddress : portal.ipAddresses())
-                    if(ipAddress.isIp4()) {
-                        serviceIp = ipAddress.getIp4Address();
-                        break;
-                    }
-            if(serviceIp == null){
-                log.warn("PortalManager: Portal has no valid IPv4 address!");
-                return;
+            Service portalService = serviceStore.getService(portalId);
+            if(portalService == null){
+                log.warn("PortalManager: No portal defined with ID {}", portalId.toString());
             }
 
             IPacket iPkt = ethPkt.getPayload();
-            IPv4 ipPkt;
+            Ip4Address srcIp;
             if(iPkt instanceof IPv4)
-                ipPkt = (IPv4) iPkt;
+                srcIp = Ip4Address.valueOf(((IPv4) iPkt).getSourceAddress());
             else{
                 log.debug("PortalManager: Payload of {} is no IPv4 packet.", ethPkt.toString());
                 return;
             }
 
+            Set<Host> users = hostService.getHostsByIp(srcIp);
+
             // FIXME: adding rule for every IPv4 request, even if not on TpPort 80
             // FIXME: rules are stuck in PENDING_ADD state, but they are installed and do work!
             // add rules to routing devices enabling the connection between user and portal
-            connectionStoreService.addConnection(new DefaultConnection(
-                    Ip4Address.valueOf(ipPkt.getSourceAddress()),
-                    ethPkt.getSourceMAC(),
-                    portalService
-                    ));
+            for(Host user : users) {
+                Connection connection = new DefaultConnection(user, portalService);
+                connectionStoreService.addConnection(connection);
+            }
 
             // check if a redirect flow rule is necessary
             // (the destination of the packet differs from the portal addresses)
             Boolean addressDiffersFromPortal = true;
-            for(IpAddress portalAddress : portal.ipAddresses()){
-                addressDiffersFromPortal = IpAddress.valueOf(ipPkt.getDestinationAddress())
-                        .equals(portalAddress) ? false : addressDiffersFromPortal;
+            for(IpAddress portalAddress : portalService.getHost().ipAddresses()){
+                addressDiffersFromPortal = srcIp.equals(portalAddress) ? false : addressDiffersFromPortal;
             }
             if(addressDiffersFromPortal){
                 // install redirect rules in the network device flow table
-                packetRedirectService.redirectToPortal(context, portal);
+                packetRedirectService.redirectToPortal(context, portalService.getHost());
             }
 
             // send context to flow table, where it should be handled
@@ -242,8 +233,12 @@ public class PortalManager implements PortalService{
         // find hosts with portal IP address
         Set<Host> portalHosts = hostService.getHostsByIp(portalIPv4);
         if(portalHosts.size() == 1) {
-            this.portal = portalHosts.iterator().next();
-            log.debug(String.format("Set portal to %s", this.portal.id().toString()));
+
+            Service portalService = new DefaultService(portalHosts.iterator().next(), TpPort.tpPort(80), "PortalService", ProviderId.NONE);
+            serviceStore.addService(portalService);
+            portalId = portalService.id();
+
+            log.info(String.format("Set portal ID to {}", this.portalId.toString()));
             return true;
         }
 
@@ -276,12 +271,11 @@ public class PortalManager implements PortalService{
                     Sets.newHashSet(portalIPv4));
 
             hostStore.createOrUpdateHost(ProviderId.NONE, HostId.hostId(portalMac, VlanId.NONE), hostDescription, true);
-            portal = hostService.getHostsByIp(portalIPv4).iterator().next();
 
-            log.debug(String.format("No host with IP address %s found." +
-                    "\nCreated new Host %s.", portalIPv4, portal.toString()));
+            log.debug(String.format("No host with IP address {} found." +
+                    "\nCreated new Host."), portalIPv4);
 
-            return true;
+            return setPortal(pIp);
         }
 
         log.warn(String.format("Could not set portal. More than one hosts with IP %s found.", portalIPv4.toString()));
@@ -295,7 +289,7 @@ public class PortalManager implements PortalService{
      */
     @Override
     public MacAddress getPortalMac() {
-        return new MacAddress(portal.mac().toBytes());
+        return serviceStore.getService(portalId).getHost().mac();
     }
 
     /**
@@ -304,7 +298,7 @@ public class PortalManager implements PortalService{
      * @return IpAddress
      */
     @Override
-    public Set<IpAddress> getPortalIp() { return portal.ipAddresses(); }
+    public Set<IpAddress> getPortalIp() { return serviceStore.getService(portalId).getHost().ipAddresses(); }
 
     /**
      * Get the portal as host
@@ -313,7 +307,7 @@ public class PortalManager implements PortalService{
      */
     @Override
     public Host getPortal() {
-        return portal;
+        return serviceStore.getService(portalId).getHost();
     }
 
     /**

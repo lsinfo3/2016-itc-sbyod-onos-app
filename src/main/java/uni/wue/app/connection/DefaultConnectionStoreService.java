@@ -114,30 +114,29 @@ public class DefaultConnectionStoreService implements ConnectionStoreService {
     }
 
     /**
-     * Get the set of connection for source IP address
+     * Get the set of connection for user with IP address
      *
-     * @param srcIp IPv4 address of the user
+     * @param userIp IPv4 address of the user
      * @return set of connections
      */
     @Override
-    public Set<Connection> getConnections(Ip4Address srcIp) {
+    public Set<Connection> getUserConnections(Ip4Address userIp) {
         return connections.stream()
-                .filter(c -> c.getSrcIp().equals(srcIp))
+                .filter(c -> c.getUser().ipAddresses().contains(userIp))
                 .collect(Collectors.toSet());
     }
 
     /**
      * Get the set of connections for source IP and source MAC
      *
-     * @param srcIp
-     * @param srcMac
+     * @param userIp
+     * @param userMac
      * @return set of connections
      */
     @Override
-    public Set<Connection> getConnections(Ip4Address srcIp, MacAddress srcMac) {
+    public Set<Connection> getUserConnections(Ip4Address userIp, MacAddress userMac) {
         return connections.stream()
-                .filter(c -> (c.getSrcIp().equals(srcIp) && c.getSrcMac().equals(srcMac)))
-                .sorted(Comparator.comparing(Connection::getDstIp))
+                .filter(c -> (c.getUser().ipAddresses().contains(userIp) && c.getUser().mac().equals(userMac)))
                 .collect(Collectors.toSet());
     }
 
@@ -149,18 +148,16 @@ public class DefaultConnectionStoreService implements ConnectionStoreService {
      * @return set of connections
      */
     @Override
-    public Set<Connection> getConnections(Ip4Address dstIp, TpPort dstTpPort) {
+    public Set<Connection> getUserConnections(Ip4Address dstIp, TpPort dstTpPort) {
         return connections.stream()
-                .filter(c -> (c.getDstIp().equals(dstIp) && c.getDstTpPort().equals(dstTpPort)))
-                .sorted(Comparator.comparing(Connection::getSrcIp))
+                .filter(c -> (c.getService().getHost().ipAddresses().contains(dstIp)
+                        && c.getService().getTpPort().equals(dstTpPort)))
                 .collect(Collectors.toSet());
     }
 
     @Override
     public Set<Connection> getConnections(){
         return connections.stream()
-                .sorted(Comparator.comparing(Connection::getSrcIp)
-                        .thenComparing(Comparator.comparing(Connection::getDstIp)))
                 .collect(Collectors.toSet());
     }
 

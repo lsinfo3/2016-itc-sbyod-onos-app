@@ -21,6 +21,8 @@ import org.onosproject.codec.CodecContext;
 import org.onosproject.codec.JsonCodec;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.onosproject.net.Host;
+import uni.wue.app.service.Service;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -31,21 +33,16 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 public final class ConnectionCodec extends JsonCodec<Connection> {
 
-    // JSON fieldNames
-    private static final String srcIp = "sourceIP";
-    private static final String srcMac = "sourceMAC";
-    private static final String dstIp = "destinationIp";
-    private static final String dstTpP = "destinationTpPort";
-
     @Override
     public ObjectNode encode(Connection connection, CodecContext context){
         checkNotNull(connection, "Connection can not be null");
 
-        ObjectNode result = context.mapper().createObjectNode()
-                .put(srcIp, connection.getSrcIp().toString())
-                .put(srcMac, connection.getSrcMac().toString())
-                .put(dstIp, connection.getDstIp().toString())
-                .put(dstTpP, connection.getDstTpPort().toString());
+        final JsonCodec<Host> hostCodec = context.codec(Host.class);
+        final JsonCodec<Service> serviceCodec = context.codec(Service.class);
+
+        final ObjectNode result = context.mapper().createObjectNode();
+        result.set("user", hostCodec.encode(connection.getUser(), context));
+        result.set("service", serviceCodec.encode(connection.getService(), context));
 
         return result;
     }

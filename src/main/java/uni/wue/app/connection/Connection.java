@@ -21,6 +21,7 @@ import org.onlab.packet.Ip4Address;
 import org.onlab.packet.MacAddress;
 import org.onlab.packet.TpPort;
 import org.onosproject.net.Element;
+import org.onosproject.net.Host;
 import uni.wue.app.service.Service;
 
 import javax.xml.stream.events.EndElement;
@@ -31,37 +32,16 @@ import javax.xml.stream.events.EndElement;
 public interface Connection{
 
     /**
-     * Get the source IP address of the connection
-     *
-     * @return source Ip4Address
-     */
-    Ip4Address getSrcIp();
-
-    /**
-     * Get the source MAC address of the connection
-     *
-     * @return source MacAddress
-     */
-    MacAddress getSrcMac();
-
-    /**
-     * Get the destination IP address of the connection
-     *
-     * @return destination Ip4Address
-     */
-    Ip4Address getDstIp();
-
-    /**
-     * Get the destination transport protocol port
-     *
-     * @return destination TpPort
-     */
-    TpPort getDstTpPort();
-
-    /**
      * Get the service of the connection
      *
      * @return service
      */
     Service getService();
+
+    /**
+     * Get the user of the connection
+     *
+     * @return user host element
+     */
+    Host getUser();
 }
