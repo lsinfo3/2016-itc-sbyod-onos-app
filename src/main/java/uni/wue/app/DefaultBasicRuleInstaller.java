@@ -75,21 +75,21 @@ public class DefaultBasicRuleInstaller implements BasicRuleInstaller {
             FlowRule rule = dropRuleBuilder.forDevice(device.id()).build();
 
             // add a listener, that notifies if rule has been added in device
-            InternalFlowRuleListener internalFlowRuleListener = new InternalFlowRuleListener(rule);
+            /*InternalFlowRuleListener internalFlowRuleListener = new InternalFlowRuleListener(rule);
             flowRuleService.addListener(internalFlowRuleListener);
 
             lock.lock();
             try {
-                // apply flow rule
+                // apply flow rule*/
                 flowRuleService.applyFlowRules(rule);
                 // wait for rule state "ADDED" in device
-                ruleAdded.await();
+                /*ruleAdded.await();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             } finally {
                 lock.unlock();
                 flowRuleService.removeListener(internalFlowRuleListener);
-            }
+            }*/
         }
 
         FlowRule.Builder controllerRuleBuilder = getControllerRuleBuilder();
@@ -99,21 +99,21 @@ public class DefaultBasicRuleInstaller implements BasicRuleInstaller {
             FlowRule rule = controllerRuleBuilder.forDevice(device.id()).build();
 
             // add a listener, that notifies if rule has been added in device
-            InternalFlowRuleListener internalFlowRuleListener = new InternalFlowRuleListener(rule);
+            /*InternalFlowRuleListener internalFlowRuleListener = new InternalFlowRuleListener(rule);
             flowRuleService.addListener(internalFlowRuleListener);
 
             lock.lock();
             try{
-                // apply flow rule
+                // apply flow rule*/
                 flowRuleService.applyFlowRules(rule);
                 // wait for rule state "ADDED" in device
-                ruleAdded.await();
+                /*ruleAdded.await();
             } catch (InterruptedException e){
                 e.printStackTrace();
             } finally {
                 lock.unlock();
                 flowRuleService.removeListener(internalFlowRuleListener);
-            }
+            }*/
         }
 
     }
@@ -148,7 +148,6 @@ public class DefaultBasicRuleInstaller implements BasicRuleInstaller {
      */
     private FlowRule.Builder getControllerRuleBuilder() {
 
-        //TODO: second rule matching on UPD port 80?
         TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
                 //.matchIPDst(IpAddress.valueOf("10.0.0.3").toIpPrefix())
                 //.matchTcpDst(PORTAL_TCP_PORT);

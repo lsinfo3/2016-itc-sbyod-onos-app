@@ -21,6 +21,7 @@ import org.onlab.packet.Ip4Address;
 import org.onlab.packet.MacAddress;
 import org.onlab.packet.TpPort;
 import org.slf4j.Logger;
+import uni.wue.app.service.Service;
 
 import java.security.InvalidParameterException;
 
@@ -33,22 +34,14 @@ public class DefaultConnection implements Connection{
 
     private static final Logger log = getLogger(uni.wue.app.PortalManager.class);
 
-    private Ip4Address srcIp, dstIp;
+    private Ip4Address srcIp;
     private MacAddress srcMac;
-    private TpPort dstTpPort;
+    private final Service service;
 
 
-    /**
-     * Create a connection between an user and a service
-     *
-     * @param srcIp source IP address of the user
-     * @param srcMac source Mac address of the user
-     * @param dstIp destination Ip address of the service
-     * @param dstTpPort destination transport protocol port of the service
-     */
-    public DefaultConnection(Ip4Address srcIp, MacAddress srcMac, Ip4Address dstIp, TpPort dstTpPort){
+    public DefaultConnection(Ip4Address srcIp, MacAddress srcMac, Service service){
 
-        if(srcIp == null || srcMac == null || dstIp == null || dstTpPort == null){
+        if(srcIp == null || srcMac == null || service == null){
             log.warn("DefaultConnection: Invalid parameter");
             throw new InvalidParameterException(String.format("Invalid parameter in class : {}",
                     this.getClass().toString()));
@@ -56,8 +49,7 @@ public class DefaultConnection implements Connection{
 
         this.srcIp = srcIp;
         this.srcMac = srcMac;
-        this.dstIp = dstIp;
-        this.dstTpPort = dstTpPort;
+        this.service = service;
     }
 
     public Ip4Address getSrcIp() {
@@ -68,13 +60,16 @@ public class DefaultConnection implements Connection{
         return srcMac;
     }
 
+    // TODO: return set of ip addresses
     public Ip4Address getDstIp() {
-        return dstIp;
+        return service.getIpv4().iterator().next();
     }
 
     public TpPort getDstTpPort() {
-        return dstTpPort;
+        return service.getTpPort();
     }
+
+    public Service getService() { return service; }
 
     @Override
     public boolean equals(Object o) {
@@ -84,18 +79,16 @@ public class DefaultConnection implements Connection{
         DefaultConnection that = (DefaultConnection) o;
 
         if (srcIp != null ? !srcIp.equals(that.srcIp) : that.srcIp != null) return false;
-        if (dstIp != null ? !dstIp.equals(that.dstIp) : that.dstIp != null) return false;
         if (srcMac != null ? !srcMac.equals(that.srcMac) : that.srcMac != null) return false;
-        return !(dstTpPort != null ? !dstTpPort.equals(that.dstTpPort) : that.dstTpPort != null);
+        return !(service != null ? !service.equals(that.service) : that.service != null);
 
     }
 
     @Override
     public int hashCode() {
         int result = srcIp != null ? srcIp.hashCode() : 0;
-        result = 31 * result + (dstIp != null ? dstIp.hashCode() : 0);
         result = 31 * result + (srcMac != null ? srcMac.hashCode() : 0);
-        result = 31 * result + (dstTpPort != null ? dstTpPort.hashCode() : 0);
+        result = 31 * result + (service != null ? service.hashCode() : 0);
         return result;
     }
 
@@ -103,9 +96,9 @@ public class DefaultConnection implements Connection{
     public String toString() {
         return "DefaultConnection{" +
                 "srcIp=" + srcIp +
-                ", dstIp=" + dstIp +
                 ", srcMac=" + srcMac +
-                ", dstTpPort=" + dstTpPort +
+                ", service=" + service +
                 '}';
     }
 }
+

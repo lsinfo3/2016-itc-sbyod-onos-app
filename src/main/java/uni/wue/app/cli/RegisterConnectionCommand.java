@@ -23,8 +23,11 @@ import org.onlab.packet.Ip4Address;
 import org.onlab.packet.MacAddress;
 import org.onlab.packet.TpPort;
 import org.onosproject.cli.AbstractShellCommand;
+import org.onosproject.net.host.HostService;
 import uni.wue.app.connection.DefaultConnection;
 import uni.wue.app.connection.ConnectionStoreService;
+import uni.wue.app.service.Service;
+import uni.wue.app.service.ServiceStore;
 
 /**
  * Created by lorry on 14.01.16.
@@ -32,21 +35,13 @@ import uni.wue.app.connection.ConnectionStoreService;
 @Command(scope="onos", name="register-connection", description = "Register a new connection between an user and a service")
 public class RegisterConnectionCommand extends AbstractShellCommand{
 
-    @Option(name = "-si", aliases = "--sourceIp", description = "The source IP address of the user",
+    @Option(name = "-s", aliases = "--sourceIp", description = "The source IP address of the user",
             required = true, multiValued = false)
     private String srcIp_ = null;
 
-    @Option(name = "-sm", aliases = "--sourceMac", description = "The source MAC address of the user",
+    @Option(name = "-d", aliases = "--serviceName", description = "The name of the destination service",
             required = true, multiValued = false)
-    private String srcMac_ = null;
-
-    @Option(name = "-di", aliases = "--destinationIp", description = "The destination IP address of the service",
-            required = true, multiValued = false)
-    private String dstIp_ = null;
-
-    @Option(name = "-dp", aliases = "--destinationTpPort", description = "The destination traffic protocol port of the service",
-            required = true, multiValued = false)
-    private String dstTpPort_ = null;
+    private String dstService = null;
 
     private ConnectionStoreService connectionStoreService;
 
@@ -55,16 +50,15 @@ public class RegisterConnectionCommand extends AbstractShellCommand{
 
         try{
             Ip4Address srcIp = Ip4Address.valueOf(srcIp_);
-            MacAddress srcMac = MacAddress.valueOf(srcMac_);
-            Ip4Address dstIp = Ip4Address.valueOf(dstIp_);
-            TpPort dstTpPort = TpPort.tpPort(Integer.valueOf(dstTpPort_));
+            MacAddress srcMac = get(HostService.class).getHostsByIp(srcIp).iterator().next().mac();
+            Service service = get(ServiceStore.class).getService(dstService).iterator().next();
 
             connectionStoreService = get(ConnectionStoreService.class);
-            connectionStoreService.addConnection(new DefaultConnection(srcIp, srcMac, dstIp, dstTpPort));
+            connectionStoreService.addConnection(new DefaultConnection(srcIp, srcMac, service));
 
             System.out.println(String.format("Added connection between user with IP = {} and MAC = {} " +
-                    "and service with IP = {} and TpPort = {}",
-                    new String[]{srcIp.toString(), srcMac.toString(), dstIp.toString(), dstTpPort.toString()}));
+                    "and service with name = {}",
+                    new String[]{srcIp.toString(), srcMac.toString(), service.toString()}));
 
         } catch (Exception e){
             System.out.println("Could not add connection.");

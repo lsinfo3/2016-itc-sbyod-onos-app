@@ -45,6 +45,9 @@
         <command>
             <action class="uni.wue.app.cli.ListConnectionsCommand"/>
         </command>
+        <command>
+            <action class="uni.wue.app.cli.ListServicesCommand"/>
+        </command>
     </command-bundle>
 
     <bean id="hostIdCompleter" class="org.onosproject.cli.net.HostIdCompleter"/>

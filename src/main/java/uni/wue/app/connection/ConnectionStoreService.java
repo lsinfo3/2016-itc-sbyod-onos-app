@@ -30,12 +30,22 @@ public interface ConnectionStoreService {
 
     /**
      * Add a new connection to the service
+     *
      * @param connection
      */
     void addConnection(Connection connection);
 
     /**
+     * Get the set of connection for source IP address
+     *
+     * @param srcIp IPv4 address of the user
+     * @return set of connections
+     */
+    Set<Connection> getConnections(Ip4Address srcIp);
+
+    /**
      * Get the set of connections for source IP and source MAC
+     *
      * @param srcIp
      * @param srcMac
      * @return set of connections
@@ -44,6 +54,7 @@ public interface ConnectionStoreService {
 
     /**
      * Get the set of connections for destination IP and destination traffic protocol port
+     *
      * @param dstIp
      * @param dstTpPort
      * @return set of connections
@@ -52,8 +63,17 @@ public interface ConnectionStoreService {
 
     /**
      * Get all registered connections
+     *
      * @return set of connections
      */
     Set<Connection> getConnections();
+
+    /**
+     * Ask if connection is already installed
+     *
+     * @param connection the connection to check
+     * @return true if connection already installed
+     */
+    Boolean contains(Connection connection);
 
 }

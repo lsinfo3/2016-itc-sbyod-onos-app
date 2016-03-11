@@ -15,37 +15,31 @@
  *
  *
  */
-package uni.wue.app.connection;
-
-import org.onosproject.codec.CodecContext;
-import org.onosproject.codec.JsonCodec;
+package uni.wue.app.service;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.onosproject.codec.CodecContext;
+import org.onosproject.codec.JsonCodec;
+import uni.wue.app.connection.Connection;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
- * Created by lorry on 07.03.16.
- *
- * Connection JSON codec.
+ * Created by lorry on 10.03.16.
  */
-public final class ConnectionCodec extends JsonCodec<Connection> {
+public class ServiceCodec extends JsonCodec<Service> {
 
-    // JSON fieldNames
-    private static final String srcIp = "sourceIP";
-    private static final String srcMac = "sourceMAC";
-    private static final String dstIp = "destinationIp";
-    private static final String dstTpP = "destinationTpPort";
+    // JSON field names
+    private static final String serviceName = "serviceName";
+    private static final String serviceId = "serviceId";
 
     @Override
-    public ObjectNode encode(Connection connection, CodecContext context){
-        checkNotNull(connection, "Connection can not be null");
+    public ObjectNode encode(Service service, CodecContext context){
+        checkNotNull(service, "Service can not be null");
 
         ObjectNode result = context.mapper().createObjectNode()
-                .put(srcIp, connection.getSrcIp().toString())
-                .put(srcMac, connection.getSrcMac().toString())
-                .put(dstIp, connection.getDstIp().toString())
-                .put(dstTpP, connection.getDstTpPort().toString());
+                .put(serviceName, service.getName())
+                .put(serviceId, service.id().toString());
 
         return result;
     }

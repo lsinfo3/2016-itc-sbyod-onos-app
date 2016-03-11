@@ -39,6 +39,11 @@ import uni.wue.app.connection.DefaultConnection;
 import uni.wue.app.connection.HostConnectionService;
 import uni.wue.app.redirect.PacketRedirect;
 import uni.wue.app.redirect.PacketRedirectService;
+import uni.wue.app.service.DefaultService;
+import uni.wue.app.service.DefaultServiceStore;
+import uni.wue.app.service.ServiceId;
+import uni.wue.app.service.ServiceStore;
+import uni.wue.app.service.Service;
 
 import java.util.Set;
 
@@ -47,7 +52,7 @@ import java.util.Set;
  * Created by lorry on 13.11.15.
  */
 @Component(immediate = true)
-@Service
+@org.apache.felix.scr.annotations.Service
 public class PortalManager implements PortalService{
 
     private final Logger log = LoggerFactory.getLogger(getClass());
@@ -80,6 +85,9 @@ public class PortalManager implements PortalService{
     protected ConnectionStoreService connectionStoreService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected ServiceStore serviceStore;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected BasicRuleInstaller basicRuleInstaller;
 
 
@@ -97,8 +105,12 @@ public class PortalManager implements PortalService{
         basicRuleInstaller.installRules();
         packetService.addProcessor(processor, PacketProcessor.director(2));
         requestIntercepts();
-        // just for development reasons -> better user netcfghostprovider
+        // just for development reasons -> better use netcfghostprovider
         setPortal("10.0.0.3", "00:00:00:00:00:03", "of:0000000000000003", "1");
+        // add some services to the serviceStore
+        Host host = hostService.getHostsByIp(IpAddress.valueOf("10.0.0.3")).iterator().next();
+        Service service = new DefaultService(host, TpPort.tpPort(80), "PortalService", ProviderId.NONE);
+        serviceStore.addService(service);
 
         log.info("Started PortalManager {}", appId.toString());
     }
@@ -162,6 +174,9 @@ public class PortalManager implements PortalService{
                 return;
             }
 
+            // get the portal service
+            Service portalService = serviceStore.getService("PortalService").iterator().next();
+
             // TODO: what to do if portal has more than one IP address?
             // get IPv4 address of the portal
             Ip4Address serviceIp = null;
@@ -190,8 +205,7 @@ public class PortalManager implements PortalService{
             connectionStoreService.addConnection(new DefaultConnection(
                     Ip4Address.valueOf(ipPkt.getSourceAddress()),
                     ethPkt.getSourceMAC(),
-                    serviceIp,
-                    TpPort.tpPort(80)
+                    portalService
                     ));
 
             // check if a redirect flow rule is necessary

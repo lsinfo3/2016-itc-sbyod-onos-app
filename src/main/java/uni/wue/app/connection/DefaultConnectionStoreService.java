@@ -32,6 +32,7 @@ import org.onosproject.store.service.StorageService;
 import org.slf4j.Logger;
 
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -59,33 +60,41 @@ public class DefaultConnectionStoreService implements ConnectionStoreService {
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected CodecService codecService;
 
-    private DistributedSet<Connection> connections;
+    // TODO: use distributed set (problem with kryo)
+    //private DistributedSet<Connection> connections;
+    private Set<Connection> connections;
+
+    /*Serializer serializer = Serializer.using(KryoNamespaces.API.newBuilder()
+            .nextId(KryoNamespaces.BEGIN_USER_CUSTOM_ID)
+            .register(DefaultConnection.class)
+            .register(org.onlab.packet.Ip4Address.class)
+            .register(byte[].class)
+            .register(org.onlab.packet.IpAddress.Version.class)
+            .register(org.onlab.packet.TpPort.class)
+            .register(org.onlab.packet.MacAddress.class)
+            .build());*/
 
     @Activate
     protected void activate(){
-        connections = storageService.<Connection>setBuilder()
+        /*connections = storageService.<Connection>setBuilder()
                 .withApplicationId(applicationIdStore.getAppId(APPLICATION_ID))
-                .withSerializer(Serializer.using(KryoNamespaces.API.newBuilder()
-                        .register(DefaultConnection.class)
-                        .register(org.onlab.packet.Ip4Address.class)
-                        .register(byte[].class)
-                        .register(org.onlab.packet.IpAddress.Version.class)
-                        .register(org.onlab.packet.TpPort.class)
-                        .register(org.onlab.packet.MacAddress.class)
-                        .build()))
+                .withSerializer(serializer)
                 .withName("connections")
                 .build();
-        connections.clear();
+        connections.clear();*/
+
+        connections = new HashSet<>();
 
         codecService.registerCodec(Connection.class, new ConnectionCodec());
 
-        log.info("Started ConnectionManager");
+        log.info("Started ConnectionStoreService");
     }
 
     @Deactivate
     protected void deactivate(){
+        connections.clear();
 
-        log.info("Stopped ConnectionManager");
+        log.info("Stopped ConnectionStoreService");
     }
 
     /**
@@ -102,6 +111,19 @@ public class DefaultConnectionStoreService implements ConnectionStoreService {
         hostConnectionService.addConnection(connection);
 
         log.debug("Added connection {}", connection.toString());
+    }
+
+    /**
+     * Get the set of connection for source IP address
+     *
+     * @param srcIp IPv4 address of the user
+     * @return set of connections
+     */
+    @Override
+    public Set<Connection> getConnections(Ip4Address srcIp) {
+        return connections.stream()
+                .filter(c -> c.getSrcIp().equals(srcIp))
+                .collect(Collectors.toSet());
     }
 
     /**
@@ -140,5 +162,16 @@ public class DefaultConnectionStoreService implements ConnectionStoreService {
                 .sorted(Comparator.comparing(Connection::getSrcIp)
                         .thenComparing(Comparator.comparing(Connection::getDstIp)))
                 .collect(Collectors.toSet());
+    }
+
+    /**
+     * Ask if connection is already installed
+     *
+     * @param connection the connection to check
+     * @return true if connection already installed
+     */
+    @Override
+    public Boolean contains(Connection connection) {
+        return connections.contains(connection);
     }
 }

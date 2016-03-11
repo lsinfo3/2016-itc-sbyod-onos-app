@@ -15,53 +15,58 @@
  *
  *
  */
-package uni.wue.app.connection;
+package uni.wue.app.service;
 
 import org.onlab.packet.Ip4Address;
+import org.onlab.packet.IpAddress;
 import org.onlab.packet.MacAddress;
 import org.onlab.packet.TpPort;
+import org.onosproject.net.ElementId;
+import org.onosproject.net.Host;
 import org.onosproject.net.Element;
-import uni.wue.app.service.Service;
 
-import javax.xml.stream.events.EndElement;
+import java.util.Set;
 
 /**
- * Created by lorry on 06.03.16.
+ * Created by lorry on 10.03.16.
  */
-public interface Connection{
+public interface Service extends Element{
 
     /**
-     * Get the source IP address of the connection
-     *
-     * @return source Ip4Address
+     * Get the host where the service is running on
+     * @return host
      */
-    Ip4Address getSrcIp();
+    Host getHost();
 
     /**
-     * Get the source MAC address of the connection
-     *
-     * @return source MacAddress
+     * Get the name of the service
+     * @return name
      */
-    MacAddress getSrcMac();
+    String getName();
 
     /**
-     * Get the destination IP address of the connection
+     * Returns the element identifier.
      *
-     * @return destination Ip4Address
+     * @return element id
      */
-    Ip4Address getDstIp();
+    @Override
+    ElementId id();
 
     /**
-     * Get the destination transport protocol port
-     *
-     * @return destination TpPort
+     * Get the MAC address of the service
+     * @return MacAddress
      */
-    TpPort getDstTpPort();
+    MacAddress getMac();
 
     /**
-     * Get the service of the connection
-     *
-     * @return service
+     * Get the IPv4 addresses of the service
+     * @return Ip4Address
      */
-    Service getService();
+    Set<Ip4Address> getIpv4();
+
+    /**
+     * Get the transport protocol port of the service
+     * @return TpPort
+     */
+    TpPort getTpPort();
 }
