@@ -179,37 +179,36 @@ public class PortalManager implements PortalService{
 
             IPacket iPkt = ethPkt.getPayload();
             Ip4Address srcIp;
-            if(iPkt instanceof IPv4)
+            Ip4Address dstIp;
+            if(iPkt instanceof IPv4) {
                 srcIp = Ip4Address.valueOf(((IPv4) iPkt).getSourceAddress());
-            else{
+                dstIp = Ip4Address.valueOf(((IPv4) iPkt).getDestinationAddress());
+            } else{
                 log.debug("PortalManager: Payload of {} is no IPv4 packet.", ethPkt.toString());
                 return;
             }
 
-            Set<Host> users = hostService.getHostsByIp(srcIp);
+            // install rule only if it is not coming from the portal
+            if(!portalService.getHost().ipAddresses().contains(srcIp)) {
 
-            // FIXME: adding rule for every IPv4 request, even if not on TpPort 80
-            // FIXME: rules are stuck in PENDING_ADD state, but they are installed and do work!
-            // add rules to routing devices enabling the connection between user and portal
-            for(Host user : users) {
-                Connection connection = new DefaultConnection(user, portalService);
-                connectionStoreService.addConnection(connection);
+                // install rules for all users with source ip address
+                for (Host user : hostService.getHostsByIp(srcIp)) {
+                    // add rules to routing devices enabling the connection between user and portal
+                    Connection connection = new DefaultConnection(user, portalService);
+                    connectionStoreService.addConnection(connection);
+                }
+
+                // redirect if the destination of the packet differs from the portal addresses
+                if (!portalService.getHost().ipAddresses().contains(dstIp)) {
+                    // install redirect rules in the network device flow table
+                    packetRedirectService.redirectToPortal(context, portalService.getHost());
+                }
+
+                // send context to flow table, where it should be handled
+                //context.treatmentBuilder().setOutput(PortNumber.TABLE);
+                //context.send();
             }
 
-            // check if a redirect flow rule is necessary
-            // (the destination of the packet differs from the portal addresses)
-            Boolean addressDiffersFromPortal = true;
-            for(IpAddress portalAddress : portalService.getHost().ipAddresses()){
-                addressDiffersFromPortal = srcIp.equals(portalAddress) ? false : addressDiffersFromPortal;
-            }
-            if(addressDiffersFromPortal){
-                // install redirect rules in the network device flow table
-                packetRedirectService.redirectToPortal(context, portalService.getHost());
-            }
-
-            // send context to flow table, where it should be handled
-            context.treatmentBuilder().setOutput(PortNumber.TABLE);
-            context.send();
             return;
         }
     }

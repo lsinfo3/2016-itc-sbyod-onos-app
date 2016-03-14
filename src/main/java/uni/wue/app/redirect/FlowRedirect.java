@@ -46,8 +46,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class FlowRedirect extends PacketRedirect {
 
     private static final String APPLICATION_ID = "uni.wue.app";
-    private static final int TIMEOUT = 60; //seconds
-    private static final int RULE_PRIORITY = 300;
+    private static final int TIMEOUT = 5; //seconds
+    private static final int RULE_PRIORITY = 400;
 
 
     private final Lock lock = new ReentrantLock();
@@ -88,9 +88,6 @@ public class FlowRedirect extends PacketRedirect {
         this.portal = portal;
         flowToPortal(context);
         flowFromPortal(context);
-
-        context.treatmentBuilder().setOutput(PortNumber.TABLE);
-        context.send();
 
         return;
     }

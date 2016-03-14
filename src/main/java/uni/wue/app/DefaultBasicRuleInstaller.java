@@ -21,10 +21,7 @@ import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
 import org.apache.felix.scr.annotations.Service;
-import org.onlab.packet.EthType;
-import org.onlab.packet.Ethernet;
-import org.onlab.packet.IpAddress;
-import org.onlab.packet.TpPort;
+import org.onlab.packet.*;
 import org.onosproject.core.ApplicationIdStore;
 import org.onosproject.net.Device;
 import org.onosproject.net.PortNumber;
@@ -149,9 +146,8 @@ public class DefaultBasicRuleInstaller implements BasicRuleInstaller {
     private FlowRule.Builder getControllerRuleBuilder() {
 
         TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
-                //.matchIPDst(IpAddress.valueOf("10.0.0.3").toIpPrefix())
-                //.matchTcpDst(PORTAL_TCP_PORT);
-                // TODO: does not install rule with match on TCP port 80
+                .matchIPProtocol(IPv4.PROTOCOL_TCP)
+                .matchTcpDst(PORTAL_TCP_PORT)
                 .matchEthType(EthType.EtherType.IPV4.ethType().toShort());
 
         TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()

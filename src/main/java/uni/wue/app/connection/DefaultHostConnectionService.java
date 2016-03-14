@@ -18,12 +18,12 @@
 package uni.wue.app.connection;
 
 import org.apache.felix.scr.annotations.*;
+import org.onlab.packet.EthType;
+import org.onlab.packet.IPv4;
 import org.onlab.packet.IpAddress;
+import org.onosproject.cli.net.IpProtocol;
 import org.onosproject.core.ApplicationIdStore;
 import org.onosproject.net.*;
-import org.onlab.packet.Ip4Address;
-import org.onlab.packet.MacAddress;
-import org.onlab.packet.TpPort;
 import org.onosproject.net.flow.*;
 import org.onosproject.net.host.HostService;
 import org.onosproject.net.topology.TopologyService;
@@ -82,7 +82,7 @@ public class DefaultHostConnectionService implements HostConnectionService {
             log.warn("HostConnectionService: DefaultConnection not added -> invalid parameter!");
             return;
         } else
-            log.info("HostConnectionService: Adding connection between user with IP={} MAC={} " +
+            log.debug("HostConnectionService: Adding connection between user with IP={} MAC={} " +
                             "and service with IP={} Port={}",
                     new String[]{connection.getUser().ipAddresses().toString(),
                             connection.getUser().mac().toString(),
@@ -151,21 +151,23 @@ public class DefaultHostConnectionService implements HostConnectionService {
      */
     private void addFlows(PortNumber userSidePort, PortNumber serviceSidePort, DeviceId forDeviceId,
                           Connection connection){
-        addFlowToDevicePortalDirection(userSidePort, serviceSidePort, forDeviceId, connection);
-        addFlowToDeviceUserDirection(serviceSidePort, userSidePort, forDeviceId, connection);
+        addFlowUserToService(userSidePort, serviceSidePort, forDeviceId, connection);
+        addFlowServiceToUser(serviceSidePort, userSidePort, forDeviceId, connection);
     }
 
-    private void addFlowToDevicePortalDirection(PortNumber inPort, PortNumber outPort, DeviceId forDeviceId,
-                                                Connection connection){
+    private void addFlowUserToService(PortNumber inPort, PortNumber outPort, DeviceId forDeviceId,
+                                      Connection connection){
 
         for(IpAddress userIp : connection.getUser().ipAddresses())
             for(IpAddress serviceIp : connection.getService().getHost().ipAddresses())
                 if(userIp.isIp4() && serviceIp.isIp4()) {
                     TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
+                            .matchEthType(EthType.EtherType.IPV4.ethType().toShort())
                             .matchInPort(inPort)
                             .matchIPSrc(userIp.toIpPrefix())
                             .matchEthSrc(connection.getUser().mac())
                             .matchIPDst(serviceIp.toIpPrefix())
+                            .matchIPProtocol(IPv4.PROTOCOL_TCP)
                             .matchTcpDst(connection.getService().getTpPort());
 
                     TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
@@ -183,13 +185,14 @@ public class DefaultHostConnectionService implements HostConnectionService {
                 }
     }
 
-    private void addFlowToDeviceUserDirection(PortNumber inPort, PortNumber outPort, DeviceId forDeviceId,
-                                              Connection connection){
+    private void addFlowServiceToUser(PortNumber inPort, PortNumber outPort, DeviceId forDeviceId,
+                                      Connection connection){
 
         for(IpAddress userIp : connection.getUser().ipAddresses())
             for(IpAddress serviceIp : connection.getService().getHost().ipAddresses())
                 if(userIp.isIp4() && serviceIp.isIp4()) {
                     TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
+                            .matchEthType(EthType.EtherType.IPV4.ethType().toShort())
                             .matchInPort(inPort)
                             .matchIPSrc(serviceIp.toIpPrefix())
                             .matchEthDst(connection.getUser().mac())
