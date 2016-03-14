@@ -17,14 +17,18 @@
  */
 package uni.wue.app.connection;
 
+import com.google.common.collect.Sets;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.MacAddress;
 import org.onlab.packet.TpPort;
 import org.onosproject.net.Host;
+import org.onosproject.net.flow.FlowRule;
 import org.slf4j.Logger;
 import uni.wue.app.service.Service;
 
 import java.security.InvalidParameterException;
+import java.util.HashSet;
+import java.util.Set;
 
 import static org.slf4j.LoggerFactory.getLogger;
 
@@ -37,6 +41,7 @@ public class DefaultConnection implements Connection{
 
     private final Host user;
     private final Service service;
+    private Set<FlowRule> flowRules;
 
 
     public DefaultConnection(Host user, Service service){
@@ -49,11 +54,35 @@ public class DefaultConnection implements Connection{
 
         this.user = user;
         this.service = service;
+        flowRules = new HashSet<>();
     }
 
     public Service getService() { return service; }
 
     public Host getUser(){ return user;}
+
+    /**
+     * Add a flow rule establishing the connection
+     *
+     * @param flowRule
+     */
+    @Override
+    public void addFlowRule(FlowRule flowRule) {
+        if(flowRule == null)
+            return;
+
+        flowRules.add(flowRule);
+    }
+
+    /**
+     * Get the flow rules establishing the connection
+     *
+     * @return set of flow rules
+     */
+    @Override
+    public Set<FlowRule> getFlowRules() {
+        return Sets.newHashSet(flowRules);
+    }
 
 
 }

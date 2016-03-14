@@ -22,9 +22,11 @@ import org.onlab.packet.MacAddress;
 import org.onlab.packet.TpPort;
 import org.onosproject.net.Element;
 import org.onosproject.net.Host;
+import org.onosproject.net.flow.FlowRule;
 import uni.wue.app.service.Service;
 
 import javax.xml.stream.events.EndElement;
+import java.util.Set;
 
 /**
  * Created by lorry on 06.03.16.
@@ -44,4 +46,18 @@ public interface Connection{
      * @return user host element
      */
     Host getUser();
+
+    /**
+     * Add a flow rule establishing the connection
+     *
+     * @param flowRule
+     */
+    void addFlowRule(FlowRule flowRule);
+
+    /**
+     * Get the flow rules establishing the connection
+     *
+     * @return set of flow rules
+     */
+    Set<FlowRule> getFlowRules();
 }

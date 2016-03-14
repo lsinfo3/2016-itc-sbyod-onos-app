@@ -109,6 +109,8 @@ public class PortalManager implements PortalService{
         // initiate a test setup
         testSetup();
 
+        hostService.addListener(new PortalConnectionHostListener());
+
         log.info("Started PortalManager {}", appId.toString());
     }
 
@@ -325,6 +327,31 @@ public class PortalManager implements PortalService{
         host = hostService.getHostsByIp(IpAddress.valueOf("10.0.0.4")).iterator().next();
         service = new DefaultService(host, TpPort.tpPort(22), "TestService2", ProviderId.NONE);
         serviceStore.addService(service);
+    }
+
+    public class PortalConnectionHostListener implements HostListener{
+
+        /**
+         * Reacts to the specified event.
+         *
+         * @param event event to be processed
+         */
+        @Override
+        public void event(HostEvent event) {
+            if(     event.type().equals(HostEvent.Type.HOST_ADDED) ||
+                    event.type().equals(HostEvent.Type.HOST_MOVED) ||
+                    event.type().equals(HostEvent.Type.HOST_UPDATED)){
+
+                // get the portal service
+                Service portalService = serviceStore.getService(portalId);
+                if(portalService == null){
+                    log.warn("PortalManager: No portal defined with ID {}", portalId.toString());
+                }
+
+                Connection connection = new DefaultConnection(event.subject(), portalService);
+                connectionStoreService.addConnection(connection);
+            }
+        }
     }
 
 }
