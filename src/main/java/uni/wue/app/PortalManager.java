@@ -37,16 +37,15 @@ import org.slf4j.LoggerFactory;
 import uni.wue.app.connection.Connection;
 import uni.wue.app.connection.ConnectionStoreService;
 import uni.wue.app.connection.DefaultConnection;
-import uni.wue.app.connection.HostConnectionService;
-import uni.wue.app.redirect.PacketRedirect;
 import uni.wue.app.redirect.PacketRedirectService;
 import uni.wue.app.service.DefaultService;
-import uni.wue.app.service.DefaultServiceStore;
 import uni.wue.app.service.ServiceId;
 import uni.wue.app.service.ServiceStore;
 import uni.wue.app.service.Service;
 
 import java.util.Set;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 
 /**
@@ -91,6 +90,9 @@ public class PortalManager implements PortalService{
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected PacketRedirectService packetRedirectService;
 
+    // make sure no new host is added to the host service, as long as
+    // the hosts are iterated
+    private final Lock hostLock = new ReentrantLock();
 
     private ReactivePacketProcessor processor = new ReactivePacketProcessor();
 
@@ -110,6 +112,7 @@ public class PortalManager implements PortalService{
         testSetup();
 
         hostService.addListener(new PortalConnectionHostListener());
+        connectAllHosts();
 
         log.info("Started PortalManager {}", appId.toString());
     }
@@ -329,6 +332,38 @@ public class PortalManager implements PortalService{
         serviceStore.addService(service);
     }
 
+    /**
+     * Add a connection to the portal for all hosts in the network
+     */
+    private void connectAllHosts(){
+
+        // get the portal service
+        Service portalService = null;
+        if(portalId != null)
+            portalService = serviceStore.getService(portalId);
+
+        hostLock.lock();
+
+        if(portalService != null) {
+            // install connection to the portal for every host in the network
+            Iterable<Host> hosts = hostService.getHosts();
+            for (Host host : hosts) {
+
+                // no connection for the portal itself
+                if(!portalService.getHost().equals(host)) {
+                    Connection connection = new DefaultConnection(host, portalService);
+                    connectionStoreService.addConnection(connection);
+                }
+
+            }
+        }
+
+        hostLock.unlock();
+    }
+
+    /**
+     * Add a connection to the portal for a new or changed host
+     */
     public class PortalConnectionHostListener implements HostListener{
 
         /**
@@ -338,6 +373,8 @@ public class PortalManager implements PortalService{
          */
         @Override
         public void event(HostEvent event) {
+            hostLock.lock();
+
             if(     event.type().equals(HostEvent.Type.HOST_ADDED) ||
                     event.type().equals(HostEvent.Type.HOST_MOVED) ||
                     event.type().equals(HostEvent.Type.HOST_UPDATED)){
@@ -346,11 +383,17 @@ public class PortalManager implements PortalService{
                 Service portalService = serviceStore.getService(portalId);
                 if(portalService == null){
                     log.warn("PortalManager: No portal defined with ID {}", portalId.toString());
+                    return;
                 }
 
-                Connection connection = new DefaultConnection(event.subject(), portalService);
-                connectionStoreService.addConnection(connection);
+                // only install if host is not the portal
+                if(portalService.getHost().equals(event.subject())) {
+                    Connection connection = new DefaultConnection(event.subject(), portalService);
+                    connectionStoreService.addConnection(connection);
+                }
             }
+
+            hostLock.unlock();
         }
     }
 
