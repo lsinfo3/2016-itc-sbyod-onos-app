@@ -18,6 +18,7 @@
 package uni.wue.app.connection;
 
 import org.apache.felix.scr.annotations.*;
+import org.apache.felix.scr.annotations.Service;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.IpAddress;
 import org.onlab.packet.MacAddress;
@@ -32,6 +33,7 @@ import org.onosproject.net.host.HostListener;
 import org.onosproject.net.host.HostService;
 import org.onosproject.store.service.StorageService;
 import org.slf4j.Logger;
+import uni.wue.app.service.*;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -180,6 +182,24 @@ public class DefaultConnectionStore implements ConnectionStore {
                 .filter(c -> (c.getService().getHost().ipAddresses().contains(dstIp)
                         && c.getService().getTpPort().equals(dstTpPort)))
                 .collect(Collectors.toSet());
+    }
+
+    /**
+     * Get the connection between the user and the service
+     *
+     * @param user
+     * @param service
+     * @return connection between user and service
+     */
+    @Override
+    public Connection getConnection(Host user, uni.wue.app.service.Service service) {
+        Set<Connection> result = connections.stream()
+                .filter(c -> c.getUser().equals(user) && c.getService().equals(service))
+                .collect(Collectors.toSet());
+        if(result.size() == 1)
+            return result.iterator().next();
+        else
+            return null;
     }
 
     @Override

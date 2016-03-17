@@ -37,9 +37,10 @@
             </completers>
         </command>
         <command>
-            <action class="uni.wue.app.cli.UnregisterConnectionCommand"/>
+            <action class="uni.wue.app.cli.RemoveConnectionCommand"/>
             <completers>
-                <ref component-id="hostIpCompleter"/>
+                <ref component-id="hostIdCompleter"/>
+                <ref component-id="serviceIdCompleter"/>
             </completers>
         </command>
         <command>

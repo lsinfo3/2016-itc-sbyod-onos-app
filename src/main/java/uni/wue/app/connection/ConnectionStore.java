@@ -20,6 +20,8 @@ package uni.wue.app.connection;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.MacAddress;
 import org.onlab.packet.TpPort;
+import org.onosproject.net.Host;
+import uni.wue.app.service.Service;
 
 import java.util.Set;
 
@@ -67,6 +69,15 @@ public interface ConnectionStore {
      * @return set of connections
      */
     Set<Connection> getServiceConnections(Ip4Address dstIp, TpPort dstTpPort);
+
+    /**
+     * Get the connection between the user and the service
+     *
+     * @param user
+     * @param service
+     * @return connection between user and service
+     */
+    Connection getConnection(Host user, Service service);
 
     /**
      * Get all registered connections
