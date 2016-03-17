@@ -17,6 +17,7 @@
  */
 package uni.wue.app.cli;
 
+import org.apache.karaf.shell.commands.Argument;
 import org.apache.karaf.shell.commands.Command;
 import org.apache.karaf.shell.commands.Option;
 import org.onosproject.cli.AbstractShellCommand;
@@ -32,18 +33,18 @@ import uni.wue.app.service.ServiceStore;
 /**
  * Created by lorry on 14.01.16.
  */
-@Command(scope="onos", name="register-connection", description = "Register a new connection between an user and a service")
+@Command(scope="onos", name="register-connection",
+        description = "Register a new connection between an user and a service")
 public class RegisterConnectionCommand extends AbstractShellCommand{
 
-    @Option(name = "-h", aliases = "--hostId", description = "The HostID of the user",
-            required = true, multiValued = false)
-    private String userId = null;
-
-    @Option(name = "-s", aliases = "--serviceId", description = "The ServiceID of the service",
+    @Argument(index=0, name="serviceId", description = "The ServiceID of the service",
             required = true, multiValued = false)
     private String serviceId = null;
 
-    private ConnectionStore connectionStore;
+    @Argument(index=1, name="userId", description = "The HostID of the user",
+            required = true, multiValued = false)
+    private String userId = null;
+
 
     @Override
     protected void execute() {

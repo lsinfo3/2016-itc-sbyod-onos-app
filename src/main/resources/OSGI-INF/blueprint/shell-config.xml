@@ -32,8 +32,8 @@
         <command>
             <action class="uni.wue.app.cli.RegisterConnectionCommand"/>
             <completers>
-                <ref component-id="hostIdCompleter"/>
                 <ref component-id="serviceIdCompleter"/>
+                <ref component-id="hostIdCompleter"/>
             </completers>
         </command>
         <command>
@@ -56,6 +56,6 @@
     <bean id="hostIpCompleter" class="uni.wue.app.cli.completer.HostIpv4Completer"/>
     <bean id="hostMacCompleter" class="uni.wue.app.cli.completer.HostMacCompleter"/>
     <bean id="devicePortNumberCompleter" class="uni.wue.app.cli.completer.DevicePortNumberCompleter"/>
-    <bean id="deviceIdCompleter" class="uni.wue.app.cli.completer.DeviceIdCompleter"/>
+    <bean id="deviceIdCompleter" class="org.onosproject.cli.net.DeviceIdCompleter"/>
 
 </blueprint>

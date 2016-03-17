@@ -17,6 +17,8 @@
  */
 package uni.wue.app.rest;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Sets;
 import org.onlab.packet.Ip4Address;
@@ -111,10 +113,30 @@ public class AppWebResource extends AbstractWebResource {
             return Response.ok(INVALID_PARAMETER).build();
         }
 
-        Iterable<Service> services = get(ConnectionStore.class).getUserConnections(userIp).stream()
+        // get the services the user is allowed to use
+        Iterable<Service> services = get(ServiceStore.class).getServices();
+        Set<Service> userServices = get(ConnectionStore.class).getUserConnections(userIp).stream()
                 .map(c -> c.getService())
                 .collect(Collectors.toSet());
-        return Response.ok(encodeArray(Service.class, "services", services)).build();
+
+        ArrayNode arrayNode = mapper().createArrayNode();
+
+        for(Service service : services){
+            ObjectNode serviceNode = mapper().createObjectNode()
+                    .put("serviceName", service.getName())
+                    .put("serviceId", service.id().toString())
+                    .put("serviceTpPort", service.getTpPort().toString());
+            if(userServices.contains(service))
+                serviceNode.put("serviceEnabled", true);
+            else
+                serviceNode.put("serviceEnabled", false);
+
+            arrayNode.add(serviceNode);
+        }
+
+        JsonNode result = mapper().createObjectNode().set("services", arrayNode);
+        return Response.ok(result).build();
+
     }
 
     /**

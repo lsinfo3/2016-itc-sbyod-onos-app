@@ -139,6 +139,7 @@ public class DefaultService extends AbstractElement implements Service {
         return "DefaultService{" +
                 "host=" + host +
                 ", tpPort=" + tpPort +
+                ", serviceId=" + this.id() +
                 '}';
     }
 }
