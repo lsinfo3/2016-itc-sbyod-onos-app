@@ -38,6 +38,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Response;
@@ -204,7 +205,10 @@ public class AppWebResource extends AbstractWebResource {
             return Response.ok(INVALID_PARAMETER).build();
         }
 
-        if(service == null) {
+        if(srcHosts.isEmpty()) {
+            log.debug("AppWebResource: No host found with IP = {}", userIp_);
+            return Response.ok(ENABLED_FALSE).build();
+        } else if(service == null) {
             log.debug("AppWebResource: No service found with id = {}", serviceId_);
             return Response.ok(ENABLED_FALSE).build();
         }
@@ -222,5 +226,46 @@ public class AppWebResource extends AbstractWebResource {
         }
 
         return Response.ok(ENABLED_TRUE).build();
+    }
+
+    @DELETE
+    @Path("/user/{userIp}/service/{serviceId}")
+    public Response deleteHostTraffic(@PathParam("userIp") String userIp_,
+                                      @PathParam("serviceId") String serviceId_){
+        log.debug("AppWebResource: Removing connection between user ip = {} and serviceId = {}",
+                new String[]{userIp_, serviceId_});
+
+        if(userIp_ == null || serviceId_ == null)
+            return Response.ok(INVALID_PARAMETER).build();
+
+        Service service;
+        Set<Host> srcHosts;
+        try{
+            Ip4Address userIp = Ip4Address.valueOf(userIp_);
+            srcHosts = get(HostService.class).getHostsByIp(userIp);
+            service = get(ServiceStore.class).getService(ServiceId.serviceId(serviceId_));
+        } catch (Exception e){
+            return Response.ok(INVALID_PARAMETER).build();
+        }
+
+
+        if(srcHosts.isEmpty()) {
+            log.debug("AppWebResource: No host found with IP = {}", userIp_);
+            return Response.ok(ENABLED_FALSE).build();
+        } else if(service == null) {
+            log.debug("AppWebResource: No service found with id = {}", serviceId_);
+            return Response.ok(ENABLED_FALSE).build();
+        }
+
+        // install connection for every host and service
+        for(Host user : srcHosts) {
+            Connection connection = get(ConnectionStore.class).getConnection(user, service);
+            if(connection != null) {
+                log.debug("AppWebResource: Removing connection {}", connection.toString());
+                get(ConnectionStore.class).removeConnection(connection);
+            }
+        }
+
+        return Response.ok(ENABLED_FALSE).build();
     }
 }
