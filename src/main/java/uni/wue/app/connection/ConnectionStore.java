@@ -26,7 +26,7 @@ import java.util.Set;
 /**
  * Created by lorry on 06.03.16.
  */
-public interface ConnectionStoreService {
+public interface ConnectionStore {
 
     /**
      * Add a new connection to the service
@@ -34,6 +34,13 @@ public interface ConnectionStoreService {
      * @param connection
      */
     void addConnection(Connection connection);
+
+    /**
+     * Removes the connection between user and service
+     *
+     * @param connection
+     */
+    void removeConnection(Connection connection);
 
     /**
      * Get the set of connection for source IP address
@@ -59,7 +66,7 @@ public interface ConnectionStoreService {
      * @param dstTpPort
      * @return set of connections
      */
-    Set<Connection> getUserConnections(Ip4Address dstIp, TpPort dstTpPort);
+    Set<Connection> getServiceConnections(Ip4Address dstIp, TpPort dstTpPort);
 
     /**
      * Get all registered connections

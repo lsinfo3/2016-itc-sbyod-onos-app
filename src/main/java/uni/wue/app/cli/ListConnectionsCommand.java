@@ -20,23 +20,22 @@ package uni.wue.app.cli;
 import org.apache.karaf.shell.commands.Command;
 import org.onosproject.cli.AbstractShellCommand;
 import uni.wue.app.connection.Connection;
-import uni.wue.app.connection.DefaultConnection;
-import uni.wue.app.connection.ConnectionStoreService;
+import uni.wue.app.connection.ConnectionStore;
 
 import java.util.Iterator;
 
 /**
  * Created by lorry on 14.01.16.
  */
-@Command(scope="onos", name="list-registered-connections", description = "List the registered connections")
+@Command(scope="onos", name="list-connections", description = "List the registered connections between user and service")
 public class ListConnectionsCommand extends AbstractShellCommand {
 
-    private ConnectionStoreService connectionStoreService;
+    private ConnectionStore connectionStore;
 
     @Override
     protected void execute() {
-        connectionStoreService = get(ConnectionStoreService.class);
-        Iterator<Connection> connectionIterator = connectionStoreService.getConnections().iterator();
+        connectionStore = get(ConnectionStore.class);
+        Iterator<Connection> connectionIterator = connectionStore.getConnections().iterator();
         print("List of all registered connections:");
         while(connectionIterator.hasNext()){
             print(connectionIterator.next().toString());

@@ -26,8 +26,8 @@ import org.onosproject.rest.AbstractWebResource;
 
 import org.slf4j.Logger;
 import uni.wue.app.connection.Connection;
+import uni.wue.app.connection.ConnectionStore;
 import uni.wue.app.connection.DefaultConnection;
-import uni.wue.app.connection.ConnectionStoreService;
 import uni.wue.app.service.Service;
 import uni.wue.app.service.ServiceId;
 import uni.wue.app.service.ServiceStore;
@@ -111,7 +111,7 @@ public class AppWebResource extends AbstractWebResource {
             return Response.ok(INVALID_PARAMETER).build();
         }
 
-        Iterable<Service> services = get(ConnectionStoreService.class).getUserConnections(userIp).stream()
+        Iterable<Service> services = get(ConnectionStore.class).getUserConnections(userIp).stream()
                 .map(c -> c.getService())
                 .collect(Collectors.toSet());
         return Response.ok(encodeArray(Service.class, "services", services)).build();
@@ -144,7 +144,7 @@ public class AppWebResource extends AbstractWebResource {
             return Response.ok(INVALID_PARAMETER).build();
         }
 
-        Set<Connection> result = get(ConnectionStoreService.class).getUserConnections(userIp);
+        Set<Connection> result = get(ConnectionStore.class).getUserConnections(userIp);
         if(result.stream()
                 .filter(c -> c.getService().id().equals(serviceId))
                 .count() != 0){
@@ -191,9 +191,9 @@ public class AppWebResource extends AbstractWebResource {
         for(Host srcHost : srcHosts) {
                 Connection connection = new DefaultConnection(srcHost, service);
                 // if the connection does not already exist
-                if (!get(ConnectionStoreService.class).contains(connection)) {
+                if (!get(ConnectionStore.class).contains(connection)) {
                     log.debug("AppWebResource: Installing connection {}", connection.toString());
-                    get(ConnectionStoreService.class).addConnection(connection);
+                    get(ConnectionStore.class).addConnection(connection);
                 } else{
                     log.debug("AppWebResource: Connection {} already exists", connection.toString());
                 }

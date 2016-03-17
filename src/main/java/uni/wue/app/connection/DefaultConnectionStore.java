@@ -17,21 +17,22 @@
  */
 package uni.wue.app.connection;
 
-import com.esotericsoftware.kryo.pool.KryoPool;
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.Ip4Address;
+import org.onlab.packet.IpAddress;
 import org.onlab.packet.MacAddress;
 import org.onlab.packet.TpPort;
-import org.onlab.util.KryoNamespace;
 import org.onosproject.codec.CodecService;
 import org.onosproject.core.ApplicationIdStore;
-import org.onosproject.store.serializers.KryoNamespaces;
-import org.onosproject.store.service.DistributedSet;
-import org.onosproject.store.service.Serializer;
+import org.onosproject.net.Host;
+import org.onosproject.net.flow.FlowRule;
+import org.onosproject.net.flow.FlowRuleService;
+import org.onosproject.net.host.HostEvent;
+import org.onosproject.net.host.HostListener;
+import org.onosproject.net.host.HostService;
 import org.onosproject.store.service.StorageService;
 import org.slf4j.Logger;
 
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -43,22 +44,28 @@ import static org.slf4j.LoggerFactory.getLogger;
  */
 @Component(immediate = true)
 @Service
-public class DefaultConnectionStoreService implements ConnectionStoreService {
+public class DefaultConnectionStore implements ConnectionStore {
 
     private static final Logger log = getLogger(uni.wue.app.PortalManager.class);
     private static String APPLICATION_ID = "uni.wue.app";
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected HostService hostService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected ApplicationIdStore applicationIdStore;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected HostConnectionService hostConnectionService;
+    protected ConnectionRuleInstaller connectionRuleInstaller;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected StorageService storageService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected CodecService codecService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected FlowRuleService flowRuleService;
 
     // TODO: use distributed set (problem with kryo)
     //private DistributedSet<Connection> connections;
@@ -87,14 +94,17 @@ public class DefaultConnectionStoreService implements ConnectionStoreService {
 
         codecService.registerCodec(Connection.class, new ConnectionCodec());
 
-        log.info("Started ConnectionStoreService");
+        // add listener to detect host moved, updated or removed
+        hostService.addListener(new ConnectionHostListener());
+
+        log.info("Started ConnectionStore");
     }
 
     @Deactivate
     protected void deactivate(){
         connections.clear();
 
-        log.info("Stopped ConnectionStoreService");
+        log.info("Stopped ConnectionStore");
     }
 
     /**
@@ -104,13 +114,30 @@ public class DefaultConnectionStoreService implements ConnectionStoreService {
      */
     @Override
     public void addConnection(Connection connection) {
-        if(!connections.contains(connection))
+        if(!connections.contains(connection)) {
+            //TODO: synchronize with flows in table (timeout)
+            connectionRuleInstaller.addConnection(connection);
             connections.add(connection);
+            log.debug("Added connection {}", connection);
+        } else{
+            log.debug("ConnectionStore: Connection already installed. Nothing done. Connection = {}", connection);
+        }
+    }
 
-        //TODO: test functionality, synchronize with flows in table (timeout)
-        hostConnectionService.addConnection(connection);
-
-        log.debug("Added connection {}", connection.toString());
+    /**
+     * Removes the connection between user and service
+     *
+     * @param connection
+     */
+    @Override
+    public void removeConnection(Connection connection) {
+        // remove the flow rules on the network devices
+        Set<FlowRule> flowRules = connection.getFlowRules();
+        for(FlowRule flowRule : flowRules){
+            flowRuleService.removeFlowRules(flowRule);
+        }
+        // remove the connection from the store
+        connections.remove(connection);
     }
 
     /**
@@ -148,7 +175,7 @@ public class DefaultConnectionStoreService implements ConnectionStoreService {
      * @return set of connections
      */
     @Override
-    public Set<Connection> getUserConnections(Ip4Address dstIp, TpPort dstTpPort) {
+    public Set<Connection> getServiceConnections(Ip4Address dstIp, TpPort dstTpPort) {
         return connections.stream()
                 .filter(c -> (c.getService().getHost().ipAddresses().contains(dstIp)
                         && c.getService().getTpPort().equals(dstTpPort)))
@@ -170,5 +197,58 @@ public class DefaultConnectionStoreService implements ConnectionStoreService {
     @Override
     public Boolean contains(Connection connection) {
         return connections.contains(connection);
+    }
+
+
+    public class ConnectionHostListener implements HostListener{
+
+        /**
+         * Reacts to the specified event.
+         *
+         * @param event event to be processed
+         */
+        @Override
+        public void event(HostEvent event) {
+            switch(event.type()){
+                case HOST_REMOVED:
+                    removeHostConnections(event);
+                    break;
+                case HOST_MOVED:
+                    updateHostConnections(event);
+                    break;
+                case HOST_UPDATED:
+                    updateHostConnections(event);
+                    break;
+            }
+        }
+
+        // remove all connections of the host
+        private void removeHostConnections(HostEvent event){
+            Host host = event.subject();
+            for(IpAddress ipAddress : host.ipAddresses()) {
+                if(ipAddress.isIp4()) {
+                    Set<Connection> connections = getUserConnections(ipAddress.getIp4Address());
+                    for(Connection connection : connections){
+                        removeConnection(connection);
+                    }
+                }
+            }
+        }
+
+        // update the connections of the host
+        private void updateHostConnections(HostEvent event){
+            Host host = event.subject();
+            for(IpAddress ipAddress : host.ipAddresses()){
+                if(ipAddress.isIp4()){
+                    Set<Connection> connections = getUserConnections(ipAddress.getIp4Address());
+                    for(Connection connection : connections){
+                        // removes the old flow rules from the devices
+                        removeConnection(connection);
+                        // installs new flow rules depending on the new host location
+                        addConnection(connection);
+                    }
+                }
+            }
+        }
     }
 }

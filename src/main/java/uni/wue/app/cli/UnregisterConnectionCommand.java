@@ -20,7 +20,7 @@ package uni.wue.app.cli;
 import org.apache.karaf.shell.commands.Command;
 import org.apache.karaf.shell.commands.Option;
 import org.onosproject.cli.AbstractShellCommand;
-import uni.wue.app.connection.ConnectionStoreService;
+import uni.wue.app.connection.ConnectionStore;
 
 /**
  * Created by lorry on 14.01.16.
@@ -44,7 +44,7 @@ public class UnregisterConnectionCommand extends AbstractShellCommand {
             required = true, multiValued = false)
     private String dstTpPort_ = null;
 
-    private ConnectionStoreService connectionStoreService;
+    private ConnectionStore connectionStore;
 
     @Override
     protected void execute() {

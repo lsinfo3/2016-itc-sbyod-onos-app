@@ -25,7 +25,7 @@ import org.onosproject.net.Host;
 /**
  * Created by lorry on 01.03.16.
  */
-public interface HostConnectionService {
+public interface ConnectionRuleInstaller {
 
     /**
      * Establish a connection between the user and the service

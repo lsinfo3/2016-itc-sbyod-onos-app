@@ -21,7 +21,6 @@ import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.EthType;
 import org.onlab.packet.IPv4;
 import org.onlab.packet.IpAddress;
-import org.onosproject.cli.net.IpProtocol;
 import org.onosproject.core.ApplicationIdStore;
 import org.onosproject.net.*;
 import org.onosproject.net.flow.*;
@@ -38,7 +37,7 @@ import static org.slf4j.LoggerFactory.getLogger;
  */
 @Component(immediate = true)
 @Service
-public class DefaultHostConnectionService implements HostConnectionService {
+public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
 
     private static final int FLOW_PRIORITY = 300;
     private static final int TIMEOUT = 5*60; //seconds
@@ -61,12 +60,12 @@ public class DefaultHostConnectionService implements HostConnectionService {
 
     @Activate
     protected void activate() {
-        log.info("Started DefaultHostConnectionService");
+        log.info("Started DefaultConnectionRuleInstaller");
     }
 
     @Deactivate
     protected void deactivate() {
-        log.info("Stopped DefaultHostConnectionService");
+        log.info("Stopped DefaultConnectionRuleInstaller");
     }
 
 
@@ -79,10 +78,10 @@ public class DefaultHostConnectionService implements HostConnectionService {
     public void addConnection(Connection connection) {
 
         if(connection == null){
-            log.warn("HostConnectionService: DefaultConnection not added -> invalid parameter!");
+            log.warn("ConnectionRuleInstaller: DefaultConnection not added -> invalid parameter!");
             return;
         } else
-            log.debug("HostConnectionService: Adding connection between user with IP={} MAC={} " +
+            log.debug("ConnectionRuleInstaller: Adding connection between user with IP={} MAC={} " +
                             "and service with IP={} Port={}",
                     new String[]{connection.getUser().ipAddresses().toString(),
                             connection.getUser().mac().toString(),
@@ -95,7 +94,7 @@ public class DefaultHostConnectionService implements HostConnectionService {
 
         // if user and service is connected to the same network device
         if(userLocation.deviceId().equals(serviceLocation.deviceId())){
-            log.debug("HostConnectionService: Installing flow rule only on device {}",
+            log.debug("ConnectionRuleInstaller: Installing flow rule only on device {}",
                     userLocation.deviceId().toString());
 
             // add one rule directing the traffic from user port to service port on device
@@ -107,11 +106,11 @@ public class DefaultHostConnectionService implements HostConnectionService {
             Set<Path> paths = topologyService.getPaths(topologyService.currentTopology(),
                     userLocation.deviceId(), serviceLocation.deviceId());
             if (paths.isEmpty()) {
-                log.warn("HostConnectionService: No path found between {} and {}",
+                log.warn("ConnectionRuleInstaller: No path found between {} and {}",
                         userLocation.toString(), serviceLocation.toString());
                 return;
             } else {
-                log.debug("HostConnectionService: Installing connection between {} and {}",
+                log.debug("ConnectionRuleInstaller: Installing connection between {} and {}",
                         userLocation.deviceId().toString(), serviceLocation.deviceId().toString());
                 Path path = paths.iterator().next();
 
@@ -181,7 +180,10 @@ public class DefaultHostConnectionService implements HostConnectionService {
                             .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
                             .makeTemporary(TIMEOUT);
 
-                    flowRuleService.applyFlowRules(flowRuleBuilder.build());
+                    FlowRule flowRule = flowRuleBuilder.build();
+                    flowRuleService.applyFlowRules(flowRule);
+                    // save flow rule in connection
+                    connection.addFlowRule(flowRule);
                 }
     }
 
@@ -209,7 +211,10 @@ public class DefaultHostConnectionService implements HostConnectionService {
                             .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
                             .makeTemporary(TIMEOUT);
 
-                    flowRuleService.applyFlowRules(flowRuleBuilder.build());
+                    FlowRule flowRule = flowRuleBuilder.build();
+                    flowRuleService.applyFlowRules(flowRule);
+                    // save flow rule in connection
+                    connection.addFlowRule(flowRule);
                 }
     }
 }

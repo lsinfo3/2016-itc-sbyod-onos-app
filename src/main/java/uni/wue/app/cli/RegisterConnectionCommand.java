@@ -19,13 +19,12 @@ package uni.wue.app.cli;
 
 import org.apache.karaf.shell.commands.Command;
 import org.apache.karaf.shell.commands.Option;
-import org.onlab.packet.Ip4Address;
 import org.onosproject.cli.AbstractShellCommand;
 import org.onosproject.net.Host;
 import org.onosproject.net.HostId;
 import org.onosproject.net.host.HostService;
+import uni.wue.app.connection.ConnectionStore;
 import uni.wue.app.connection.DefaultConnection;
-import uni.wue.app.connection.ConnectionStoreService;
 import uni.wue.app.service.Service;
 import uni.wue.app.service.ServiceStore;
 
@@ -43,7 +42,7 @@ public class RegisterConnectionCommand extends AbstractShellCommand{
             required = true, multiValued = false)
     private String serviceId = null;
 
-    private ConnectionStoreService connectionStoreService;
+    private ConnectionStore connectionStore;
 
     @Override
     protected void execute() {
@@ -52,7 +51,7 @@ public class RegisterConnectionCommand extends AbstractShellCommand{
             Host user = get(HostService.class).getHost(HostId.hostId(userId));
             Service service = get(ServiceStore.class).getService(serviceId).iterator().next();
 
-            get(ConnectionStoreService.class).addConnection(new DefaultConnection(user, service));
+            get(ConnectionStore.class).addConnection(new DefaultConnection(user, service));
 
             System.out.println(String.format("Added connection between user with ID = {} " +
                     "and service with ID = {}", userId, serviceId));

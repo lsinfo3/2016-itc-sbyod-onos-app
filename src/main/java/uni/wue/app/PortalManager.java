@@ -35,7 +35,7 @@ import org.onosproject.net.provider.ProviderId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uni.wue.app.connection.Connection;
-import uni.wue.app.connection.ConnectionStoreService;
+import uni.wue.app.connection.ConnectionStore;
 import uni.wue.app.connection.DefaultConnection;
 import uni.wue.app.redirect.PacketRedirectService;
 import uni.wue.app.service.DefaultService;
@@ -79,7 +79,7 @@ public class PortalManager implements PortalService{
 
     // own services
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected ConnectionStoreService connectionStoreService;
+    protected ConnectionStore connectionStore;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected ServiceStore serviceStore;
@@ -200,7 +200,7 @@ public class PortalManager implements PortalService{
                 for (Host user : hostService.getHostsByIp(srcIp)) {
                     // add rules to routing devices enabling the connection between user and portal
                     Connection connection = new DefaultConnection(user, portalService);
-                    connectionStoreService.addConnection(connection);
+                    connectionStore.addConnection(connection);
                 }
 
                 // redirect if the destination of the packet differs from the portal addresses
@@ -352,7 +352,7 @@ public class PortalManager implements PortalService{
                 // no connection for the portal itself
                 if(!portalService.getHost().equals(host)) {
                     Connection connection = new DefaultConnection(host, portalService);
-                    connectionStoreService.addConnection(connection);
+                    connectionStore.addConnection(connection);
                 }
 
             }
@@ -389,7 +389,7 @@ public class PortalManager implements PortalService{
                 // only install if host is not the portal
                 if(portalService.getHost().equals(event.subject())) {
                     Connection connection = new DefaultConnection(event.subject(), portalService);
-                    connectionStoreService.addConnection(connection);
+                    connectionStore.addConnection(connection);
                 }
             }
 
