@@ -242,11 +242,11 @@ public class PortalManager implements PortalService{
             serviceStore.addService(portalService);
             portalId = portalService.id();
 
-            log.info(String.format("Set portal ID to {}", this.portalId.toString()));
+            log.info("Set portal ID to {}", this.portalId.toString());
             return true;
         }
 
-        log.warn(String.format("Could not set portal. No host defined with IP %s!", portalIPv4.toString()));
+        log.warn("Could not set portal. No host defined with IP {}!", portalIPv4.toString());
         return false;
     }
 
@@ -318,18 +318,28 @@ public class PortalManager implements PortalService{
      * Initiate a test setup
      */
     private void testSetup(){
-        // just for development reasons -> better use netcfghostprovider
+        // just for development reasons
         setPortal("10.0.0.3");
+
+        Service service = null;
         // add some services to the serviceStore
-        Host host = hostService.getHostsByIp(IpAddress.valueOf("10.0.0.3")).iterator().next();
-        Service service = new DefaultService(host, TpPort.tpPort(80), "PortalService", ProviderId.NONE);
-        serviceStore.addService(service);
-        host = hostService.getHostsByIp(IpAddress.valueOf("10.0.0.4")).iterator().next();
-        service = new DefaultService(host, TpPort.tpPort(80), "TestService1", ProviderId.NONE);
-        serviceStore.addService(service);
-        host = hostService.getHostsByIp(IpAddress.valueOf("10.0.0.4")).iterator().next();
-        service = new DefaultService(host, TpPort.tpPort(22), "TestService2", ProviderId.NONE);
-        serviceStore.addService(service);
+        service = serviceStore.getService(portalId);
+        if(service != null) {
+            serviceStore.addService(service);
+        }
+
+        Set<Host> hosts = hostService.getHostsByIp(IpAddress.valueOf("10.0.0.4"));
+        if(!hosts.isEmpty()) {
+            service = new DefaultService(hosts.iterator().next(), TpPort.tpPort(80), "TestService1", ProviderId.NONE);
+            serviceStore.addService(service);
+            hosts = null;
+        }
+
+        hosts = hostService.getHostsByIp(IpAddress.valueOf("10.0.0.4"));
+        if(!hosts.isEmpty()) {
+            service = new DefaultService(hosts.iterator().next(), TpPort.tpPort(22), "TestService2", ProviderId.NONE);
+            serviceStore.addService(service);
+        }
     }
 
     /**
@@ -362,7 +372,7 @@ public class PortalManager implements PortalService{
     }
 
     /**
-     * Add a connection to the portal for a new or changed host
+     * Add a connection to the portal for a new host
      */
     public class PortalConnectionHostListener implements HostListener{
 
@@ -375,9 +385,7 @@ public class PortalManager implements PortalService{
         public void event(HostEvent event) {
             hostLock.lock();
 
-            if(     event.type().equals(HostEvent.Type.HOST_ADDED) ||
-                    event.type().equals(HostEvent.Type.HOST_MOVED) ||
-                    event.type().equals(HostEvent.Type.HOST_UPDATED)){
+            if(event.type().equals(HostEvent.Type.HOST_ADDED)){
 
                 // get the portal service
                 Service portalService = serviceStore.getService(portalId);
@@ -387,7 +395,7 @@ public class PortalManager implements PortalService{
                 }
 
                 // only install if host is not the portal
-                if(portalService.getHost().equals(event.subject())) {
+                if(!portalService.getHost().equals(event.subject())) {
                     Connection connection = new DefaultConnection(event.subject(), portalService);
                     connectionStore.addConnection(connection);
                 }

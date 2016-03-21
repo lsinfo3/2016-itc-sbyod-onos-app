@@ -40,7 +40,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
 
     private static final int FLOW_PRIORITY = 300;
-    private static final int TIMEOUT = 5*60; //seconds
+    private static final int TIMEOUT = 60*60; //seconds
     private static final String APPLICATION_ID = "uni.wue.app";
 
     private static final Logger log = getLogger(uni.wue.app.PortalManager.class);

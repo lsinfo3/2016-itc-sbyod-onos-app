@@ -114,6 +114,10 @@ public class AppWebResource extends AbstractWebResource {
             return Response.ok(INVALID_PARAMETER).build();
         }
 
+        // return invalid, if no user with this ip address is connected
+        if(get(HostService.class).getHostsByIp(userIp).isEmpty())
+            return Response.ok(INVALID_PARAMETER).build();
+
         // get the services the user is allowed to use
         Iterable<Service> services = get(ServiceStore.class).getServices();
         Set<Service> userServices = get(ConnectionStore.class).getUserConnections(userIp).stream()

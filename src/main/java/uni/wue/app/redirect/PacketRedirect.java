@@ -79,10 +79,23 @@ public abstract class PacketRedirect implements PacketRedirectService {
      */
     public abstract void restoreSource(PacketContext context, Host portal);
 
+    /**
+     * Find the output port for the inbound packet to destination host
+     * @param pkt inbound packet
+     * @param dstHost destination host
+     * @return port number to the destination host
+     */
     protected PortNumber getDstPort(InboundPacket pkt, Host dstHost){
         return getDstPort(pkt, dstHost, pkt.receivedFrom().port());
     }
 
+    /**
+     * Find the output port for the inbound packet to destination host not leading to source port
+     * @param pkt inbound packet
+     * @param dstHost destination host
+     * @param srcPortNr source port of the packet
+     * @return port number to the destination host
+     */
     protected PortNumber getDstPort(InboundPacket pkt, Host dstHost, PortNumber srcPortNr){
 
         // Are we on an edge switch that our dstHost is on? If so,
@@ -136,32 +149,5 @@ public abstract class PacketRedirect implements PacketRedirectService {
             }
         }
         return lastPath;
-    }
-
-    public void FloodPacket(PacketContext context, Ip4Address hostIp){
-        //parse the packet of the context
-        InboundPacket pkt = context.inPacket();
-        Ethernet ethPkt = pkt.parsed();
-        IPv4 ipPkt = (IPv4)ethPkt.getPayload();
-
-        //set the mac address of the portal as destination
-        ethPkt.setDestinationMACAddress(MacAddress.BROADCAST);
-        // set the ip address of the portal as destination
-        ipPkt.setDestinationAddress(hostIp.toInt());
-        ipPkt.resetChecksum();
-        //wrap the packet as buffer
-        ByteBuffer buf = ByteBuffer.wrap(ethPkt.serialize());
-
-        TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder();
-        // set up the traffic management
-        trafficTreatmentBuilder.setIpDst(hostIp)
-                .setOutput(PortNumber.FLOOD);
-
-        //send new packet to the device where received packet came from
-        // TODO: failure when sending the packet out!
-        packetService.emit(new DefaultOutboundPacket(pkt.receivedFrom().deviceId(), trafficTreatmentBuilder.build(), buf));
-        context.isHandled();
-        context.block();
-        return;
     }
 }

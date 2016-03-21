@@ -24,9 +24,12 @@ import org.onlab.packet.IpAddress;
 import org.onlab.packet.MacAddress;
 import org.onlab.packet.TpPort;
 import org.onosproject.codec.CodecService;
+import org.onosproject.core.ApplicationId;
 import org.onosproject.core.ApplicationIdStore;
 import org.onosproject.net.Host;
 import org.onosproject.net.flow.FlowRule;
+import org.onosproject.net.flow.FlowRuleEvent;
+import org.onosproject.net.flow.FlowRuleListener;
 import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.host.HostEvent;
 import org.onosproject.net.host.HostListener;
@@ -37,6 +40,8 @@ import uni.wue.app.service.*;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 import static org.slf4j.LoggerFactory.getLogger;
@@ -69,6 +74,10 @@ public class DefaultConnectionStore implements ConnectionStore {
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected FlowRuleService flowRuleService;
 
+    // if a connection is removed, the RemovedFlowRule listener should wait
+    // until the connection is deleted
+    private final Lock flowRuleLock = new ReentrantLock();
+
     // TODO: use distributed set (problem with kryo)
     //private DistributedSet<Connection> connections;
     private Set<Connection> connections;
@@ -98,6 +107,7 @@ public class DefaultConnectionStore implements ConnectionStore {
 
         // add listener to detect host moved, updated or removed
         hostService.addListener(new ConnectionHostListener());
+        flowRuleService.addListener(new RemovedFlowRuleListener());
 
         log.info("Started ConnectionStore");
     }
@@ -117,7 +127,7 @@ public class DefaultConnectionStore implements ConnectionStore {
     @Override
     public void addConnection(Connection connection) {
         if(!connections.contains(connection)) {
-            //TODO: synchronize with flows in table (timeout)
+
             connectionRuleInstaller.addConnection(connection);
             connections.add(connection);
             log.debug("Added connection {}", connection);
@@ -133,13 +143,16 @@ public class DefaultConnectionStore implements ConnectionStore {
      */
     @Override
     public void removeConnection(Connection connection) {
+        // first remove the connection from the store
+        // as the event triggered by the flow rule removal
+        // would remove it again
+        connections.remove(connection);
+
         // remove the flow rules on the network devices
         Set<FlowRule> flowRules = connection.getFlowRules();
         for(FlowRule flowRule : flowRules){
             flowRuleService.removeFlowRules(flowRule);
         }
-        // remove the connection from the store
-        connections.remove(connection);
     }
 
     /**
@@ -269,6 +282,46 @@ public class DefaultConnectionStore implements ConnectionStore {
                     }
                 }
             }
+        }
+    }
+
+    public class RemovedFlowRuleListener implements FlowRuleListener{
+
+        /**
+         * Indicates whether the specified event is of interest or not.
+         * Default implementation always returns true.
+         *
+         * @param event event to be inspected
+         * @return true if event is relevant; false otherwise
+         */
+        @Override
+        public boolean isRelevant(FlowRuleEvent event) {
+
+            // events of rule removal and with this app id
+            if(event.type().equals(FlowRuleEvent.Type.RULE_REMOVED))
+                if(event.subject().appId() == applicationIdStore.getAppId(APPLICATION_ID).id()){
+                    return true;
+                }
+
+            return false;
+        }
+
+        /**
+         * Reacts to the specified event.
+         *
+         * @param event event to be processed
+         */
+        @Override
+        public void event(FlowRuleEvent event) {
+            FlowRule flowRule = event.subject();
+
+            // collect all connections that depend on this flow rule
+            Set<Connection> relevantConnections = connections.stream()
+                    .filter(c -> c.getFlowRules().contains(flowRule))
+                    .collect(Collectors.toSet());
+
+            // remove all connections depending on the flow rule
+            relevantConnections.forEach(c -> removeConnection(c));
         }
     }
 }

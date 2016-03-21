@@ -120,13 +120,17 @@ public class DefaultServiceStore implements ServiceStore {
      */
     @Override
     public void addService(Service service) {
+        if(service == null){
+            log.warn("ServiceStore - addService(service): service can not be null!");
+            return;
+        }
         if(!services.contains(service)) {
             services.add(service);
             log.debug("ServiceStore: Added service {}", service.toString());
             return;
         }
 
-        log.debug("ServiceStore: Could not add service {}", service.toString());
+        log.debug("ServiceStore: Could not add service {}. Service already active.", service.toString());
     }
 
     /**
@@ -147,7 +151,12 @@ public class DefaultServiceStore implements ServiceStore {
      */
     @Override
     public Service getService(ServiceId serviceId) {
+        if(serviceId == null){
+            log.warn("ServiceStore - getService(ServiceId): ServiceId can not be null!");
+            return null;
+        }
 
+        // get the service with ServiceId
         Set<Service> result = services.stream()
                 .filter(s -> s.id().equals(serviceId))
                 .collect(Collectors.toSet());

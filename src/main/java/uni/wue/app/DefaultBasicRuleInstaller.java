@@ -91,7 +91,6 @@ public class DefaultBasicRuleInstaller implements BasicRuleInstaller {
 
         FlowRule.Builder controllerRuleBuilder = getControllerRuleBuilder();
         for(Device device : devices){
-            // TODO: PENDING_ADD in FlowRuleManager -> "Adding rule in store, but not on switch"
             // get flow rule sending packet to controller
             FlowRule rule = controllerRuleBuilder.forDevice(device.id()).build();
 
