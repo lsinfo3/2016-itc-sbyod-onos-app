@@ -17,8 +17,10 @@
  */
 package uni.wue.app;
 
+import org.onlab.packet.Ip4Address;
 import org.onlab.packet.IpAddress;
 import org.onlab.packet.MacAddress;
+import org.onlab.packet.TpPort;
 import org.onosproject.net.Host;
 
 import java.util.Set;
@@ -32,22 +34,11 @@ public interface PortalService {
      * Set the captive portal
      *
      * @param portalIp Ip address of the portal
+     * @param portalTpPort Transport protocol port of the portal
      *
      * @return true if the portal was set correctly
      */
-    boolean setPortal(String portalIp);
-
-    /**
-     * Define the captive portal and it's location in the network
-     *
-     * @param portalIp Ip address of the portal
-     * @param portalMac Mac address of the portal
-     * @param deviceId ID of the switch device the portal is connected to
-     * @param devicePort port number of the switch where the portal is connected to
-     *
-     * @return true if the portal was set correctly
-     */
-    boolean setPortal(String portalIp, String portalMac, String deviceId, String devicePort);
+    boolean setPortal(Ip4Address portalIp, TpPort portalTpPort);
 
     /**
      * Get the Mac Address of the portal

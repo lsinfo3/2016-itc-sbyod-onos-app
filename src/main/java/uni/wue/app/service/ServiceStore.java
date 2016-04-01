@@ -31,8 +31,16 @@ public interface ServiceStore {
     /**
      * Add a new service to the store
      * @param service
+     * @return true if service was added to collection
      */
-    void addService(Service service);
+    boolean addService(Service service);
+
+    /**
+     * Removes a service from the store and all of the connections with this service.
+     *
+     * @param service
+     */
+    void removeService(Service service);
 
     /**
      * Get all services from the store

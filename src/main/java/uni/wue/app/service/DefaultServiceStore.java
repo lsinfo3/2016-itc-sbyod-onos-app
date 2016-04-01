@@ -32,6 +32,7 @@ import org.onosproject.store.service.Serializer;
 import org.onosproject.store.service.StorageService;
 import org.slf4j.Logger;
 import uni.wue.app.connection.Connection;
+import uni.wue.app.connection.ConnectionStore;
 import uni.wue.app.connection.DefaultConnection;
 
 import java.net.URI;
@@ -55,6 +56,9 @@ public class DefaultServiceStore implements ServiceStore {
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected ApplicationIdStore applicationIdStore;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected ConnectionStore connectionStore;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected StorageService storageService;
@@ -103,13 +107,13 @@ public class DefaultServiceStore implements ServiceStore {
 
         codecService.registerCodec(Service.class, new ServiceCodec());
 
-        log.info("Started ServiceStore");
+        //log.info("Started ServiceStore");
     }
 
     @Deactivate
     protected void deactivate(){
         services.clear();
-        log.info("Stopped ServiceStore");
+        //log.info("Stopped ServiceStore");
     }
 
 
@@ -119,18 +123,30 @@ public class DefaultServiceStore implements ServiceStore {
      * @param service
      */
     @Override
-    public void addService(Service service) {
+    public boolean addService(Service service) {
         if(service == null){
             log.warn("ServiceStore - addService(service): service can not be null!");
-            return;
+            return false;
         }
         if(!services.contains(service)) {
-            services.add(service);
             log.debug("ServiceStore: Added service {}", service.toString());
-            return;
+            return services.add(service);
         }
 
         log.debug("ServiceStore: Could not add service {}. Service already active.", service.toString());
+        return false;
+    }
+
+    /**
+     * Removes a service from the store and all of the connections with this service.
+     *
+     * @param service
+     */
+    @Override
+    public void removeService(Service service) {
+        Set<Connection> serviceConnections = connectionStore.getConnections(service);
+        serviceConnections.forEach(c -> connectionStore.removeConnection(c));
+        services.remove(service);
     }
 
     /**

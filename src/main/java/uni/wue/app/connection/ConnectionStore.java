@@ -80,6 +80,14 @@ public interface ConnectionStore {
     Connection getConnection(Host user, Service service);
 
     /**
+     * Get the connections of a service
+     *
+     * @param service
+     * @return Set of connections
+     */
+    Set<Connection> getConnections(Service service);
+
+    /**
      * Get all registered connections
      *
      * @return set of connections

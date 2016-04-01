@@ -28,6 +28,6 @@ import java.util.Set;
 public class AppWebApplication extends AbstractWebApplication {
     @Override
     public Set<Class<?>> getClasses() {
-        return getClasses(AppWebResource.class);
+        return getClasses(AppWebResource.class, AppWebPortal.class);
     }
 }

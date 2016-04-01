@@ -67,12 +67,12 @@ public class FlowRedirect extends PacketRedirect {
     @Activate
     protected void activate() {
         appId = applicationIdStore.getAppId(APPLICATION_ID);
-        log.info("Started FlowRedirect");
+        //log.info("Started FlowRedirect");
     }
 
     @Deactivate
     protected void deactivate() {
-        log.info("Stopped FlowRedirect");
+        //log.info("Stopped FlowRedirect");
     }
 
     /**

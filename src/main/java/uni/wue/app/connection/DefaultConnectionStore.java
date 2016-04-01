@@ -74,6 +74,9 @@ public class DefaultConnectionStore implements ConnectionStore {
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected FlowRuleService flowRuleService;
 
+    private final HostListener connectionHostListener = new ConnectionHostListener();
+    //private final FlowRuleListener removedFlowRuleListener = new RemovedFlowRuleListener();
+
     // if a connection is removed, the RemovedFlowRule listener should wait
     // until the connection is deleted
     private final Lock flowRuleLock = new ReentrantLock();
@@ -106,17 +109,24 @@ public class DefaultConnectionStore implements ConnectionStore {
         codecService.registerCodec(Connection.class, new ConnectionCodec());
 
         // add listener to detect host moved, updated or removed
-        hostService.addListener(new ConnectionHostListener());
-        flowRuleService.addListener(new RemovedFlowRuleListener());
+        hostService.addListener(connectionHostListener);
+        //flowRuleService.addListener(removedFlowRuleListener);
 
-        log.info("Started ConnectionStore");
+        //log.info("Started ConnectionStore");
     }
 
     @Deactivate
     protected void deactivate(){
+        hostService.removeListener(connectionHostListener);
+        //flowRuleService.removeListener(removedFlowRuleListener);
+
+        // remove all connections
+        connections.forEach(c -> removeConnection(c));
         connections.clear();
 
-        log.info("Stopped ConnectionStore");
+        flowRuleService.removeFlowRulesById(applicationIdStore.getAppId(APPLICATION_ID));
+
+        //log.info("Stopped ConnectionStore");
     }
 
     /**
@@ -182,6 +192,7 @@ public class DefaultConnectionStore implements ConnectionStore {
                 .collect(Collectors.toSet());
     }
 
+    // TODO: Remove! -> better use getConnections(Service)
     /**
      * Get the set of connections for destination IP and destination traffic protocol port
      *
@@ -215,6 +226,19 @@ public class DefaultConnectionStore implements ConnectionStore {
             return null;
     }
 
+    /**
+     * Get the connections of a service
+     *
+     * @param service
+     * @return Set of connections
+     */
+    @Override
+    public Set<Connection> getConnections(uni.wue.app.service.Service service) {
+        return connections.stream()
+                .filter(c -> c.getService().equals(service))
+                .collect(Collectors.toSet());
+    }
+
     @Override
     public Set<Connection> getConnections(){
         return connections.stream()
@@ -233,7 +257,7 @@ public class DefaultConnectionStore implements ConnectionStore {
     }
 
 
-    public class ConnectionHostListener implements HostListener{
+    private class ConnectionHostListener implements HostListener{
 
         /**
          * Reacts to the specified event.
@@ -285,7 +309,8 @@ public class DefaultConnectionStore implements ConnectionStore {
         }
     }
 
-    public class RemovedFlowRuleListener implements FlowRuleListener{
+    // TODO: Throws NullPointerException even if not active???
+    private class RemovedFlowRuleListener implements FlowRuleListener{
 
         /**
          * Indicates whether the specified event is of interest or not.

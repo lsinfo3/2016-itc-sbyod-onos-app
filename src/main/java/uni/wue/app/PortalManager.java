@@ -20,12 +20,16 @@ package uni.wue.app;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.*;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
-import org.onosproject.net.*;
+import org.onosproject.net.config.ConfigFactory;
+import org.onosproject.net.config.NetworkConfigEvent;
+import org.onosproject.net.config.NetworkConfigListener;
+import org.onosproject.net.config.NetworkConfigRegistry;
 import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.*;
 import org.onosproject.net.host.*;
@@ -42,7 +46,12 @@ import uni.wue.app.service.DefaultService;
 import uni.wue.app.service.ServiceId;
 import uni.wue.app.service.ServiceStore;
 import uni.wue.app.service.Service;
+//import org.osgi.service.component.ComponentContext;
+import static org.onosproject.net.config.basics.SubjectFactories.APP_SUBJECT_FACTORY;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -77,6 +86,9 @@ public class PortalManager implements PortalService{
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected HostStore hostStore;
 
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected NetworkConfigRegistry cfgService;
+
     // own services
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected ConnectionStore connectionStore;
@@ -89,6 +101,28 @@ public class PortalManager implements PortalService{
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected PacketRedirectService packetRedirectService;
+
+    // Portal configuration
+
+    private final InternalConfigListener cfgListener = new InternalConfigListener();
+
+    private final Set<ConfigFactory> factories = ImmutableSet.of(
+            new ConfigFactory<ApplicationId, ByodConfig>(APP_SUBJECT_FACTORY,
+                    ByodConfig.class,
+                    "byod"){
+                @Override
+                public ByodConfig createConfig(){
+                    return new ByodConfig();
+                }
+            }
+    );
+
+    // Portal configuration values
+    // Hardcoded values are default values.
+
+    private Ip4Address portalIp = Ip4Address.valueOf("10.0.0.3");
+
+    private TpPort portalPort = TpPort.tpPort(80);
 
     // make sure no new host is added to the host service, as long as
     // the hosts are iterated
@@ -104,23 +138,26 @@ public class PortalManager implements PortalService{
     protected void activate() {
         appId = coreService.registerApplication("uni.wue.app");
 
+        cfgService.addListener(cfgListener);
+        factories.forEach(cfgService::registerConfigFactory);
+        cfgListener.reconfigureNetwork(cfgService.getConfig(appId, ByodConfig.class));
+
         basicRuleInstaller.installRules();
         packetService.addProcessor(processor, PacketProcessor.director(2));
-        requestIntercepts();
 
-        // initiate a test setup
         testSetup();
 
         hostService.addListener(new PortalConnectionHostListener());
-        connectAllHosts();
 
         log.info("Started PortalManager {}", appId.toString());
     }
 
     @Deactivate
     protected void deactivate() {
+        cfgService.removeListener(cfgListener);
+        factories.forEach(cfgService::unregisterConfigFactory);
+
         withdrawIntercepts();
-        flowRuleService.removeFlowRulesById(appId);
         packetService.removeProcessor(processor);
         processor = null;
 
@@ -228,61 +265,39 @@ public class PortalManager implements PortalService{
         return type == Ethernet.TYPE_LLDP || type == Ethernet.TYPE_BSN;
     }
 
+    // TODO: return true if portal is the same as the new one!
     @Override
-    public boolean setPortal(String pIp){
+    public boolean setPortal(Ip4Address pIp, TpPort tpPort){
         checkNotNull(pIp, "Portal IPv4 address can not be null");
-        // parse IP address
-        Ip4Address portalIPv4 = Ip4Address.valueOf(pIp);
 
         // find hosts with portal IP address
-        Set<Host> portalHosts = hostService.getHostsByIp(portalIPv4);
+        Set<Host> portalHosts = hostService.getHostsByIp(pIp);
         if(portalHosts.size() == 1) {
 
-            Service portalService = new DefaultService(portalHosts.iterator().next(), TpPort.tpPort(80), "PortalService", ProviderId.NONE);
-            serviceStore.addService(portalService);
-            portalId = portalService.id();
+            Service portalService = new DefaultService(portalHosts.iterator().next(), tpPort, "PortalService", ProviderId.NONE);
+            // update portal if the service not already exists
+            if(serviceStore.addService(portalService)) {
 
-            log.info("Set portal ID to {}", this.portalId.toString());
-            return true;
+                // remove old connections
+                if (portalId != null) {
+                    Service oldPortalService = serviceStore.getService(portalId);
+                    serviceStore.removeService(oldPortalService);
+
+                }
+                // establish new connections to portal
+                portalId = portalService.id();
+                connectHostsToPortal();
+
+                log.info("Portal is up. IP = {}, TpPort = {}, ID = {}",
+                        Sets.newHashSet(pIp.toString(), tpPort.toString(), this.portalId.toString()).toArray());
+                return true;
+            }
+
+            log.warn("Could not set portal. Service already active on '{}' !", pIp.toString() + ":" + tpPort.toString());
+            return false;
         }
 
-        log.warn("Could not set portal. No host defined with IP {}!", portalIPv4.toString());
-        return false;
-    }
-
-    // better define hosts in network-cfg.json
-    @Override
-    public boolean setPortal(String pIp, String pMac, String dId, String dPort) {
-        checkNotNull(pIp, "Portal IPv4 address can not be null!");
-        Ip4Address portalIPv4 = Ip4Address.valueOf(pIp);
-
-        // find host with portal IP address
-        Set<Host> portalHosts = hostService.getHostsByIp(portalIPv4);
-        if(portalHosts.size() == 1) {
-            return setPortal(pIp);
-        } else if(portalHosts.size() == 0){
-
-            checkNotNull(pMac, "Portal MAC address can not be null!");
-            MacAddress portalMac = MacAddress.valueOf(pMac);
-            checkNotNull(dId, "Device ID can not be null!");
-            Device switchDevice = deviceService.getDevice(DeviceId.deviceId(dId));
-            checkNotNull(dPort, "Device port number can not be null!");
-            PortNumber portNumber = PortNumber.portNumber(Long.valueOf(dPort));
-
-            // Create new Host:
-            HostLocation hostLocation = new HostLocation(switchDevice.id(), portNumber, System.nanoTime());
-            HostDescription hostDescription = new DefaultHostDescription(portalMac, VlanId.NONE, hostLocation,
-                    Sets.newHashSet(portalIPv4));
-
-            hostStore.createOrUpdateHost(ProviderId.NONE, HostId.hostId(portalMac, VlanId.NONE), hostDescription, true);
-
-            log.debug(String.format("No host with IP address {} found." +
-                    "\nCreated new Host."), portalIPv4);
-
-            return setPortal(pIp);
-        }
-
-        log.warn(String.format("Could not set portal. More than one hosts with IP %s found.", portalIPv4.toString()));
+        log.warn("Could not set portal. No host defined with IP {}!", pIp.toString());
         return false;
     }
 
@@ -319,14 +334,14 @@ public class PortalManager implements PortalService{
      */
     private void testSetup(){
         // just for development reasons
-        setPortal("10.0.0.3");
+        //setPortal(Ip4Address.valueOf("10.0.0.3"), TpPort.tpPort(80));
 
         Service service = null;
         // add some services to the serviceStore
-        service = serviceStore.getService(portalId);
-        if(service != null) {
-            serviceStore.addService(service);
-        }
+        //service = serviceStore.getService(portalId);
+        //if(service != null) {
+        //    serviceStore.addService(service);
+        //}
 
         Set<Host> hosts = hostService.getHostsByIp(IpAddress.valueOf("10.0.0.4"));
         if(!hosts.isEmpty()) {
@@ -345,7 +360,7 @@ public class PortalManager implements PortalService{
     /**
      * Add a connection to the portal for all hosts in the network
      */
-    private void connectAllHosts(){
+    private void connectHostsToPortal(){
 
         // get the portal service
         Service portalService = null;
@@ -387,6 +402,10 @@ public class PortalManager implements PortalService{
 
             if(event.type().equals(HostEvent.Type.HOST_ADDED)){
 
+                if(portalId == null){
+                    log.debug("PortalManager: No portal defined.");
+                    return;
+                }
                 // get the portal service
                 Service portalService = serviceStore.getService(portalId);
                 if(portalService == null){
@@ -402,6 +421,39 @@ public class PortalManager implements PortalService{
             }
 
             hostLock.unlock();
+        }
+    }
+
+    private class InternalConfigListener implements NetworkConfigListener {
+
+        private void reconfigureNetwork(ByodConfig cfg){
+            if(cfg == null){
+                return;
+            }
+            if(cfg.portalIp() != null){
+                portalIp = cfg.portalIp();
+            }
+            if(cfg.portalPort() != null){
+                portalPort = cfg.portalPort();
+            }
+        }
+
+        /**
+         * Reacts to the specified event.
+         *
+         * @param event event to be processed
+         */
+        @Override
+        public void event(NetworkConfigEvent event) {
+
+            if(event.type() == NetworkConfigEvent.Type.CONFIG_ADDED ||
+                    event.type() == NetworkConfigEvent.Type.CONFIG_UPDATED &&
+                    event.configClass().equals(ByodConfig.class)){
+
+                ByodConfig cfg = cfgService.getConfig(appId, ByodConfig.class);
+                reconfigureNetwork(cfg);
+                log.info("Reconfigured");
+            }
         }
     }
 

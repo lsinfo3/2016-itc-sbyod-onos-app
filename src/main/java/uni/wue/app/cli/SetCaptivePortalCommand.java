@@ -20,6 +20,8 @@ package uni.wue.app.cli;
 import org.apache.karaf.shell.commands.Argument;
 import org.apache.karaf.shell.commands.Command;
 import org.apache.karaf.shell.commands.Option;
+import org.onlab.packet.Ip4Address;
+import org.onlab.packet.TpPort;
 import org.onosproject.cli.AbstractShellCommand;
 import uni.wue.app.PortalManager;
 import uni.wue.app.PortalService;
@@ -37,16 +39,8 @@ public class SetCaptivePortalCommand extends AbstractShellCommand{
             required = true, multiValued = false)
     private String portalIPv4 = null;
 
-    @Option(name = "-m", aliases = "--mac", description = "The host MAC address of the portal",
-            required = false, multiValued = false)
-    private String portalMac = null;
-
-    @Option(name = "-s", aliases = "--switch", description = "The device ID of the connected switch",
-            required = false, multiValued = false)
-    private String deviceId = null;
-
-    @Option(name = "-p", aliases = "--port", description = "Port number of switch port the portal is connected to",
-            required = false, multiValued = false)
+    @Argument(index=1, name = "portal-TpPort", description = "Port number of switch port the portal is connected to",
+            required = true, multiValued = false)
     private String portNumber = null;
 
     @Override
@@ -54,13 +48,17 @@ public class SetCaptivePortalCommand extends AbstractShellCommand{
 
         PortalService portalService = get(PortalService.class);
 
-        boolean success;
-        if(portalMac != null && deviceId != null && portNumber != null)
-            success = portalService.setPortal(portalIPv4, portalMac, deviceId, portNumber);
-        else
-            success = portalService.setPortal(portalIPv4);
+        Ip4Address ip4Address;
+        TpPort tpPort;
+        try{
+            ip4Address = Ip4Address.valueOf(portalIPv4);
+            tpPort = TpPort.tpPort(Integer.valueOf(portNumber));
+        } catch(Exception e){
+            System.out.println(String.format("Could not set portal. Wrong Argument."));
+            return;
+        }
 
-        if(success)
+        if(portalService.setPortal(ip4Address, tpPort))
             System.out.println(String.format("Set portal with IP %s.", portalIPv4));
         else
             System.out.println(String.format("Could not set portal with IP %s.\n" +

@@ -40,7 +40,6 @@ import static org.slf4j.LoggerFactory.getLogger;
 public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
 
     private static final int FLOW_PRIORITY = 300;
-    private static final int TIMEOUT = 60*60; //seconds
     private static final String APPLICATION_ID = "uni.wue.app";
 
     private static final Logger log = getLogger(uni.wue.app.PortalManager.class);
@@ -60,12 +59,12 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
 
     @Activate
     protected void activate() {
-        log.info("Started DefaultConnectionRuleInstaller");
+        //log.info("Started DefaultConnectionRuleInstaller");
     }
 
     @Deactivate
     protected void deactivate() {
-        log.info("Stopped DefaultConnectionRuleInstaller");
+        //log.info("Stopped DefaultConnectionRuleInstaller");
     }
 
 
@@ -178,7 +177,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                             .forDevice(forDeviceId)
                             .withPriority(FLOW_PRIORITY)
                             .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
-                            .makeTemporary(TIMEOUT);
+                            .makePermanent();
 
                     FlowRule flowRule = flowRuleBuilder.build();
                     flowRuleService.applyFlowRules(flowRule);
@@ -209,7 +208,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                             .forDevice(forDeviceId)
                             .withPriority(FLOW_PRIORITY)
                             .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
-                            .makeTemporary(TIMEOUT);
+                            .makePermanent();
 
                     FlowRule flowRule = flowRuleBuilder.build();
                     flowRuleService.applyFlowRules(flowRule);

@@ -35,6 +35,8 @@
         <api.package>uni.wue.app</api.package>
         <api.title>BYOD REST API</api.title>
         <!-- rest end -->
+
+        <onos-maven-plugin.version>1.7</onos-maven-plugin.version>
     </properties>
 
     <dependencies>
@@ -87,6 +89,20 @@
         </dependency>
 
         <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.compendium</artifactId>
+            <version>4.3.1</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.component</artifactId>
+            <version>1.3.0</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
           <groupId>org.apache.karaf.shell</groupId>
           <artifactId>org.apache.karaf.shell.console</artifactId>
           <version>3.0.3</version>
@@ -104,6 +120,8 @@
             <artifactId>onos-core-serializers</artifactId>
             <version>1.4.0</version>
         </dependency>
+
+
 
         <!-- rest begin -->
 
@@ -185,7 +203,8 @@
                             org.onlab.osgi.*,
                             org.onlab.util.*,
                             org.onosproject.*,
-                            org.jboss.netty.util.*</Import-Package>
+                            org.jboss.netty.util.*
+                        </Import-Package>
                         <Web-ContextPath>${web.context}</Web-ContextPath>
                     </instructions>
                 </configuration>
@@ -222,7 +241,7 @@
             <plugin>
                 <groupId>org.onosproject</groupId>
                 <artifactId>onos-maven-plugin</artifactId>
-                <version>1.5</version>
+                <version>${onos-maven-plugin.version}</version>
                 <executions>
                     <execution>
                         <id>cfg</id>
