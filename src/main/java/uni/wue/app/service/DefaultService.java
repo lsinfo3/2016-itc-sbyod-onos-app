@@ -137,7 +137,8 @@ public class DefaultService extends AbstractElement implements Service {
     @Override
     public String toString() {
         return "DefaultService{" +
-                "host=" + host +
+                "name=" + getName() +
+                "hostId=" + host.id() +
                 ", tpPort=" + tpPort +
                 ", serviceId=" + this.id() +
                 '}';

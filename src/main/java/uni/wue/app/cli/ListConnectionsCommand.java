@@ -39,8 +39,8 @@ public class ListConnectionsCommand extends AbstractShellCommand {
         print("List of all registered connections:");
         while(connectionIterator.hasNext()){
             Connection connection = connectionIterator.next();
-            print("Connection between user = " + connection.getUser() + " and service = " + connection.getService()
-            + " with " + connection.getFlowRules().size() + " flowRules.");
+            print("Connection:\n\nuser = " + connection.getUser() + "\nservice = " + connection.getService()
+            + "\nFlowRule count: " + connection.getFlowRules().size());
         }
     }
 }

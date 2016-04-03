@@ -21,6 +21,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.*;
@@ -143,6 +144,7 @@ public class PortalManager implements PortalService{
         cfgListener.reconfigureNetwork(cfgService.getConfig(appId, ByodConfig.class));
 
         basicRuleInstaller.installRules();
+        // TODO: Add topology listener -> adding basic rules if new device connected.
         packetService.addProcessor(processor, PacketProcessor.director(2));
 
         testSetup();
@@ -160,6 +162,9 @@ public class PortalManager implements PortalService{
         withdrawIntercepts();
         packetService.removeProcessor(processor);
         processor = null;
+
+        // remove all flow rules of this app
+        flowRuleService.removeFlowRulesById(appId);
 
         log.info("Stopped PortalManager {}", appId.toString());
     }
@@ -214,9 +219,17 @@ public class PortalManager implements PortalService{
             }
 
             // get the portal service
-            Service portalService = serviceStore.getService(portalId);
-            if(portalService == null){
-                log.warn("PortalManager: No portal defined with ID {}", portalId.toString());
+            Service portalService = null;
+            if(portalId != null) {
+                portalService = serviceStore.getService(portalId);
+                if (portalService == null) {
+                    log.warn("PortalManager: No portal defined with ID {}", portalId.toString());
+                    return;
+                }
+            } else{
+                // no portal defined
+                log.debug("PortalManager: No portal defined.");
+                return;
             }
 
             IPacket iPkt = ethPkt.getPayload();
@@ -265,7 +278,6 @@ public class PortalManager implements PortalService{
         return type == Ethernet.TYPE_LLDP || type == Ethernet.TYPE_BSN;
     }
 
-    // TODO: return true if portal is the same as the new one!
     @Override
     public boolean setPortal(Ip4Address pIp, TpPort tpPort){
         checkNotNull(pIp, "Portal IPv4 address can not be null");
@@ -282,22 +294,33 @@ public class PortalManager implements PortalService{
                 if (portalId != null) {
                     Service oldPortalService = serviceStore.getService(portalId);
                     serviceStore.removeService(oldPortalService);
-
                 }
+
                 // establish new connections to portal
                 portalId = portalService.id();
                 connectHostsToPortal();
 
                 log.info("Portal is up. IP = {}, TpPort = {}, ID = {}",
-                        Sets.newHashSet(pIp.toString(), tpPort.toString(), this.portalId.toString()).toArray());
+                        Lists.newArrayList(pIp.toString(), tpPort.toString(), this.portalId.toString()).toArray());
                 return true;
+            } else if(portalId != null) {
+                if (portalService.equals(serviceStore.getService(portalId))) {
+                    log.info("PortalManager: Portal already up on {}.",
+                            pIp.toString() + ":" + tpPort.toString());
+                    return true;
+                }
             }
 
-            log.warn("Could not set portal. Service already active on '{}' !", pIp.toString() + ":" + tpPort.toString());
+            log.warn("Could not set portal. Another service is already active on '{}' !",
+                    pIp.toString() + ":" + tpPort.toString());
             return false;
+
+        } else if(portalHosts.size() > 1){
+            log.warn("PortalManager: Could not set portal. More than one host with IP = {}", pIp);
+        } else{
+            log.warn("Could not set portal. No host defined with IP {}!", pIp.toString());
         }
 
-        log.warn("Could not set portal. No host defined with IP {}!", pIp.toString());
         return false;
     }
 
@@ -308,7 +331,12 @@ public class PortalManager implements PortalService{
      */
     @Override
     public MacAddress getPortalMac() {
-        return serviceStore.getService(portalId).getHost().mac();
+        Host portal = this.getPortal();
+        if(portal != null){
+            return portal.mac();
+            } else{
+            return null;
+        }
     }
 
     /**
@@ -317,7 +345,14 @@ public class PortalManager implements PortalService{
      * @return IpAddress
      */
     @Override
-    public Set<IpAddress> getPortalIp() { return serviceStore.getService(portalId).getHost().ipAddresses(); }
+    public Set<IpAddress> getPortalIp() {
+        Host portal = this.getPortal();
+        if(portal != null){
+            return portal.ipAddresses();
+        } else{
+            return null;
+        }
+    }
 
     /**
      * Get the portal as host
@@ -326,7 +361,26 @@ public class PortalManager implements PortalService{
      */
     @Override
     public Host getPortal() {
-        return serviceStore.getService(portalId).getHost();
+        if(portalId != null){
+            Service portalService = serviceStore.getService(portalId);
+            if(portalService != null){
+                return portalService.getHost();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Get the portal service
+     *
+     * @return Service
+     */
+    @Override
+    public Service getPortalService() {
+        if(portalId != null){
+            return serviceStore.getService(portalId);
+        }
+        return null;
     }
 
     /**
@@ -334,14 +388,8 @@ public class PortalManager implements PortalService{
      */
     private void testSetup(){
         // just for development reasons
-        //setPortal(Ip4Address.valueOf("10.0.0.3"), TpPort.tpPort(80));
 
         Service service = null;
-        // add some services to the serviceStore
-        //service = serviceStore.getService(portalId);
-        //if(service != null) {
-        //    serviceStore.addService(service);
-        //}
 
         Set<Host> hosts = hostService.getHostsByIp(IpAddress.valueOf("10.0.0.4"));
         if(!hosts.isEmpty()) {
@@ -389,7 +437,7 @@ public class PortalManager implements PortalService{
     /**
      * Add a connection to the portal for a new host
      */
-    public class PortalConnectionHostListener implements HostListener{
+    private class PortalConnectionHostListener implements HostListener{
 
         /**
          * Reacts to the specified event.

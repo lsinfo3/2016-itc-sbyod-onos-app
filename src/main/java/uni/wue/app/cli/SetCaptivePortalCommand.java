@@ -61,7 +61,6 @@ public class SetCaptivePortalCommand extends AbstractShellCommand{
         if(portalService.setPortal(ip4Address, tpPort))
             System.out.println(String.format("Set portal with IP %s.", portalIPv4));
         else
-            System.out.println(String.format("Could not set portal with IP %s.\n" +
-                    "Try defining a new one giving the mac address, connected device and port number.", portalIPv4));
+            System.out.println(String.format("Could not set portal with IP %s.", portalIPv4));
     }
 }

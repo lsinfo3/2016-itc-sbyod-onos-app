@@ -21,6 +21,7 @@ import org.apache.karaf.shell.commands.Command;
 import org.onosproject.cli.AbstractShellCommand;
 import org.onosproject.net.Host;
 import uni.wue.app.PortalService;
+import uni.wue.app.service.Service;
 
 /**
  * Created by lorry on 27.11.15.
@@ -30,12 +31,12 @@ public class GetCaptivePortalCommand extends AbstractShellCommand {
     @Override
     protected void execute() {
         PortalService portalService = get(PortalService.class);
-        Host portal = portalService.getPortal();
-        if(portal != null && portal.ipAddresses().iterator().hasNext()) {
-            System.out.println(String.format("Portal Mac address: %s\nPortal Ip address: %s",
-                    portal.mac().toString(), portal.ipAddresses().iterator().next().toString()));
+        Service portal = portalService.getPortalService();
+        if(portal != null) {
+            System.out.println(String.format("Portal:\nMac = %s\nIP = %s\nTpPort = %s\nServiceId = %s",
+                    portal.getHost().mac(), portal.getHost().ipAddresses(), portal.getTpPort(), portal.id() ));
         } else{
-            System.out.println("No portal defined");
+            System.out.println("No portal defined.");
         }
     }
 }

@@ -22,6 +22,7 @@ import org.onlab.packet.IpAddress;
 import org.onlab.packet.MacAddress;
 import org.onlab.packet.TpPort;
 import org.onosproject.net.Host;
+import uni.wue.app.service.Service;
 
 import java.util.Set;
 
@@ -60,5 +61,12 @@ public interface PortalService {
      * @return Host
      */
     Host getPortal();
+
+    /**
+     * Get the portal service
+     *
+     * @return Service
+     */
+    Service getPortalService();
 
 }

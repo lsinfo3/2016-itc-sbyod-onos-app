@@ -110,7 +110,6 @@ public class DefaultConnectionStore implements ConnectionStore {
 
         // add listener to detect host moved, updated or removed
         hostService.addListener(connectionHostListener);
-        //flowRuleService.addListener(removedFlowRuleListener);
 
         //log.info("Started ConnectionStore");
     }
@@ -118,13 +117,9 @@ public class DefaultConnectionStore implements ConnectionStore {
     @Deactivate
     protected void deactivate(){
         hostService.removeListener(connectionHostListener);
-        //flowRuleService.removeListener(removedFlowRuleListener);
-
         // remove all connections
-        connections.forEach(c -> removeConnection(c));
         connections.clear();
-
-        flowRuleService.removeFlowRulesById(applicationIdStore.getAppId(APPLICATION_ID));
+        // flow rules are removed in PortalManager class
 
         //log.info("Stopped ConnectionStore");
     }

@@ -19,8 +19,8 @@ package uni.wue.app.cli.completer;
 
 import org.apache.karaf.shell.console.Completer;
 import org.apache.karaf.shell.console.completer.StringsCompleter;
-import org.onlab.packet.IpAddress;
 import org.onosproject.cli.AbstractShellCommand;
+import org.onlab.packet.IpAddress;
 import org.onosproject.net.Host;
 import org.onosproject.net.host.HostService;
 
@@ -32,7 +32,6 @@ import java.util.SortedSet;
  * Created by lorry on 14.01.16.
  */
 public class HostIpv4Completer implements Completer {
-
     @Override
     public int complete(String buffer, int cursor, List<String> candidates) {
         //Delegate string completer
