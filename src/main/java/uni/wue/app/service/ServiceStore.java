@@ -40,7 +40,7 @@ public interface ServiceStore {
      *
      * @param service
      */
-    void removeService(Service service);
+    boolean removeService(Service service);
 
     /**
      * Get all services from the store

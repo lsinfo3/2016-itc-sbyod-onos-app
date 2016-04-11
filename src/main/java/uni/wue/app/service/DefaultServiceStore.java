@@ -121,6 +121,8 @@ public class DefaultServiceStore implements ServiceStore {
      * Add a new service to the store
      *
      * @param service
+     * @return true service was adde to collection
+     *          false service is null or already in collection
      */
     @Override
     public boolean addService(Service service) {
@@ -128,25 +130,41 @@ public class DefaultServiceStore implements ServiceStore {
             log.warn("ServiceStore - addService(service): service can not be null!");
             return false;
         }
+
         if(!services.contains(service)) {
             log.debug("ServiceStore: Added service {}", service.toString());
             return services.add(service);
+        } else {
+            log.debug("ServiceStore: Could not add service {}. Service already active.", service.toString());
+            return false;
         }
-
-        log.debug("ServiceStore: Could not add service {}. Service already active.", service.toString());
-        return false;
     }
 
     /**
      * Removes a service from the store and all of the connections with this service.
      *
      * @param service
+     * @return true if service was removed,
+     *          false if no such service in collection
      */
     @Override
-    public void removeService(Service service) {
-        Set<Connection> serviceConnections = connectionStore.getConnections(service);
-        serviceConnections.forEach(c -> connectionStore.removeConnection(c));
-        services.remove(service);
+    public boolean removeService(Service service) {
+        if(service == null){
+            log.warn("ServiceStore - removeService(service): service can not be null!");
+            return false;
+        }
+
+        if(this.contains(service)) {
+            // get the connections of the service
+            Set<Connection> serviceConnections = connectionStore.getConnections(service);
+            // remove all connections
+            serviceConnections.forEach(c -> connectionStore.removeConnection(c));
+            // remove the service
+            services.remove(service);
+            return true;
+        } else{
+            return false;
+        }
     }
 
     /**

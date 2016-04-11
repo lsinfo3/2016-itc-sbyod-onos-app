@@ -48,8 +48,8 @@ import java.util.stream.Collectors;
 /**
  * Web resource.
  */
-@Path("")
-public class AppWebResource extends AbstractWebResource {
+@Path("/user")
+public class AppWebUser extends AbstractWebResource {
 
     private static final Logger log = getLogger(uni.wue.app.PortalManager.class);
 
@@ -57,40 +57,6 @@ public class AppWebResource extends AbstractWebResource {
     private final ObjectNode ENABLED_TRUE = mapper().createObjectNode().put("enabled", true);
     private final ObjectNode ENABLED_FALSE = mapper().createObjectNode().put("enabled", false);
 
-    /**
-     * Get all registered services.
-     *
-     * @return array of services
-     */
-    @GET
-    @Path("/service")
-    public Response getServices(){
-        log.debug("AppWebResource: Getting all services");
-
-        Iterable<Service> services = get(ServiceStore.class).getServices();
-        return Response.ok(encodeArray(Service.class, "services", services)).build();
-    }
-
-    /**
-     * Get the service with serviceId.
-     *
-     * @param serviceId_ the ID of the service
-     * @return INVALID_PARAMETER if some parameter was wrong
-     *          service
-     */
-    @GET
-    @Path("/service/{serviceId}")
-    public Response getService(@PathParam("serviceId") String serviceId_){
-        log.debug("AppWebResource: Getting service with name = {}", serviceId_);
-
-        if(serviceId_ == null)
-            return Response.ok(INVALID_PARAMETER).build();
-
-        Service service = get(ServiceStore.class).getService(ServiceId.serviceId(serviceId_));
-        Set<Service> result = (service == null) ? Sets.newHashSet() : Sets.newHashSet(service);
-
-        return Response.ok(encodeArray(Service.class, "services", (Iterable)result)).build();
-    }
 
     /**
      * Get the services the user with userIp is connected to.
@@ -100,9 +66,9 @@ public class AppWebResource extends AbstractWebResource {
      *          array of services
      */
     @GET
-    @Path("/user/{userIp}")
+    @Path("/{userIp}")
     public Response getUserRules(@PathParam("userIp") String userIp_){
-        log.debug("AppWebResource: Getting services for userIp = {}", userIp_);
+        log.debug("AppWebUser: Getting services for userIp = {}", userIp_);
 
         if(userIp_ == null)
             return Response.ok(INVALID_PARAMETER).build();
@@ -154,10 +120,10 @@ public class AppWebResource extends AbstractWebResource {
      *          "enabled : true" if service is enabled
      */
     @GET
-    @Path("/user/{userIp}/service/{serviceId}")
+    @Path("/{userIp}/service/{serviceId}")
     public Response getUserServices(@PathParam("userIp") String userIp_,
                                     @PathParam("serviceId") String serviceId_){
-        log.debug("AppWebResource: Getting rules for userIp = {} and serviceId = {}", userIp_, serviceId_);
+        log.debug("AppWebUser: Getting rules for userIp = {} and serviceId = {}", userIp_, serviceId_);
 
         if(userIp_ == null || serviceId_ == null)
             return Response.ok(INVALID_PARAMETER).build();
@@ -190,10 +156,10 @@ public class AppWebResource extends AbstractWebResource {
      *          "enabled : true" if service is enabled
      */
     @POST
-    @Path("/user/{userIp}/service/{serviceId}")
+    @Path("/{userIp}/service/{serviceId}")
     public Response allowHostTraffic(@PathParam("userIp") String userIp_,
                                     @PathParam("serviceId") String serviceId_){
-        log.debug("AppWebResource: Adding connection between user ip = {} and serviceId = {}",
+        log.debug("AppWebUser: Adding connection between user ip = {} and serviceId = {}",
                 new String[]{userIp_, serviceId_});
 
         if(userIp_ == null || serviceId_ == null)
@@ -210,10 +176,10 @@ public class AppWebResource extends AbstractWebResource {
         }
 
         if(srcHosts.isEmpty()) {
-            log.debug("AppWebResource: No host found with IP = {}", userIp_);
+            log.debug("AppWebUser: No host found with IP = {}", userIp_);
             return Response.ok(ENABLED_FALSE).build();
         } else if(service == null) {
-            log.debug("AppWebResource: No service found with id = {}", serviceId_);
+            log.debug("AppWebUser: No service found with id = {}", serviceId_);
             return Response.ok(ENABLED_FALSE).build();
         }
 
@@ -222,10 +188,10 @@ public class AppWebResource extends AbstractWebResource {
                 Connection connection = new DefaultConnection(srcHost, service);
                 // if the connection does not already exist
                 if (!get(ConnectionStore.class).contains(connection)) {
-                    log.debug("AppWebResource: Installing connection {}", connection.toString());
+                    log.debug("AppWebUser: Installing connection {}", connection.toString());
                     get(ConnectionStore.class).addConnection(connection);
                 } else{
-                    log.debug("AppWebResource: Connection {} already exists", connection.toString());
+                    log.debug("AppWebUser: Connection {} already exists", connection.toString());
                 }
         }
 
@@ -233,10 +199,10 @@ public class AppWebResource extends AbstractWebResource {
     }
 
     @DELETE
-    @Path("/user/{userIp}/service/{serviceId}")
+    @Path("/{userIp}/service/{serviceId}")
     public Response deleteHostTraffic(@PathParam("userIp") String userIp_,
                                       @PathParam("serviceId") String serviceId_){
-        log.debug("AppWebResource: Removing connection between user ip = {} and serviceId = {}",
+        log.debug("AppWebUser: Removing connection between user ip = {} and serviceId = {}",
                 new String[]{userIp_, serviceId_});
 
         if(userIp_ == null || serviceId_ == null)
@@ -254,10 +220,10 @@ public class AppWebResource extends AbstractWebResource {
 
 
         if(srcHosts.isEmpty()) {
-            log.debug("AppWebResource: No host found with IP = {}", userIp_);
+            log.debug("AppWebUser: No host found with IP = {}", userIp_);
             return Response.ok(ENABLED_FALSE).build();
         } else if(service == null) {
-            log.debug("AppWebResource: No service found with id = {}", serviceId_);
+            log.debug("AppWebUser: No service found with id = {}", serviceId_);
             return Response.ok(ENABLED_FALSE).build();
         }
 
@@ -265,7 +231,7 @@ public class AppWebResource extends AbstractWebResource {
         for(Host user : srcHosts) {
             Connection connection = get(ConnectionStore.class).getConnection(user, service);
             if(connection != null) {
-                log.debug("AppWebResource: Removing connection {}", connection.toString());
+                log.debug("AppWebUser: Removing connection {}", connection.toString());
                 get(ConnectionStore.class).removeConnection(connection);
             }
         }

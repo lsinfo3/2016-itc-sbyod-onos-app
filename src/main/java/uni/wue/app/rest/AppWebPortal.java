@@ -33,7 +33,7 @@ import javax.ws.rs.core.Response;
 import static org.slf4j.LoggerFactory.getLogger;
 
 /**
- * Web portal.
+ * Web portal interface.
  */
 @Path("/portal")
 public class AppWebPortal extends AbstractWebResource {
@@ -44,6 +44,12 @@ public class AppWebPortal extends AbstractWebResource {
     private final ObjectNode ENABLED_TRUE = mapper().createObjectNode().put("enabled", true);
     private final ObjectNode ENABLED_FALSE = mapper().createObjectNode().put("enabled", false);
 
+    /**
+     * Define the destination where the portal instance is running.
+     * @param ip ip address of the server
+     * @param port transport protocol port of the server
+     * @return enabled true if portal was defined rigth
+     */
     @POST
     @Path("/ip/{ip}/port/{port}")
     public Response setPortal(@PathParam("ip") String ip,
