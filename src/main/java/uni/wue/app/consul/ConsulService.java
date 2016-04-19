@@ -15,23 +15,22 @@
  *
  *
  */
+package uni.wue.app.consul;
 
-package uni.wue.app.rest;
-
-import org.onlab.rest.AbstractWebApplication;
-
-import java.util.Set;
+import org.onlab.packet.IpAddress;
+import org.onlab.packet.TpPort;
 
 /**
- * REST API web application.
+ * Created by lorry on 15.04.16.
  */
-public class AppWebApplication extends AbstractWebApplication {
-    @Override
-    public Set<Class<?>> getClasses() {
-        return getClasses(
-                AppWebUser.class,
-                AppWebPortal.class,
-                AppWebService.class,
-                AppWebConsul.class);
-    }
+public interface ConsulService {
+
+    /**
+     * Connect to a running consul agent.
+     *
+     * @param ipAddress Ip address to connect to
+     * @param tpPort transport protocol port
+     */
+    void connectConsul(IpAddress ipAddress, TpPort tpPort);
+
 }

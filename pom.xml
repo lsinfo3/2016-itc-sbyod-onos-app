@@ -169,7 +169,42 @@
 
         <!-- rest end -->
 
+        <!-- consul java client -->
+        <!--
+        <dependency>
+            <groupId>org.immutables</groupId>
+            <artifactId>value</artifactId>
+            <version>2.1.16</version>
+        </dependency>
+        -->
+        <dependency>
+            <groupId>com.orbitz.consul</groupId>
+            <artifactId>consul-client</artifactId>
+            <version>0.10.1</version>
+        </dependency>
+
+        <!-- consul java api -->
+        <dependency>
+            <groupId>com.ecwid.consul</groupId>
+            <artifactId>consul-api</artifactId>
+            <version>1.1.9</version>
+        </dependency>
+        <!-- -->
+
     </dependencies>
+
+    <!-- consul java api
+    <repositories>
+        <repository>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+            <id>central</id>
+            <name>bintray</name>
+            <url>http://jcenter.bintray.com</url>
+        </repository>
+    </repositories>
+    -->
 
     <build>
         <plugins>
