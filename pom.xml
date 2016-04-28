@@ -26,7 +26,7 @@
     <url>http://onosproject.org</url>
 
     <properties>
-        <onos.version>1.4.0</onos.version>
+        <onos.version>1.5.1</onos.version>
         <onos.app.name>uni.wue.app</onos.app.name>
         <onos.app.origin>Uni Wuerzburg</onos.app.origin>
         <!-- rest begin -->
@@ -36,6 +36,11 @@
         <api.package>uni.wue.app</api.package>
         <api.title>BYOD REST API</api.title>
         <!-- rest end -->
+        <jackson.version>2.7.0</jackson.version>
+        <osgi.version>4.3.1</osgi.version>
+        <karaf.version>3.0.5</karaf.version>
+        <slf4j.version>1.7.13</slf4j.version>
+        <jersey.version>1.19</jersey.version>
 
         <onos-maven-plugin.version>1.7</onos-maven-plugin.version>
     </properties>
@@ -56,7 +61,7 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.11</version>
+            <version>4.12</version>
             <scope>test</scope>
         </dependency>
 
@@ -71,7 +76,7 @@
         <dependency>
             <groupId>org.apache.felix</groupId>
             <artifactId>org.apache.felix.scr.annotations</artifactId>
-            <version>1.9.8</version>
+            <version>1.9.12</version>
             <scope>provided</scope>
         </dependency>
 
@@ -85,14 +90,14 @@
         <dependency>
           <groupId>org.osgi</groupId>
           <artifactId>org.osgi.core</artifactId>
-          <version>4.3.1</version>
+          <version>${osgi.version}</version>
           <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>org.osgi</groupId>
             <artifactId>org.osgi.compendium</artifactId>
-            <version>4.3.1</version>
+            <version>${osgi.version}</version>
             <scope>provided</scope>
         </dependency>
 
@@ -106,20 +111,20 @@
         <dependency>
           <groupId>org.apache.karaf.shell</groupId>
           <artifactId>org.apache.karaf.shell.console</artifactId>
-          <version>3.0.3</version>
+          <version>${karaf.version}</version>
           <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
-            <version>1.6.4</version>
+            <version>${slf4j.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.onosproject</groupId>
             <artifactId>onos-core-serializers</artifactId>
-            <version>1.4.0</version>
+            <version>${onos.version}</version>
         </dependency>
 
 
@@ -129,7 +134,7 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>2.4.2</version>
+            <version>${jackson.version}</version>
             <scope>provided</scope>
         </dependency>
 
@@ -143,14 +148,14 @@
         <dependency>
             <groupId>com.sun.jersey</groupId>
             <artifactId>jersey-servlet</artifactId>
-            <version>1.19</version>
+            <version>${jersey.version}</version>
             <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>
-            <version>2.4.2</version>
+            <version>${jackson.version}</version>
             <scope>provided</scope>
         </dependency>
 

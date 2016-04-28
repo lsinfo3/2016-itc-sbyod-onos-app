@@ -65,10 +65,10 @@ public class DefaultBasicRuleInstaller implements BasicRuleInstaller {
 
         Iterable<Device> devices = deviceService.getDevices();
 
-        FlowRule.Builder dropRuleBuilder = getDropRuleBuilder();
         for(Device device : devices){
 
             // get flow rule to drop packets
+            FlowRule.Builder dropRuleBuilder = getDropRuleBuilder();
             FlowRule rule = dropRuleBuilder.forDevice(device.id()).build();
 
             // add a listener, that notifies if rule has been added in device
@@ -89,9 +89,10 @@ public class DefaultBasicRuleInstaller implements BasicRuleInstaller {
             }*/
         }
 
-        FlowRule.Builder controllerRuleBuilder = getControllerRuleBuilder();
         for(Device device : devices){
+
             // get flow rule sending packet to controller
+            FlowRule.Builder controllerRuleBuilder = getControllerRuleBuilder();
             FlowRule rule = controllerRuleBuilder.forDevice(device.id()).build();
 
             // add a listener, that notifies if rule has been added in device

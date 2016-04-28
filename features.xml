@@ -19,7 +19,7 @@
 <features xmlns="http://karaf.apache.org/xmlns/features/v1.2.0" name="onos-byod-1.0-SNAPSHOT">
     <feature name="onos-byod" version="1.0-SNAPSHOT"
              description="ONOS OSGi bundle archetype">
-        <feature version="1.4.0">onos-api</feature>
+        <feature version="1.5.1">onos-api</feature>
         <bundle>mvn:uni.wue/onos-byod/1.0-SNAPSHOT</bundle>
         <!-- <bundle>mvn:com.fasterxml.jackson.datatype/jackson-datatype-guava/2.5.3</bundle>
         <bundle>mvn:com.fasterxml.jackson.core/jackson-databind/2.4.2</bundle>
