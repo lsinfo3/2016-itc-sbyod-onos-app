@@ -18,9 +18,9 @@
 package uni.wue.app.consul;
 
 import com.google.common.net.HostAndPort;
-import com.orbitz.consul.Consul;
-import com.orbitz.consul.HealthClient;
-import com.orbitz.consul.model.health.ServiceHealth;
+//import com.orbitz.consul.Consul;
+//import com.orbitz.consul.HealthClient;
+//import com.orbitz.consul.model.health.ServiceHealth;
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Deactivate;
@@ -32,8 +32,8 @@ import java.util.List;
 /**
  * Created by lorry on 15.04.16.
  */
-//@Component(immediate = true)
-//@org.apache.felix.scr.annotations.Service
+@Component(immediate = true)
+@org.apache.felix.scr.annotations.Service
 public class ConsulServiceClient implements ConsulService {
 
     @Activate
@@ -54,12 +54,12 @@ public class ConsulServiceClient implements ConsulService {
      */
     @Override
     public void connectConsul(IpAddress ipAddress, TpPort tpPort) {
-        HostAndPort hostAndPort = HostAndPort.fromParts(ipAddress.toString(), tpPort.toInt());
+        /*HostAndPort hostAndPort = HostAndPort.fromParts(ipAddress.toString(), tpPort.toInt());
         Consul consul = Consul.builder().build(); // connect to Consul
 
         HealthClient healthClient = consul.healthClient();
         List<ServiceHealth> nodes = healthClient.getHealthyServiceInstances("DataService").getResponse(); // discover only "passing" nodes
 
-        return;
+        return;*/
     }
 }

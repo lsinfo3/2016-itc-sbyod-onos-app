@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  ~ Copyright 2015 Lorenz Reinhart
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  ~
+  ~
+  -->
+<features xmlns="http://karaf.apache.org/xmlns/features/v1.2.0" name="onos-byod-1.0-SNAPSHOT">
+    <feature name="onos-byod" version="1.0-SNAPSHOT"
+             description="ONOS OSGi bundle archetype">
+        <feature version="1.4.0">onos-api</feature>
+        <bundle>mvn:uni.wue/onos-byod/1.0-SNAPSHOT</bundle>
+        <!-- <bundle>mvn:com.fasterxml.jackson.datatype/jackson-datatype-guava/2.5.3</bundle>
+        <bundle>mvn:com.fasterxml.jackson.core/jackson-databind/2.4.2</bundle>
+        <bundle>mvn:com.fasterxml.jackson.core/jackson-annotations/2.4.2</bundle>
+        <bundle>mvn:com.fasterxml.jackson.core/jackson-core/2.4.2</bundle> -->
+        <!-- <bundle dependency="true"> wrap:mvn:org.apache.httpcomponents/httpclient-osgi/4.5.2$Bundle-SymbolicName=httpclient&amp;Bundle-Version=4.5.2</bundle> -->
+        <!--<bundle dependency="true"> wrap:mvn:org.apache.httpcomponents/httpcore/4.4.4$Bundle-SymbolicName=httpcore&amp;Bundle-Version=4.4.4</bundle> -->
+        <!-- <bundle>wrap:mvn:com.orbitz.consul/consul-client/0.9.12$Bundle-SymbolicName=consul-client&amp;Bundle-Version=0.9.12</bundle> -->
+        <!-- <bundle>wrap:mvn:com.ecwid.consul/consul-api/1.1.9$Bundle-SymbolicName=consul-api&amp;Bundle-Version=1.1.9</bundle> -->
+    </feature>
+</features>
