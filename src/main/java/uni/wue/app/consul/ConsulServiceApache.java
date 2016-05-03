@@ -98,4 +98,12 @@ public class ConsulServiceApache implements ConsulService{
         }*/
 
     }
+
+    /**
+     * Connect to a running consul agent on localhost port 8500.
+     */
+    @Override
+    public void connectConsul() {
+
+    }
 }

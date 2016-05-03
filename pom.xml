@@ -26,6 +26,7 @@
     <url>http://onosproject.org</url>
 
     <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <onos.version>1.5.1</onos.version>
         <onos.app.name>uni.wue.app</onos.app.name>
         <onos.app.origin>Uni Wuerzburg</onos.app.origin>
@@ -40,16 +41,23 @@
         <osgi.version>4.3.1</osgi.version>
         <karaf.version>3.0.5</karaf.version>
         <slf4j.version>1.7.13</slf4j.version>
-        <jersey.version>1.19</jersey.version>
+        <jersey.version>1.19.1</jersey.version>
 
         <onos-maven-plugin.version>1.7</onos-maven-plugin.version>
     </properties>
 
     <dependencies>
+
         <dependency>
             <groupId>org.onosproject</groupId>
             <artifactId>onos-api</artifactId>
             <version>${onos.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>javax.ws.rs</groupId>
+            <artifactId>javax.ws.rs-api</artifactId>
+            <version>2.0.1</version>
         </dependency>
 
         <dependency>
@@ -142,15 +150,16 @@
             <groupId>org.onosproject</groupId>
             <artifactId>onos-rest</artifactId>
             <version>${onos.version}</version>
-            <scope>provided</scope>
+            <scope>compile</scope>
         </dependency>
 
+        <!--
         <dependency>
             <groupId>com.sun.jersey</groupId>
             <artifactId>jersey-servlet</artifactId>
             <version>${jersey.version}</version>
-            <scope>provided</scope>
         </dependency>
+        -->
 
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
@@ -159,38 +168,38 @@
             <scope>provided</scope>
         </dependency>
 
+        <!--
         <dependency>
             <groupId>javax.ws.rs</groupId>
             <artifactId>jsr311-api</artifactId>
             <version>1.1.1</version>
             <scope>provided</scope>
         </dependency>
+        -->
 
+        <!--
         <dependency>
             <groupId>org.onosproject</groupId>
             <artifactId>onlab-rest</artifactId>
             <version>${onos.version}</version>
             <scope>provided</scope>
         </dependency>
+        -->
+
 
         <!-- rest end -->
 
+        <dependency>
+            <groupId>com.orbitz.consul</groupId>
+            <artifactId>consul-client</artifactId>
+            <version>0.10.1</version>
+        </dependency>
 
         <!--
         <dependency>
             <groupId>org.immutables</groupId>
             <artifactId>value</artifactId>
             <version>2.1.16</version>
-        </dependency>
-        -->
-
-
-        <!-- consul java client -->
-        <!--
-        <dependency>
-            <groupId>com.orbitz.consul</groupId>
-            <artifactId>consul-client</artifactId>
-            <version>0.9.12</version>
         </dependency>
         -->
 
@@ -206,7 +215,8 @@
 
 
         <!-- maven apache http client for consul -->
-        <!--<dependency>
+        <!--
+        <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
             <version>4.5.2</version>
@@ -229,7 +239,7 @@
             <artifactId>httpcore</artifactId>
             <version>4.4.4</version>
         </dependency>
--->
+        -->
 
         <!--
         <dependency>
@@ -241,18 +251,15 @@
 
     </dependencies>
 
-    <!-- consul java api
-    <repositories>
-        <repository>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-            <id>central</id>
-            <name>bintray</name>
-            <url>http://jcenter.bintray.com</url>
-        </repository>
-    </repositories>
-    -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>javax.ws.rs</groupId>
+                <artifactId>javax.ws.rs-api</artifactId>
+                <version>2.0.1</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <build>
         <plugins>
@@ -341,53 +348,27 @@
                 </executions>
             </plugin>
 
-            <!-- shade consul client -->
-            <!--  <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>1.1</version>
+            <plugin>
+                <groupId>com.ning.maven.plugins</groupId>
+                <artifactId>maven-duplicate-finder-plugin</artifactId>
+                <version>1.0.6</version>
                 <executions>
                     <execution>
-                        <phase>package</phase>
+                        <phase>verify</phase>
                         <goals>
-                            <goal>shade</goal>
+                            <goal>check</goal>
                         </goals>
                         <configuration>
-                            <artifactSet>
-                                <includes>
-                                    <include>com.orbitz.consul:consul-client</include>
-                                </includes>
-                            </artifactSet>
-                            <filters>
-                                <filter>
-                                    <artifact>com.orbitz.consul:consul-client</artifact>
-                                    <excludes>
-                                        <exclude>**</exclude>
-                                    </excludes>
-                                </filter>
-                            </filters>
-                            <promoteTransitiveDependencies>true</promoteTransitiveDependencies>
-                            <createDependencyReducedPom>true</createDependencyReducedPom>
+                            <failBuildInCaseOfConflict>false</failBuildInCaseOfConflict>
+                            <ignoredResources>
+                                <!-- you will probably need something here -->
+
+                                <ignoredResource>changelog.txt</ignoredResource>
+                            </ignoredResources>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <version>2.4.0</version>
-                <extensions>true</extensions>
-                <configuration>
-                    <instructions>
-                        <Bundle-SymbolicName>manual</Bundle-SymbolicName>
-                        <Export-Package></Export-Package>
-                        <Import-Package></Import-Package>
-                        <_versionpolicy>[$(version;==;$(@)),$(version;+;$(@))]</_versionpolicy>
-                        <_removeheaders>Ignore-Package,Include-Resource,Private-Package,Embed-Dependency</_removeheaders>
-                    </instructions>
-                    <unpackBundle>true</unpackBundle>
-                </configuration>
-            </plugin> -->
 
         </plugins>
     </build>

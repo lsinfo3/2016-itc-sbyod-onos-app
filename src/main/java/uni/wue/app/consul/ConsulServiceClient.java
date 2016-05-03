@@ -18,9 +18,9 @@
 package uni.wue.app.consul;
 
 import com.google.common.net.HostAndPort;
-//import com.orbitz.consul.Consul;
-//import com.orbitz.consul.HealthClient;
-//import com.orbitz.consul.model.health.ServiceHealth;
+import com.orbitz.consul.Consul;
+import com.orbitz.consul.HealthClient;
+import com.orbitz.consul.model.health.ServiceHealth;
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Deactivate;
@@ -61,5 +61,18 @@ public class ConsulServiceClient implements ConsulService {
         List<ServiceHealth> nodes = healthClient.getHealthyServiceInstances("DataService").getResponse(); // discover only "passing" nodes
 
         return;*/
+    }
+
+    /**
+     * Connect to a running consul agent on localhost port 8500.
+     */
+    @Override
+    public void connectConsul() {
+        Consul consul = Consul.builder().build(); // connect to Consul
+
+        HealthClient healthClient = consul.healthClient();
+        List<ServiceHealth> nodes = healthClient.getHealthyServiceInstances("DataService").getResponse(); // discover only "passing" nodes
+
+        return;
     }
 }

@@ -56,4 +56,12 @@ public class ConsulServiceApi implements ConsulService {
         //log.info("Services: " + response.getValue());
 
     }
+
+    /**
+     * Connect to a running consul agent on localhost port 8500.
+     */
+    @Override
+    public void connectConsul() {
+
+    }
 }

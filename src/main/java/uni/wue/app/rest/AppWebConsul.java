@@ -74,4 +74,18 @@ public class AppWebConsul extends AbstractWebResource{
             return Response.ok(ENABLED_FALSE).build();
         }
     }
+
+    @POST
+    @Path("")
+    public Response postConsul(){
+        log.debug("AppWebConsul: Connecting to consul on on localhost, port 8500");
+
+        try {
+            ConsulService consulService = get(ConsulService.class);
+            consulService.connectConsul();
+            return Response.ok(ENABLED_TRUE).build();
+        } catch(Exception e){
+            return Response.ok(ENABLED_FALSE).build();
+        }
+    }
 }

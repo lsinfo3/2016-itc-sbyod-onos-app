@@ -21,6 +21,6 @@
      features="onos-byod" apps="">
     <description>ONOS OSGi bundle archetype</description>
     <artifact>mvn:uni.wue/onos-byod/1.0-SNAPSHOT</artifact>
-    <!-- <artifact>mvn:com.orbitz.consul/consul-client/0.10.1</artifact> -->
+    <artifact>mvn:com.orbitz.consul/consul-client/0.10.1</artifact>
     <!-- <artifact>mvn:com.ecwid.consul/consul-api/1.1.9</artifact> -->
 </app>

@@ -33,4 +33,9 @@ public interface ConsulService {
      */
     void connectConsul(IpAddress ipAddress, TpPort tpPort);
 
+    /**
+     * Connect to a running consul agent on localhost port 8500.
+     */
+    void connectConsul();
+
 }
