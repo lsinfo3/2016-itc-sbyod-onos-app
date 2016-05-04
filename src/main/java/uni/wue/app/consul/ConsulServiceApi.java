@@ -17,9 +17,10 @@
  */
 package uni.wue.app.consul;
 
-//import com.ecwid.consul.v1.ConsulClient;
-//import com.ecwid.consul.v1.QueryParams;
-//import com.ecwid.consul.v1.Response;
+import com.ecwid.consul.v1.ConsulClient;
+import com.ecwid.consul.v1.QueryParams;
+import com.ecwid.consul.v1.Response;
+import com.google.common.net.HostAndPort;
 import org.apache.felix.scr.annotations.Component;
 import org.onlab.packet.IpAddress;
 import org.onlab.packet.TpPort;
@@ -33,8 +34,8 @@ import static org.slf4j.LoggerFactory.getLogger;
 /**
  * Created by lorry on 19.04.16.
  */
-//@Component(immediate = true)
-//@org.apache.felix.scr.annotations.Service
+@Component(immediate = true)
+@org.apache.felix.scr.annotations.Service
 public class ConsulServiceApi implements ConsulService {
 
     private static final Logger log = getLogger(uni.wue.app.PortalManager.class);
@@ -48,12 +49,13 @@ public class ConsulServiceApi implements ConsulService {
     @Override
     public void connectConsul(IpAddress ipAddress, TpPort tpPort) {
 
-        //ConsulClient consulClient = new ConsulClient("127.0.0.1");
+        //HostAndPort hostAndPort = HostAndPort.fromParts(ipAddress.toString(), tpPort.toInt());
+        ConsulClient consulClient = new ConsulClient(ipAddress.toString(), tpPort.toInt());
 
-        //QueryParams params = new QueryParams("dc1");
-        //Response<Map<String, List<String>>> response = consulClient.getCatalogServices(params);
+        QueryParams params = new QueryParams("dc1");
+        Response<Map<String, List<String>>> response = consulClient.getCatalogServices(params);
 
-        //log.info("Services: " + response.getValue());
+        log.info("Services: " + response.getValue());
 
     }
 
@@ -62,6 +64,13 @@ public class ConsulServiceApi implements ConsulService {
      */
     @Override
     public void connectConsul() {
+
+        ConsulClient consulClient = new ConsulClient("localhost");
+
+        QueryParams params = new QueryParams("dc1");
+        Response<Map<String, List<String>>> response = consulClient.getCatalogServices(params);
+
+        log.info("Services: " + response.getValue());
 
     }
 }
