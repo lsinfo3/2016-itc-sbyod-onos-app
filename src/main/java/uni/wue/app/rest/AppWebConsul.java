@@ -47,6 +47,12 @@ public class AppWebConsul extends AbstractWebResource{
     private final ObjectNode ENABLED_TRUE = mapper().createObjectNode().put("enabled", true);
     private final ObjectNode ENABLED_FALSE = mapper().createObjectNode().put("enabled", false);
 
+    /**
+     * Connecting to consul running on server with IP and transport protocol port.
+     * @param ip_ Consul server IP address
+     * @param tpPort_ Consul transport protocol port
+     * @return "enabled: true" if connection to server is active
+     */
     @POST
     @Path("/ip/{ip}/tpPort/{tpPort}")
     public Response postConsul(@PathParam("ip") String ip_,
@@ -75,15 +81,33 @@ public class AppWebConsul extends AbstractWebResource{
         }
     }
 
+    /**
+     * Connecting to consul running on server with IP
+     * @return "enabled: true" if connection to server is active
+     */
     @POST
-    @Path("")
-    public Response postConsul(){
-        log.debug("AppWebConsul: Connecting to consul on on localhost, port 8500");
+    @Path("/ip/{ip}")
+    public Response postConsul(@PathParam("ip") String ip_){
+        log.debug("AppWebConsul: Connecting to consul on {}, port 8500", ip_);
+
+        if(ip_ == null){
+            return Response.ok(INVALID_PARAMETER).build();
+        }
+
+        Ip4Address ip4Address;
+        try{
+            ip4Address = Ip4Address.valueOf(ip_);
+        } catch(Exception e){
+            return Response.ok(INVALID_PARAMETER).build();
+        }
 
         try {
             ConsulService consulService = get(ConsulService.class);
-            consulService.connectConsul();
-            return Response.ok(ENABLED_TRUE).build();
+            if(consulService.connectConsul(ip4Address)){
+                return Response.ok(ENABLED_TRUE).build();
+            } else{
+                return Response.ok(ENABLED_FALSE).build();
+            }
         } catch(Exception e){
             return Response.ok(ENABLED_FALSE).build();
         }

@@ -31,11 +31,12 @@ public interface ConsulService {
      * @param ipAddress Ip address to connect to
      * @param tpPort transport protocol port
      */
-    void connectConsul(IpAddress ipAddress, TpPort tpPort);
+    boolean connectConsul(IpAddress ipAddress, TpPort tpPort);
 
     /**
-     * Connect to a running consul agent on localhost port 8500.
+     * Connect to a running consul agent on TpPort 8500.
+     * @param ipAddress Ip address to connect to
      */
-    void connectConsul();
+    boolean connectConsul(IpAddress ipAddress);
 
 }

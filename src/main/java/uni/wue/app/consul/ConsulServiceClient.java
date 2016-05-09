@@ -53,26 +53,24 @@ public class ConsulServiceClient implements ConsulService {
      * @return true, if connected. False, if not connected
      */
     @Override
-    public void connectConsul(IpAddress ipAddress, TpPort tpPort) {
+    public boolean connectConsul(IpAddress ipAddress, TpPort tpPort) {
         /*HostAndPort hostAndPort = HostAndPort.fromParts(ipAddress.toString(), tpPort.toInt());
         Consul consul = Consul.builder().build(); // connect to Consul
 
         HealthClient healthClient = consul.healthClient();
         List<ServiceHealth> nodes = healthClient.getHealthyServiceInstances("DataService").getResponse(); // discover only "passing" nodes
-
-        return;*/
+        */
+        return true;
     }
 
     /**
-     * Connect to a running consul agent on localhost port 8500.
+     * Connect to a running consul agent on TpPort 8500.
+     *
+     * @param ipAddress Ip address to connect to
      */
     @Override
-    public void connectConsul() {
-        /*Consul consul = Consul.builder().build(); // connect to Consul
-
-        HealthClient healthClient = consul.healthClient();
-        List<ServiceHealth> nodes = healthClient.getHealthyServiceInstances("DataService").getResponse(); // discover only "passing" nodes
-
-        return;*/
+    public boolean connectConsul(IpAddress ipAddress) {
+        return true;
     }
+
 }

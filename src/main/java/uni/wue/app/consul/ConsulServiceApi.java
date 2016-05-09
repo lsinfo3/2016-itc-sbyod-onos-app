@@ -25,9 +25,11 @@ import org.apache.felix.scr.annotations.Component;
 import org.onlab.packet.IpAddress;
 import org.onlab.packet.TpPort;
 import org.slf4j.Logger;
+import uni.wue.app.service.Service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.slf4j.LoggerFactory.getLogger;
 
@@ -38,7 +40,11 @@ import static org.slf4j.LoggerFactory.getLogger;
 @org.apache.felix.scr.annotations.Service
 public class ConsulServiceApi implements ConsulService {
 
+    // TODO: update connections if a service changes!
     private static final Logger log = getLogger(uni.wue.app.PortalManager.class);
+
+    private ConsulClient consulClient;
+    private Set<Service> consulServices;
 
     /**
      * Connect to a running consul agent.
@@ -47,30 +53,33 @@ public class ConsulServiceApi implements ConsulService {
      * @param tpPort    transport protocol port
      */
     @Override
-    public void connectConsul(IpAddress ipAddress, TpPort tpPort) {
+    public boolean connectConsul(IpAddress ipAddress, TpPort tpPort) {
 
-        //HostAndPort hostAndPort = HostAndPort.fromParts(ipAddress.toString(), tpPort.toInt());
-        ConsulClient consulClient = new ConsulClient(ipAddress.toString(), tpPort.toInt());
+        consulClient = new ConsulClient(ipAddress.toString(), tpPort.toInt());
 
-        QueryParams params = new QueryParams("dc1");
-        Response<Map<String, List<String>>> response = consulClient.getCatalogServices(params);
-
-        log.info("Services: " + response.getValue());
-
+        updateServices();
+        return true;
     }
 
     /**
-     * Connect to a running consul agent on localhost port 8500.
+     * Connect to a running consul agent on TpPort 8500.
+     *
+     * @param ipAddress Ip address to connect to
      */
     @Override
-    public void connectConsul() {
-
-        ConsulClient consulClient = new ConsulClient("localhost");
-
-        QueryParams params = new QueryParams("dc1");
-        Response<Map<String, List<String>>> response = consulClient.getCatalogServices(params);
-
-        log.info("Services: " + response.getValue());
-
+    public boolean connectConsul(IpAddress ipAddress) {
+        return connectConsul(ipAddress, TpPort.tpPort(8500));
     }
+
+    private void updateServices(){
+        List<String> datacenters = consulClient.getCatalogDatacenters().getValue();
+        QueryParams queryParams = new QueryParams(datacenters.iterator().next());
+        Map<String, List<String>> services = consulClient.getCatalogServices(
+                queryParams).getValue();
+
+        services.forEach((s,t) -> log.info("" + s + " : " + t));
+        services.forEach((s,t) -> log.info(consulClient.getCatalogService(s.toString(), queryParams)
+                .getValue().toString()));
+    }
+
 }
