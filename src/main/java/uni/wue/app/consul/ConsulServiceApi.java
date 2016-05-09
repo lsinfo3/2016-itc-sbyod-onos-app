@@ -47,6 +47,8 @@ import static org.slf4j.LoggerFactory.getLogger;
 @org.apache.felix.scr.annotations.Service
 public class ConsulServiceApi implements ConsulService {
 
+    private static final long WAIT_TIME = 60*5; // seconds - 5*60 is default consul wait time (max wait time = 60*10 s)
+
     private static final Logger log = getLogger(uni.wue.app.PortalManager.class);
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
@@ -55,16 +57,19 @@ public class ConsulServiceApi implements ConsulService {
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected ServiceStore serviceStore;
 
-    private ConsulClient consulClient;
-    // TODO: update connections if a service changes!
-    private Set<Service> consulServices;
+    protected ConsulClient consulClient;
+    protected Thread checkServices;
 
 
     @Activate
-    protected void activate() {}
+    protected void activate() {
+        checkServices = new Thread(new CheckConsulCatalogServiceUpdates());
+    }
 
     @Deactivate
-    protected void deactivate() {}
+    protected void deactivate() {
+        checkServices.interrupt();
+    }
 
 
     /**
@@ -86,7 +91,12 @@ public class ConsulServiceApi implements ConsulService {
         // remove old consul services
         storeServices.forEach(s -> serviceStore.removeService(s));
 
+        // add all services from consul to the service store
         updateServices();
+
+        // start the thread checking for consul service updates
+        checkServices.start();
+
         return true;
     }
 
@@ -100,26 +110,27 @@ public class ConsulServiceApi implements ConsulService {
         return connectConsul(ipAddress, TpPort.tpPort(8500));
     }
 
+    /**
+     * Adding all services found by consul to the service store
+     */
     private void updateServices(){
-        // get the datacenters
-        List<String> datacenters = consulClient.getCatalogDatacenters().getValue();
-        QueryParams queryParams = new QueryParams(datacenters.iterator().next());
 
-        // get the registered service names from first datacenter
-        Map<String, List<String>> services = consulClient.getCatalogServices(
-                queryParams).getValue();
+        QueryParams queryParams = new QueryParams("");
+
+        // get the registered service names
+        Map<String, List<String>> services = consulClient.getCatalogServices(queryParams).getValue();
 
         // show the services in log
-        services.forEach((s,t) -> log.info("Adding consul service [" + s + " : " + t + "] to known services."));
-        services.forEach((s,t) -> log.info(consulClient.getCatalogService(s.toString(), queryParams)
-                .getValue().toString()));
+        services.forEach((s, t) -> log.info("Found consul service [" + s + " : " + t + "]."));
 
         // get the information stored about the services
         List<CatalogService> serviceDescription = new LinkedList<>();
         services.forEach((s,t) -> serviceDescription.addAll(consulClient.getCatalogService(s.toString(), queryParams)
                 .getValue()));
 
+        // add the catalog services to the ServiceStore
         for(CatalogService c : serviceDescription){
+
             // get all hosts with corresponding ip address
             Set<Host> hosts;
             if(c.getServiceAddress().isEmpty()){
@@ -134,11 +145,46 @@ public class ConsulServiceApi implements ConsulService {
                 }
             }
 
-            // add all discovered services to the ServiceStore
+            // add all discovered hosts running the service to the ServiceStore
             for(Host h : hosts) {
+                log.info("Adding consul service {} running on {} to service store.",
+                        c.getServiceName(), h.ipAddresses());
+
                 Service service = new DefaultService(h, TpPort.tpPort(c.getServicePort()), c.getServiceName(),
                         ProviderId.NONE, c.getServiceId(), Service.Discovery.CONSUL);
                 serviceStore.addService(service);
+            }
+        }
+    }
+
+    private class CheckConsulCatalogServiceUpdates implements Runnable{
+
+        /**
+         * When an object implementing interface <code>Runnable</code> is used
+         * to create a thread, starting the thread causes the object's
+         * <code>run</code> method to be called in that separately executing
+         * thread.
+         * <p>
+         * The general contract of the method <code>run</code> is that it may
+         * take any action whatsoever.
+         *
+         * @see Thread#run()
+         */
+        @Override
+        public void run() {
+
+            while(consulClient != null) {
+                // get the consul index to wait for
+                QueryParams queryParams = new QueryParams("");
+                Response<Map<String, List<String>>> services = consulClient.getCatalogServices(queryParams);
+
+                // start blocking query for index
+                queryParams = new QueryParams(WAIT_TIME, services.getConsulIndex());
+                services = consulClient.getCatalogServices(queryParams);
+
+                log.info("Blocking query result: " + services.toString());
+
+                // TODO: check services in service store for modification
             }
         }
     }
