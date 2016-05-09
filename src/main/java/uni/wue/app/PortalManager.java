@@ -147,7 +147,7 @@ public class PortalManager implements PortalService{
         // TODO: Add topology listener -> adding basic rules if new device connected.
         packetService.addProcessor(processor, PacketProcessor.director(2));
 
-        testSetup();
+        //testSetup();
 
         hostService.addListener(new PortalConnectionHostListener());
 

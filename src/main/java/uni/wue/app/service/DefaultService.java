@@ -44,6 +44,7 @@ public class DefaultService extends AbstractElement implements Service {
     private final Host host;
     private final TpPort tpPort;
     private final String name;
+    private Discovery discovery;
 
     // for serialization
     private DefaultService(){
@@ -72,6 +73,55 @@ public class DefaultService extends AbstractElement implements Service {
         this.host = host;
         this.tpPort = tpPort;
         this.name = name;
+        this.discovery = Discovery.NONE;
+    }
+
+    /**
+     * Creates a service
+     *
+     * @param host service host
+     * @param tpPort service transport protocol port
+     * @param name service name
+     * @param providerId identity of the provider
+     * @param annotations optional key/value annotations
+     * @param discovery devine wich service discovery was used
+     */
+    public DefaultService(Host host, TpPort tpPort, String name, ProviderId providerId, Discovery discovery, Annotations... annotations){
+        super(providerId, ServiceId.serviceId(URI.create(name + System.currentTimeMillis())), annotations);
+
+        if(host == null || tpPort == null || name == null) {
+            log.warn("DefaultService: Illegal Arguments");
+            throw new IllegalArgumentException();
+        }
+
+        this.host = host;
+        this.tpPort = tpPort;
+        this.name = name;
+        this.discovery = discovery;
+    }
+
+    /**
+     * Creates a service
+     *
+     * @param host service host
+     * @param tpPort service transport protocol port
+     * @param name service name
+     * @param providerId identity of the provider
+     * @param annotations optional key/value annotations
+     * @param discovery devine wich service discovery was used
+     */
+    public DefaultService(Host host, TpPort tpPort, String name, ProviderId providerId, String id, Discovery discovery, Annotations... annotations){
+        super(providerId, ServiceId.serviceId(URI.create(id)), annotations);
+
+        if(host == null || tpPort == null || name == null) {
+            log.warn("DefaultService: Illegal Arguments");
+            throw new IllegalArgumentException();
+        }
+
+        this.host = host;
+        this.tpPort = tpPort;
+        this.name = name;
+        this.discovery = discovery;
     }
 
     /**
@@ -92,6 +142,16 @@ public class DefaultService extends AbstractElement implements Service {
     @Override
     public TpPort getTpPort() {
         return tpPort;
+    }
+
+    /**
+     * Get the discovery tag
+     *
+     * @return Discovery
+     */
+    @Override
+    public Discovery getServiceDiscovery() {
+        return discovery;
     }
 
     /**

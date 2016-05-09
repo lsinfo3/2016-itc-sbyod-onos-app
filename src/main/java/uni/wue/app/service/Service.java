@@ -32,6 +32,8 @@ import java.util.Set;
  */
 public interface Service extends Element{
 
+    public enum Discovery{CONSUL, NONE};
+
     /**
      * Get the host where the service is running on
      * @return host
@@ -57,4 +59,10 @@ public interface Service extends Element{
      * @return TpPort
      */
     TpPort getTpPort();
+
+    /**
+     * Get the discovery tag
+     * @return Discovery
+     */
+    DefaultService.Discovery getServiceDiscovery();
 }
