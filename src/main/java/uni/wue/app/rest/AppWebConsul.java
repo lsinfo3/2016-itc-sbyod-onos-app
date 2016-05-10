@@ -24,6 +24,7 @@ import org.onosproject.rest.AbstractWebResource;
 import org.slf4j.Logger;
 import uni.wue.app.consul.ConsulService;
 
+import javax.ws.rs.DELETE;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -106,6 +107,23 @@ public class AppWebConsul extends AbstractWebResource{
             }
         } catch(Exception e){
             return Response.ok(ENABLED_FALSE).build();
+        }
+    }
+
+    /**
+     * Disconnecting from Consul as service discovery client.
+     */
+    @DELETE
+    @Path("/deactivate")
+    public Response deactivateConsul(){
+        log.debug("AppWebConsul: Deactivating consul service discovery");
+
+        try{
+            ConsulService consulService = get(ConsulService.class);
+            consulService.disconnectConsul();
+            return Response.ok(ENABLED_FALSE).build();
+        } catch (Exception e){
+            return Response.ok(ENABLED_TRUE).build();
         }
     }
 }

@@ -50,7 +50,8 @@ import static org.slf4j.LoggerFactory.getLogger;
 @org.apache.felix.scr.annotations.Service
 public class ConsulServiceApi implements ConsulService {
 
-    private static final long WAIT_TIME = 30; // seconds - 5*60 is default consul wait time (max wait time = 60*10 s)
+    // Todo: longer than 30s time provokes a java http timeout error?
+    private static final long WAIT_TIME = 10; // seconds - 5*60 is default consul wait time (max wait time = 60*10 s)
 
     private static final Logger log = getLogger(uni.wue.app.PortalManager.class);
 
@@ -69,12 +70,19 @@ public class ConsulServiceApi implements ConsulService {
 
     @Activate
     protected void activate() {
-        checkServices = new Thread(new CheckConsulCatalogServiceUpdates());
+        checkServices = new CheckConsulCatalogServiceUpdates();
+        checkServices.setDaemon(true);
     }
 
     @Deactivate
     protected void deactivate() {
-        checkServices.interrupt();
+        try {
+            if(checkServices.isAlive()) {
+                checkServices.interrupt();
+            }
+        } catch(Exception e){
+            log.warn(e.toString());
+        }
     }
 
 
@@ -115,6 +123,21 @@ public class ConsulServiceApi implements ConsulService {
         return connectConsul(ipAddress, TpPort.tpPort(8500));
     }
 
+    /**
+     * Disconnect the running consul agent
+     */
+    @Override
+    public void disconnectConsul() {
+        if(checkServices.isAlive()) {
+            checkServices.interrupt();
+        }
+        consulClient = null;
+
+        checkServices = new CheckConsulCatalogServiceUpdates();
+        checkServices.setDaemon(true);
+
+    }
+
 
     /**
      * Get all services marked as Consul discovery from the service store
@@ -132,58 +155,61 @@ public class ConsulServiceApi implements ConsulService {
      */
     private Set<Service> getServices(){
 
-        QueryParams queryParams = new QueryParams("");
-
-        // get the registered service names
-        Map<String, List<String>> services = consulClient.getCatalogServices(queryParams).getValue();
-
-        // show the services in log
-        services.forEach((s, t) -> log.info("ConsulServiceApi: Found consul service [" + s + " : " + t + "]."));
-
-        // get the information stored about the services
-        List<CatalogService> serviceDescription = new LinkedList<>();
-        services.forEach((s,t) -> serviceDescription.addAll(consulClient.getCatalogService(s.toString(), queryParams)
-                .getValue()));
-
         Set<Service> consulServices = new HashSet<>();
 
-        // add the catalog services to the ServiceStore
-        for(CatalogService c : serviceDescription){
+        QueryParams queryParams = new QueryParams("");
 
-            // get all hosts with corresponding ip address
-            Set<Host> hosts;
-            if(c.getServiceAddress().isEmpty()){
-                // default ip address is the consul ip address
-                hosts = hostService.getHostsByIp(IpAddress.valueOf(c.getAddress()));
-            } else{
-                try {
-                    hosts = hostService.getHostsByIp(IpAddress.valueOf(c.getServiceAddress()));
-                } catch(IllegalArgumentException e){
-                    log.warn("ConsulServiceApi: Could not find host with address = {}, Error: {}",
-                            c.getServiceAddress(), e);
-                    hosts = Sets.newHashSet();
+        if(consulClient != null) {
+            // get the registered service names
+            Map<String, List<String>> services = consulClient.getCatalogServices(queryParams).getValue();
+
+            // show the services in log
+            services.forEach((s, t) -> log.info("ConsulServiceApi: Found consul service [" + s + " : " + t + "]."));
+
+            // get the information stored about the services
+            List<CatalogService> serviceDescription = new LinkedList<>();
+            services.forEach((s, t) -> serviceDescription.addAll(consulClient.getCatalogService(s.toString(), queryParams)
+                    .getValue()));
+
+
+            // add the catalog services to the ServiceStore
+            for (CatalogService c : serviceDescription) {
+
+                // get all hosts with corresponding ip address
+                Set<Host> hosts;
+                if (c.getServiceAddress().isEmpty()) {
+                    // default ip address is the consul ip address
+                    hosts = hostService.getHostsByIp(IpAddress.valueOf(c.getAddress()));
+                } else {
+                    try {
+                        hosts = hostService.getHostsByIp(IpAddress.valueOf(c.getServiceAddress()));
+                    } catch (IllegalArgumentException e) {
+                        log.warn("ConsulServiceApi: Could not find host with address = {}, Error: {}",
+                                c.getServiceAddress(), e);
+                        hosts = Sets.newHashSet();
+                    }
                 }
-            }
 
-            if(hosts.size() == 1){
-                Host host = hosts.iterator().next();
-                log.info("ConsulServiceApi: Consul service {} running on {} is in ONOS cluster.",
-                        c.getServiceName(), host.ipAddresses());
+                if (hosts.size() == 1) {
+                    Host host = hosts.iterator().next();
+                    log.info("ConsulServiceApi: Consul service {} running on {} is in ONOS cluster.",
+                            c.getServiceName(), host.ipAddresses());
 
-                Service service = new DefaultService(host, TpPort.tpPort(c.getServicePort()), c.getServiceName(),
-                        ProviderId.NONE, c.getServiceId(), Service.Discovery.CONSUL);
-                consulServices.add(service);
-            } else if(hosts.isEmpty()){
-                log.debug("ConsulServiceApi: No host found with ip address = {}", c.getAddress());
-            } else{
-                log.debug("ConsulServiceApi: More than one host found with ip address = {}", c.getAddress());
+                    Service service = new DefaultService(host, TpPort.tpPort(c.getServicePort()), c.getServiceName(),
+                            ProviderId.NONE, c.getServiceId(), Service.Discovery.CONSUL);
+                    consulServices.add(service);
+                } else if (hosts.isEmpty()) {
+                    log.debug("ConsulServiceApi: No host found with ip address = {}", c.getAddress());
+                } else {
+                    log.debug("ConsulServiceApi: More than one host found with ip address = {}", c.getAddress());
+                }
             }
         }
 
         return consulServices;
     }
 
-    private class CheckConsulCatalogServiceUpdates implements Runnable{
+    private class CheckConsulCatalogServiceUpdates extends Thread{
 
         /**
          * When an object implementing interface <code>Runnable</code> is used
@@ -199,18 +225,20 @@ public class ConsulServiceApi implements ConsulService {
         @Override
         public void run() {
 
-            while(consulClient != null) {
+            while(consulClient != null && !isInterrupted()) {
                 // get the consul index to wait for
                 QueryParams queryParams = new QueryParams("");
                 Response<Map<String, List<String>>> services = consulClient.getCatalogServices(queryParams);
 
                 // start blocking query for index
                 queryParams = new QueryParams(WAIT_TIME, services.getConsulIndex());
-                services = consulClient.getCatalogServices(queryParams);
+                if(!isInterrupted())
+                    services = consulClient.getCatalogServices(queryParams);
 
-                log.info("ConsulServiceApi: Updating consul services - {}", services.toString());
-
-                updateConsulServices();
+                if(!isInterrupted()) {
+                    log.info("ConsulServiceApi: Updating consul services - {}", services.toString());
+                    updateConsulServices();
+                }
             }
         }
     }
@@ -274,7 +302,8 @@ public class ConsulServiceApi implements ConsulService {
 
         // add all remaining services as new service to store
         consulServices.forEach(cs -> serviceStore.addService(cs));
-        log.info("ConsulServiceApi: Added new services = {}", consulServices);
+        if(!consulServices.isEmpty())
+            log.info("ConsulServiceApi: Added new services = {}", consulServices);
 
     }
 

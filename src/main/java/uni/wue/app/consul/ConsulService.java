@@ -39,4 +39,9 @@ public interface ConsulService {
      */
     boolean connectConsul(IpAddress ipAddress);
 
+    /**
+     * Disconnect the running consul agent
+     */
+    void disconnectConsul();
+
 }
