@@ -100,6 +100,29 @@ public class DefaultService extends AbstractElement implements Service {
         this.discovery = discovery;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        DefaultService that = (DefaultService) o;
+
+        if (host != null ? !host.equals(that.host) : that.host != null) return false;
+        if (tpPort != null ? !tpPort.equals(that.tpPort) : that.tpPort != null) return false;
+        if (name != null ? !name.equals(that.name) : that.name != null) return false;
+        return discovery == that.discovery;
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = host != null ? host.hashCode() : 0;
+        result = 31 * result + (tpPort != null ? tpPort.hashCode() : 0);
+        result = 31 * result + (name != null ? name.hashCode() : 0);
+        result = 31 * result + (discovery != null ? discovery.hashCode() : 0);
+        return result;
+    }
+
     /**
      * Creates a service
      *
@@ -117,6 +140,7 @@ public class DefaultService extends AbstractElement implements Service {
             log.warn("DefaultService: Illegal Arguments");
             throw new IllegalArgumentException();
         }
+
 
         this.host = host;
         this.tpPort = tpPort;
@@ -174,25 +198,6 @@ public class DefaultService extends AbstractElement implements Service {
         return (ServiceId) this.id;
     }
 
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        DefaultService that = (DefaultService) o;
-
-        if (host != null ? !host.equals(that.host) : that.host != null) return false;
-        return !(tpPort != null ? !tpPort.equals(that.tpPort) : that.tpPort != null);
-
-    }
-
-    @Override
-    public int hashCode() {
-        int result = host != null ? host.hashCode() : 0;
-        result = 31 * result + (tpPort != null ? tpPort.hashCode() : 0);
-        return result;
-    }
 
     @Override
     public String toString() {

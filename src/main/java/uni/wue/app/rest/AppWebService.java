@@ -165,7 +165,6 @@ public class AppWebService extends AbstractWebResource {
         }
         return Response.ok(ENABLED_FALSE).build();
 
-
     }
 
 }

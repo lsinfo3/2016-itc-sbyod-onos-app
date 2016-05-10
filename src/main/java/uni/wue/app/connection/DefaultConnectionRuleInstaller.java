@@ -69,7 +69,8 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
 
 
     /**
-     * Establish a connection between the user and the service
+     * Establish a connection between the user and the service.
+     * Use ConnectionStore to add a new connection.
      *
      * @param connection
      */
