@@ -243,7 +243,7 @@ public class PortalManager implements PortalService{
                 return;
             }
 
-            // install rule only if it is not coming from the portal
+            // install rule only if packet is not coming from the portal
             if(!portalService.getHost().ipAddresses().contains(srcIp)) {
 
                 // install rules for all users with source ip address
@@ -278,15 +278,23 @@ public class PortalManager implements PortalService{
         return type == Ethernet.TYPE_LLDP || type == Ethernet.TYPE_BSN;
     }
 
+    /**
+     * Set the captive portal
+     *
+     * @param portalIp Ip address of the portal
+     * @param portalTpPort Transport protocol port of the portal
+     *
+     * @return true if the portal was set correctly
+     */
     @Override
-    public boolean setPortal(Ip4Address pIp, TpPort tpPort){
-        checkNotNull(pIp, "Portal IPv4 address can not be null");
+    public boolean setPortal(Ip4Address portalIp, TpPort portalTpPort){
+        checkNotNull(portalIp, "Portal IPv4 address can not be null");
 
         // find hosts with portal IP address
-        Set<Host> portalHosts = hostService.getHostsByIp(pIp);
+        Set<Host> portalHosts = hostService.getHostsByIp(portalIp);
         if(portalHosts.size() == 1) {
 
-            Service portalService = new DefaultService(portalHosts.iterator().next(), tpPort, "PortalService", ProviderId.NONE);
+            Service portalService = new DefaultService(portalHosts.iterator().next(), portalTpPort, "PortalService", ProviderId.NONE);
             // update portal if the service not already exists
             if(serviceStore.addService(portalService)) {
 
@@ -301,24 +309,24 @@ public class PortalManager implements PortalService{
                 connectHostsToPortal();
 
                 log.info("Portal is up. IP = {}, TpPort = {}, ID = {}",
-                        Lists.newArrayList(pIp.toString(), tpPort.toString(), this.portalId.toString()).toArray());
+                        Lists.newArrayList(portalIp.toString(), portalTpPort.toString(), this.portalId.toString()).toArray());
                 return true;
             } else if(portalId != null) {
                 if (portalService.equals(serviceStore.getService(portalId))) {
                     log.info("PortalManager: Portal already up on {}.",
-                            pIp.toString() + ":" + tpPort.toString());
+                            portalIp.toString() + ":" + portalTpPort.toString());
                     return true;
                 }
             }
 
             log.warn("Could not set portal. Another service is already active on '{}' !",
-                    pIp.toString() + ":" + tpPort.toString());
+                    portalIp.toString() + ":" + portalTpPort.toString());
             return false;
 
         } else if(portalHosts.size() > 1){
-            log.warn("PortalManager: Could not set portal. More than one host with IP = {}", pIp);
+            log.warn("PortalManager: Could not set portal. More than one host with IP = {}", portalIp);
         } else{
-            log.warn("Could not set portal. No host defined with IP {}!", pIp.toString());
+            log.warn("Could not set portal. No host defined with IP {}!", portalIp.toString());
         }
 
         return false;
