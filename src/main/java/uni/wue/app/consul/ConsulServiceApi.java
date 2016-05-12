@@ -51,8 +51,8 @@ import static org.slf4j.LoggerFactory.getLogger;
 @org.apache.felix.scr.annotations.Service
 public class ConsulServiceApi implements ConsulService {
 
-    // Todo: longer than 30s time provokes a java http timeout error?
-    private static final long WAIT_TIME = 10; // seconds - 5*60 is default consul wait time (max wait time = 60*10 s)
+    private static final long WAIT_TIME = 50; // seconds - 5*60 is default consul wait time (max wait time = 60*10 s)
+    // consul api throws read time out at 60s in com.ecwid.consul.transport.AbstractHttpTransport class
 
     private static final Logger log = getLogger(uni.wue.app.PortalManager.class);
 

@@ -46,7 +46,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class FlowRedirect extends PacketRedirect {
 
     private static final String APPLICATION_ID = "uni.wue.app";
-    private static final int TIMEOUT = 5; //seconds
+    private static final int TIMEOUT = 3; //seconds
     private static final int RULE_PRIORITY = 400;
 
 
