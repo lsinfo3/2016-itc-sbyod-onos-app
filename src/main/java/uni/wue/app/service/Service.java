@@ -32,7 +32,7 @@ import java.util.Set;
  */
 public interface Service extends Element{
 
-    public enum Discovery{CONSUL, NONE};
+    enum Discovery{CONSUL, NONE};
 
     /**
      * Get the host where the service is running on
@@ -65,4 +65,17 @@ public interface Service extends Element{
      * @return Discovery
      */
     DefaultService.Discovery getServiceDiscovery();
+
+    /**
+     * Set the glyhpicon symbol to display in portal
+     * @param symbol name of the glyphicon
+     */
+    void setIcon(String symbol);
+
+    /**
+     * Returning the symbol to display in Portal
+     *
+     * @return symbol string
+     */
+    String getIcon();
 }

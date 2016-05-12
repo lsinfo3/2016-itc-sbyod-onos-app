@@ -17,20 +17,14 @@
  */
 package uni.wue.app.service;
 
-import org.onlab.packet.Ip4Address;
-import org.onlab.packet.MacAddress;
 import org.onlab.packet.TpPort;
 import org.onosproject.net.AbstractElement;
 import org.onosproject.net.Annotations;
-import org.onosproject.net.ElementId;
 import org.onosproject.net.Host;
 import org.onosproject.net.provider.ProviderId;
 import org.slf4j.Logger;
 
 import java.net.URI;
-import java.security.Timestamp;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import static org.slf4j.LoggerFactory.getLogger;
 
@@ -45,6 +39,7 @@ public class DefaultService extends AbstractElement implements Service {
     private final TpPort tpPort;
     private final String name;
     private Discovery discovery;
+    private String icon = "list";
 
     // for serialization
     private DefaultService(){
@@ -74,6 +69,7 @@ public class DefaultService extends AbstractElement implements Service {
         this.tpPort = tpPort;
         this.name = name;
         this.discovery = Discovery.NONE;
+
     }
 
     /**
@@ -98,29 +94,6 @@ public class DefaultService extends AbstractElement implements Service {
         this.tpPort = tpPort;
         this.name = name;
         this.discovery = discovery;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        DefaultService that = (DefaultService) o;
-
-        if (host != null ? !host.equals(that.host) : that.host != null) return false;
-        if (tpPort != null ? !tpPort.equals(that.tpPort) : that.tpPort != null) return false;
-        if (name != null ? !name.equals(that.name) : that.name != null) return false;
-        return discovery == that.discovery;
-
-    }
-
-    @Override
-    public int hashCode() {
-        int result = host != null ? host.hashCode() : 0;
-        result = 31 * result + (tpPort != null ? tpPort.hashCode() : 0);
-        result = 31 * result + (name != null ? name.hashCode() : 0);
-        result = 31 * result + (discovery != null ? discovery.hashCode() : 0);
-        return result;
     }
 
     /**
@@ -179,6 +152,27 @@ public class DefaultService extends AbstractElement implements Service {
     }
 
     /**
+     * Set the glyhpicon icon to display in portal
+     *
+     * @param icon name of the glyphicon
+     */
+    @Override
+    public void setIcon(String icon) {
+        if(!icon.isEmpty())
+            this.icon = icon;
+    }
+
+    /**
+     * Returning the icon to display in Portal
+     *
+     * @return icon string
+     */
+    @Override
+    public String getIcon() {
+        return icon;
+    }
+
+    /**
      * Get the name of the service
      *
      * @return name
@@ -198,14 +192,40 @@ public class DefaultService extends AbstractElement implements Service {
         return (ServiceId) this.id;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        DefaultService that = (DefaultService) o;
+
+        if (host != null ? !host.equals(that.host) : that.host != null) return false;
+        if (tpPort != null ? !tpPort.equals(that.tpPort) : that.tpPort != null) return false;
+        if (name != null ? !name.equals(that.name) : that.name != null) return false;
+        if (discovery != that.discovery) return false;
+        return !(icon != null ? !icon.equals(that.icon) : that.icon != null);
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = host != null ? host.hashCode() : 0;
+        result = 31 * result + (tpPort != null ? tpPort.hashCode() : 0);
+        result = 31 * result + (name != null ? name.hashCode() : 0);
+        result = 31 * result + (discovery != null ? discovery.hashCode() : 0);
+        result = 31 * result + (icon != null ? icon.hashCode() : 0);
+        return result;
+    }
 
     @Override
     public String toString() {
         return "DefaultService{" +
-                "name=" + getName() +
-                "hostId=" + host.id() +
+                "host=" + host +
                 ", tpPort=" + tpPort +
-                ", serviceId=" + this.id() +
+                ", name='" + name + '\'' +
+                ", discovery=" + discovery +
+                ", icon='" + icon + '\'' +
                 '}';
     }
+
 }

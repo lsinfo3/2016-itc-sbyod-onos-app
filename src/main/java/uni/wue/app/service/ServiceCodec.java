@@ -32,6 +32,7 @@ public class ServiceCodec extends JsonCodec<Service> {
     private static final String name = "serviceName";
     private static final String id = "serviceId";
     private static final String tpPort = "serviceTpPort";
+    private static final String icon = "icon";
 
     @Override
     public ObjectNode encode(Service service, CodecContext context){
@@ -40,7 +41,8 @@ public class ServiceCodec extends JsonCodec<Service> {
         ObjectNode result = context.mapper().createObjectNode()
                 .put(name, service.getName())
                 .put(id, service.id().toString())
-                .put(tpPort, service.getTpPort().toString());
+                .put(tpPort, service.getTpPort().toString())
+                .put(icon, service.getIcon());
 
         return result;
     }
