@@ -96,7 +96,8 @@ public class AppWebUser extends AbstractWebResource {
             ObjectNode serviceNode = mapper().createObjectNode()
                     .put("serviceName", service.getName())
                     .put("serviceId", service.id().toString())
-                    .put("serviceTpPort", service.getTpPort().toString());
+                    .put("serviceTpPort", service.getTpPort().toString())
+                    .put("icon", service.getIcon());
             if(userServices.contains(service))
                 serviceNode.put("serviceEnabled", true);
             else
