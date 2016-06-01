@@ -65,29 +65,31 @@ public class DefaultBasicRuleInstaller implements BasicRuleInstaller {
 
         Iterable<Device> devices = deviceService.getDevices();
 
-        for(Device device : devices){
 
-            // get flow rule to drop packets
-            FlowRule.Builder dropRuleBuilder = getDropRuleBuilder();
-            FlowRule rule = dropRuleBuilder.forDevice(device.id()).build();
+//        for(Device device : devices){
+//
+//            // get flow rule to drop packets
+//            FlowRule.Builder dropRuleBuilder = getDropRuleBuilder();
+//            FlowRule rule = dropRuleBuilder.forDevice(device.id()).build();
+//
+//            // add a listener, that notifies if rule has been added in device
+//            /*InternalFlowRuleListener internalFlowRuleListener = new InternalFlowRuleListener(rule);
+//            flowRuleService.addListener(internalFlowRuleListener);
+//
+//            lock.lock();
+//            try {
+//                // apply flow rule*/
+//                flowRuleService.applyFlowRules(rule);
+//                // wait for rule state "ADDED" in device
+//                /*ruleAdded.await();
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            } finally {
+//                lock.unlock();
+//                flowRuleService.removeListener(internalFlowRuleListener);
+//            }*/
+//        }
 
-            // add a listener, that notifies if rule has been added in device
-            /*InternalFlowRuleListener internalFlowRuleListener = new InternalFlowRuleListener(rule);
-            flowRuleService.addListener(internalFlowRuleListener);
-
-            lock.lock();
-            try {
-                // apply flow rule*/
-                flowRuleService.applyFlowRules(rule);
-                // wait for rule state "ADDED" in device
-                /*ruleAdded.await();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            } finally {
-                lock.unlock();
-                flowRuleService.removeListener(internalFlowRuleListener);
-            }*/
-        }
 
         for(Device device : devices){
 
