@@ -118,8 +118,8 @@ public class FlowRedirect extends PacketRedirect {
         // traffic selector for packets of type IPv4
         TrafficSelector.Builder selectorBuilder = DefaultTrafficSelector.builder();
         selectorBuilder.matchEthType(Ethernet.TYPE_IPV4)
-                .matchEthSrc(ethPkt.getSourceMAC())
-                .matchEthDst(ethPkt.getDestinationMAC());
+                .matchEthSrc(ethPkt.getSourceMAC());
+                //.matchEthDst(ethPkt.getDestinationMAC());
 
         // no port is found as long as the portal is not present to the controller
         PortNumber outPort = getDstPort(pkt, portal);
@@ -192,8 +192,8 @@ public class FlowRedirect extends PacketRedirect {
         // traffic selector for packets of type IPv4
         TrafficSelector.Builder selectorBuilder = DefaultTrafficSelector.builder();
         selectorBuilder.matchEthType(Ethernet.TYPE_IPV4)
-                .matchEthSrc(portal.mac())
-                .matchEthDst(ethPkt.getSourceMAC());
+                .matchEthSrc(portal.mac());
+                //.matchEthDst(ethPkt.getSourceMAC());
 
         // get the port where the packet from the portal should come from
         PortNumber fromPort = getDstPort(pkt, portal);
