@@ -178,6 +178,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                             .forDevice(forDeviceId)
                             .withPriority(FLOW_PRIORITY)
                             .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
+                            .forTable(100)
                             .makePermanent();
 
                     FlowRule flowRule = flowRuleBuilder.build();
@@ -209,6 +210,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                             .forDevice(forDeviceId)
                             .withPriority(FLOW_PRIORITY)
                             .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
+                            .forTable(100)
                             .makePermanent();
 
                     FlowRule flowRule = flowRuleBuilder.build();

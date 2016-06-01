@@ -132,6 +132,7 @@ public class DefaultBasicRuleInstaller implements BasicRuleInstaller {
                 .withTreatment(trafficTreatmentBuilder.build())
                 .withPriority(DROP_RULE_PRIORITY)
                 .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
+                .forTable(100)
                 .makePermanent();
 
         return flowRuleBuilder;
@@ -158,6 +159,7 @@ public class DefaultBasicRuleInstaller implements BasicRuleInstaller {
                 .withTreatment(trafficTreatmentBuilder.build())
                 .withPriority(CONTROLLER_RULE_PRIORITY)
                 .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
+                .forTable(100)
                 .makePermanent();
 
         return flowRuleBuilder;
