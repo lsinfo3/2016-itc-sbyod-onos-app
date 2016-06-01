@@ -19,7 +19,7 @@
 <features xmlns="http://karaf.apache.org/xmlns/features/v1.2.0" name="onos-byod-1.0-SNAPSHOT">
     <feature name="onos-byod" version="1.0-SNAPSHOT"
              description="ONOS OSGi bundle archetype">
-        <feature version="1.5.1">onos-api</feature>
+        <feature version="1.5.2-SNAPSHOT">onos-api</feature>
         <bundle>mvn:uni.wue/onos-byod/1.0-SNAPSHOT</bundle>
         <!-- <bundle>wrap:mvn:com.orbitz.consul/consul-client/0.10.1$Bundle-SymbolicName=consul-client&amp;Bundle-Version=0.10.1</bundle> -->
         <!-- <bundle>mvn:com.fasterxml.jackson.datatype/jackson-datatype-guava/2.6.3</bundle> -->
