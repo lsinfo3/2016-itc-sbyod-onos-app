@@ -456,8 +456,8 @@ public class PortalManager implements PortalService{
         public void event(HostEvent event) {
             hostLock.lock();
 
-            if(event.type().equals(HostEvent.Type.HOST_ADDED)){
 
+            if(event.type().equals(HostEvent.Type.HOST_ADDED)){
                 if(portalId == null){
                     log.debug("PortalManager: No portal defined.");
                     return;
