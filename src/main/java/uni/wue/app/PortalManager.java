@@ -147,8 +147,6 @@ public class PortalManager implements PortalService{
         // TODO: Add topology listener -> adding basic rules if new device connected.
         packetService.addProcessor(processor, PacketProcessor.director(2));
 
-        //testSetup();
-
         hostService.addListener(new PortalConnectionHostListener());
 
         log.info("Started PortalManager {}", appId.toString());
@@ -228,7 +226,7 @@ public class PortalManager implements PortalService{
                 }
             } else{
                 // no portal defined
-                log.debug("PortalManager: No portal defined.");
+                log.warn("PortalManager: No portal defined. No rules installed.");
                 return;
             }
 
@@ -250,18 +248,18 @@ public class PortalManager implements PortalService{
                 for (Host user : hostService.getHostsByIp(srcIp)) {
                     // add rules to routing devices enabling the connection between user and portal
                     Connection connection = new DefaultConnection(user, portalService);
+                    // connectionStore only installs rule, if connection not already exists
                     connectionStore.addConnection(connection);
                 }
 
+                // TODO: change redirect:
+                // TODO: redirect packets directly in the controller without flow rules
+                // TODO: change src ip address of host, bypassing the installed portal flow rules
                 // redirect if the destination of the packet differs from the portal addresses
                 if (!portalService.getHost().ipAddresses().contains(dstIp)) {
                     // install redirect rules in the network device flow table
                     packetRedirectService.redirectToPortal(context, portalService.getHost());
                 }
-
-                // send context to flow table, where it should be handled
-                //context.treatmentBuilder().setOutput(PortNumber.TABLE);
-                //context.send();
             }
 
             return;
@@ -459,7 +457,7 @@ public class PortalManager implements PortalService{
             if(event.type().equals(HostEvent.Type.HOST_ADDED)){
 
                 if(portalId == null){
-                    log.debug("PortalManager: No portal defined.");
+                    log.warn("PortalManager: No portal defined. No rules installed.");
                     return;
                 }
                 // get the portal service
