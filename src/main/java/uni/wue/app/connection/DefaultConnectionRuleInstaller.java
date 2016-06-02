@@ -39,8 +39,12 @@ import static org.slf4j.LoggerFactory.getLogger;
 @Service
 public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
 
-    private static final int FLOW_PRIORITY = 300;
     private static final String APPLICATION_ID = "uni.wue.app";
+    private static final int FLOW_PRIORITY = 300;
+    // defines the table number
+    private static final int FLOW_TABLE = 100;
+    // does the switch packet selector support ethernet mac matching
+    private static final boolean MATCH_ETH_DST = false;
 
     private static final Logger log = getLogger(uni.wue.app.PortalManager.class);
 
@@ -59,12 +63,10 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
 
     @Activate
     protected void activate() {
-        //log.info("Started DefaultConnectionRuleInstaller");
     }
 
     @Deactivate
     protected void deactivate() {
-        //log.info("Stopped DefaultConnectionRuleInstaller");
     }
 
 
@@ -72,7 +74,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
      * Establish a connection between the user and the service.
      * Use ConnectionStore to add a new connection.
      *
-     * @param connection
+     * @param connection between user and service to install rules for
      */
     @Override
     public void addConnection(Connection connection) {
@@ -134,8 +136,6 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                         connection);
             }
         }
-
-        return;
     }
 
     /**
@@ -178,7 +178,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                             .forDevice(forDeviceId)
                             .withPriority(FLOW_PRIORITY)
                             .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
-                            .forTable(100)
+                            .forTable(FLOW_TABLE)
                             .makePermanent();
 
                     FlowRule flowRule = flowRuleBuilder.build();
@@ -198,8 +198,10 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                             .matchEthType(EthType.EtherType.IPV4.ethType().toShort())
                             .matchInPort(inPort)
                             .matchIPSrc(serviceIp.toIpPrefix())
-                            .matchEthDst(connection.getUser().mac())
                             .matchIPDst(userIp.toIpPrefix());
+                    if(MATCH_ETH_DST){
+                        trafficSelectorBuilder.matchEthDst(connection.getUser().mac());
+                    }
 
                     TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
                             .setOutput(outPort);
@@ -210,7 +212,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                             .forDevice(forDeviceId)
                             .withPriority(FLOW_PRIORITY)
                             .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
-                            .forTable(100)
+                            .forTable(FLOW_TABLE)
                             .makePermanent();
 
                     FlowRule flowRule = flowRuleBuilder.build();

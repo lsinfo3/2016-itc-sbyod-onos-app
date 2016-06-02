@@ -48,6 +48,10 @@ public class FlowRedirect extends PacketRedirect {
     private static final String APPLICATION_ID = "uni.wue.app";
     private static final int TIMEOUT = 3; //seconds
     private static final int RULE_PRIORITY = 400;
+    // defines the table number
+    private static final int FLOW_TABLE = 100;
+    // does the switch packet selector support ethernet mac matching
+    private static final boolean MATCH_ETH_DST = false;
 
 
     private final Lock lock = new ReentrantLock();
@@ -67,18 +71,16 @@ public class FlowRedirect extends PacketRedirect {
     @Activate
     protected void activate() {
         appId = applicationIdStore.getAppId(APPLICATION_ID);
-        //log.info("Started FlowRedirect");
     }
 
     @Deactivate
     protected void deactivate() {
-        //log.info("Stopped FlowRedirect");
     }
 
     /**
      * Redirected the context to the portal
      *
-     * @param context
+     * @param context of the packet
      */
     @Override
     public void redirectToPortal(PacketContext context, Host portal) {
@@ -88,21 +90,18 @@ public class FlowRedirect extends PacketRedirect {
         this.portal = portal;
         flowToPortal(context);
         flowFromPortal(context);
-
-        return;
     }
 
     /**
      * Restore the actual source of the context
      *
-     * @param context
-     * @param portal
+     * @param context of the packet
+     * @param portal redirecting to
      */
     @Override
     public void restoreSource(PacketContext context, Host portal) {
         // as there seems to be no rule installed yet, do it now
         redirectToPortal(context, portal);
-        return;
     }
 
 
@@ -118,8 +117,10 @@ public class FlowRedirect extends PacketRedirect {
         // traffic selector for packets of type IPv4
         TrafficSelector.Builder selectorBuilder = DefaultTrafficSelector.builder();
         selectorBuilder.matchEthType(Ethernet.TYPE_IPV4)
-                .matchEthSrc(ethPkt.getSourceMAC())
-                .matchEthDst(ethPkt.getDestinationMAC());
+                .matchEthSrc(ethPkt.getSourceMAC());
+        if(MATCH_ETH_DST) {
+            selectorBuilder.matchEthDst(ethPkt.getDestinationMAC());
+        }
 
         // no port is found as long as the portal is not present to the controller
         PortNumber outPort = getDstPort(pkt, portal);
@@ -142,29 +143,12 @@ public class FlowRedirect extends PacketRedirect {
                 .fromApp(appId)
                 .makeTemporary(TIMEOUT)
                 .withPriority(RULE_PRIORITY)
-                .forTable(0)
+                .forTable(FLOW_TABLE)
                 .forDevice(context.inPacket().receivedFrom().deviceId());
 
         FlowRule fr = flowBuilder.build();
 
-        /*
-        InternalFlowRuleListener internalFlowRuleListener = new InternalFlowRuleListener(fr);
-        flowRuleService.addListener(internalFlowRuleListener);
-        lock.lock();
-        try {
-            */
-            flowRuleService.applyFlowRules(fr);
-            /*
-            ruleAdded.await();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } finally {
-            lock.unlock();
-            flowRuleService.removeListener(internalFlowRuleListener);
-        }
-        */
-
-        return;
+        flowRuleService.applyFlowRules(fr);
     }
 
     /**
@@ -192,8 +176,10 @@ public class FlowRedirect extends PacketRedirect {
         // traffic selector for packets of type IPv4
         TrafficSelector.Builder selectorBuilder = DefaultTrafficSelector.builder();
         selectorBuilder.matchEthType(Ethernet.TYPE_IPV4)
-                .matchEthSrc(portal.mac())
-                .matchEthDst(ethPkt.getSourceMAC());
+                .matchEthSrc(portal.mac());
+        if(MATCH_ETH_DST) {
+            selectorBuilder.matchEthDst(ethPkt.getSourceMAC());
+        }
 
         // get the port where the packet from the portal should come from
         PortNumber fromPort = getDstPort(pkt, portal);
@@ -218,54 +204,12 @@ public class FlowRedirect extends PacketRedirect {
                 .fromApp(appId)
                 .makeTemporary(TIMEOUT)
                 .withPriority(RULE_PRIORITY)
-                .forTable(0)
+                .forTable(FLOW_TABLE)
                 .forDevice(context.inPacket().receivedFrom().deviceId());
 
         FlowRule fr = flowBuilder.build();
 
-        /*
-        InternalFlowRuleListener internalFlowRuleListener = new InternalFlowRuleListener(fr);
-        flowRuleService.addListener(internalFlowRuleListener);
-        lock.lock();
-        try {
-            */
-            flowRuleService.applyFlowRules(fr);
-            /*
-            ruleAdded.await();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } finally {
-            lock.unlock();
-            flowRuleService.removeListener(internalFlowRuleListener);
-        }
-        */
-
-        return;
-    }
-
-    public class InternalFlowRuleListener implements FlowRuleListener{
-
-        private FlowRule flowRule;
-        public InternalFlowRuleListener(FlowRule flowRule){
-            this.flowRule = flowRule;
-        }
-
-        /**
-         * Reacts to the specified event.
-         *
-         * @param event event to be processed
-         */
-        @Override
-        public void event(FlowRuleEvent event) {
-            if (event.type() == FlowRuleEvent.Type.RULE_ADDED) {
-                if (event.subject().exactMatch(flowRule)) {
-                    // Notify the waiting class
-                    lock.lock();
-                    ruleAdded.signalAll();
-                    lock.unlock();
-                }
-            }
-        }
+        flowRuleService.applyFlowRules(fr);
     }
 
 }
