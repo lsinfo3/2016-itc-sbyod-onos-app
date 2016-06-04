@@ -191,6 +191,7 @@ public class PortalManager implements PortalService{
 
     /**
      * Packet processor establishing connection to the portal.
+     * Also doing the redirect if packets with no registered destination are received.
      */
     private class ReactivePacketProcessor implements PacketProcessor {
 
@@ -216,6 +217,22 @@ public class PortalManager implements PortalService{
                 return;
             }
 
+            IPacket iPkt = ethPkt.getPayload();
+            Ip4Address srcIp;
+            Ip4Address dstIp;
+            if(iPkt instanceof IPv4) {
+                srcIp = Ip4Address.valueOf(((IPv4) iPkt).getSourceAddress());
+                dstIp = Ip4Address.valueOf(((IPv4) iPkt).getDestinationAddress());
+            } else{
+                log.debug("PortalManager: Payload of {} is no IPv4 packet.", ethPkt.toString());
+                return;
+            }
+
+            /*  ### the packet is ipv4 ethernet type, no rules have been added for it yet,
+                ### otherwise it would have been handled by these rules.
+                ### Therefore the connection to the portal is checked for the source host
+                ### and a redirect is done to the portal. */
+
             // get the portal service
             Service portalService = null;
             if(portalId != null) {
@@ -226,18 +243,7 @@ public class PortalManager implements PortalService{
                 }
             } else{
                 // no portal defined
-                log.warn("PortalManager: No portal defined. No rules installed.");
-                return;
-            }
-
-            IPacket iPkt = ethPkt.getPayload();
-            Ip4Address srcIp;
-            Ip4Address dstIp;
-            if(iPkt instanceof IPv4) {
-                srcIp = Ip4Address.valueOf(((IPv4) iPkt).getSourceAddress());
-                dstIp = Ip4Address.valueOf(((IPv4) iPkt).getDestinationAddress());
-            } else{
-                log.debug("PortalManager: Payload of {} is no IPv4 packet.", ethPkt.toString());
+                log.warn("PortalManager: Packet received. No portal defined. No rules installed.");
                 return;
             }
 
@@ -258,7 +264,9 @@ public class PortalManager implements PortalService{
                 // redirect if the destination of the packet differs from the portal addresses
                 if (!portalService.getHost().ipAddresses().contains(dstIp)) {
                     // install redirect rules in the network device flow table
-                    packetRedirectService.redirectToPortal(context, portalService.getHost());
+
+                    // no redirect with flows as requested in issue #1
+                    // packetRedirectService.redirectToPortal(context, portalService.getHost());
                 }
             }
 
