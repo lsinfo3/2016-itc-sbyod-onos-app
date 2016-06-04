@@ -17,41 +17,41 @@
 
     <command-bundle xmlns="http://karaf.apache.org/xmlns/shell/v1.1.0">
         <command>
-            <action class="uni.wue.app.cli.SetCaptivePortalCommand"/>
+            <action class="org.sardineproject.sbyod.cli.SetCaptivePortalCommand"/>
             <completers>
                 <ref component-id="hostIpCompleter"/>
             </completers>
         </command>
         <command>
-            <action class="uni.wue.app.cli.GetCaptivePortalCommand"/>
+            <action class="org.sardineproject.sbyod.cli.GetCaptivePortalCommand"/>
         </command>
         <command>
-            <action class="uni.wue.app.cli.RegisterConnectionCommand"/>
+            <action class="org.sardineproject.sbyod.cli.RegisterConnectionCommand"/>
             <completers>
                 <ref component-id="serviceIdCompleter"/>
                 <ref component-id="hostIdCompleter"/>
             </completers>
         </command>
         <command>
-            <action class="uni.wue.app.cli.RemoveConnectionCommand"/>
+            <action class="org.sardineproject.sbyod.cli.RemoveConnectionCommand"/>
             <completers>
                 <ref component-id="hostIdCompleter"/>
                 <ref component-id="serviceIdCompleter"/>
             </completers>
         </command>
         <command>
-            <action class="uni.wue.app.cli.ListConnectionsCommand"/>
+            <action class="org.sardineproject.sbyod.cli.ListConnectionsCommand"/>
         </command>
         <command>
-            <action class="uni.wue.app.cli.ListServicesCommand"/>
+            <action class="org.sardineproject.sbyod.cli.ListServicesCommand"/>
         </command>
     </command-bundle>
 
     <bean id="hostIdCompleter" class="org.onosproject.cli.net.HostIdCompleter"/>
-    <bean id="serviceIdCompleter" class="uni.wue.app.cli.completer.ServiceIdCompleter"/>
-    <bean id="hostIpCompleter" class="uni.wue.app.cli.completer.HostIpv4Completer"/>
-    <bean id="hostMacCompleter" class="uni.wue.app.cli.completer.HostMacCompleter"/>
-    <bean id="devicePortNumberCompleter" class="uni.wue.app.cli.completer.DevicePortNumberCompleter"/>
+    <bean id="serviceIdCompleter" class="org.sardineproject.sbyod.cli.completer.ServiceIdCompleter"/>
+    <bean id="hostIpCompleter" class="org.sardineproject.sbyod.cli.completer.HostIpv4Completer"/>
+    <bean id="hostMacCompleter" class="org.sardineproject.sbyod.cli.completer.HostMacCompleter"/>
+    <bean id="devicePortNumberCompleter" class="org.sardineproject.sbyod.cli.completer.DevicePortNumberCompleter"/>
     <bean id="deviceIdCompleter" class="org.onosproject.cli.net.DeviceIdCompleter"/>
 
 </blueprint>

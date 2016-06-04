@@ -17,25 +17,25 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>uni.wue</groupId>
-    <artifactId>onos-byod</artifactId>
+    <groupId>org.sardineproject</groupId>
+    <artifactId>sbyod</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>bundle</packaging>
 
-    <description>ONOS OSGi bundle archetype</description>
-    <url>http://onosproject.org</url>
+    <description>Bring your own device application of the sardine project</description>
+    <url>https://github.com/lsinfo3/2016-itc-sbyod-onos-app</url>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <onos.version>1.5.1</onos.version>
-        <onos.app.name>uni.wue.app</onos.app.name>
-        <onos.app.origin>Uni Wuerzburg</onos.app.origin>
+        <onos.app.name>org.sardineproject.sbyod</onos.app.name>
+        <onos.app.origin>Sardine Project</onos.app.origin>
         <!-- rest begin -->
-        <web.context>/onos/onos-byod</web.context>
-        <api.description>BYOD REST API</api.description>
+        <web.context>/onos/sbyod</web.context>
+        <api.description>Bring your own device REST API of the sardine project</api.description>
         <api.version>1.0.0</api.version>
-        <api.package>uni.wue.app</api.package>
-        <api.title>BYOD REST API</api.title>
+        <api.package>org.sardineproject.sbyod</api.package>
+        <api.title>Sardine-BYOD REST API</api.title>
         <!-- rest end -->
         <jackson.version>2.7.0</jackson.version>
         <osgi.version>4.3.1</osgi.version>
@@ -343,29 +343,6 @@
                     </execution>
                 </executions>
             </plugin>
-
-            <plugin>
-                <groupId>com.ning.maven.plugins</groupId>
-                <artifactId>maven-duplicate-finder-plugin</artifactId>
-                <version>1.0.6</version>
-                <executions>
-                    <execution>
-                        <phase>verify</phase>
-                        <goals>
-                            <goal>check</goal>
-                        </goals>
-                        <configuration>
-                            <failBuildInCaseOfConflict>false</failBuildInCaseOfConflict>
-                            <ignoredResources>
-                                <!-- you will probably need something here -->
-
-                                <ignoredResource>changelog.txt</ignoredResource>
-                            </ignoredResources>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
         </plugins>
     </build>
 

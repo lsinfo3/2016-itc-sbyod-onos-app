@@ -47,7 +47,7 @@
         <servlet-class>com.sun.jersey.spi.container.servlet.ServletContainer</servlet-class>
         <init-param>
             <param-name>javax.ws.rs.Application</param-name>
-            <param-value>uni.wue.app.rest.AppWebApplication</param-value>
+            <param-value>org.sardineproject.sbyod.rest.AppWebApplication</param-value>
         </init-param>
         <load-on-startup>1</load-on-startup>
     </servlet>

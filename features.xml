@@ -16,22 +16,14 @@
   ~
   ~
   -->
-<features xmlns="http://karaf.apache.org/xmlns/features/v1.2.0" name="onos-byod-1.0-SNAPSHOT">
-    <feature name="onos-byod" version="1.0-SNAPSHOT"
-             description="ONOS OSGi bundle archetype">
+<features xmlns="http://karaf.apache.org/xmlns/features/v1.2.0" name="${project.artifactId}-${project.version}">
+    <feature name="${project.artifactId}" version="${project.version}"
+             description="${project.description}">
         <feature version="1.5.2-SNAPSHOT">onos-api</feature>
-        <bundle>mvn:uni.wue/onos-byod/1.0-SNAPSHOT</bundle>
-        <!-- <bundle>wrap:mvn:com.orbitz.consul/consul-client/0.10.1$Bundle-SymbolicName=consul-client&amp;Bundle-Version=0.10.1</bundle> -->
-        <!-- <bundle>mvn:com.fasterxml.jackson.datatype/jackson-datatype-guava/2.6.3</bundle> -->
-        <!-- <bundle>mvn:javax.ws.rs/javax.ws.rs-api/2.0.1</bundle> -->
-
+        <bundle>mvn:${project.groupId}/${project.artifactId}/${project.version}</bundle>
         <bundle>wrap:mvn:com.ecwid.consul/consul-api/1.1.9$Bundle-SymbolicName=consul-api&amp;Bundle-Version=1.1.9</bundle>
         <bundle>wrap:mvn:org.apache.httpcomponents/httpclient/4.2.5$Bundle-SymbolicName=httpclient&amp;Bundle-Version=4.2.5</bundle>
         <bundle>wrap:mvn:org.apache.httpcomponents/httpcore/4.2.5$Bundle-SymbolicName=httpcore&amp;Bundle-Version=4.2.5</bundle>
         <bundle>wrap:mvn:com.google.code.gson/gson/2.3$Bundle-SymbolicName=gson&amp;Bundle-Version=2.3</bundle>
-        <!-- <bundle>mvn:commons-codec/commons-codec/1.6</bundle> -->
-
-        <!-- <bundle dependency="true"> wrap:mvn:org.apache.httpcomponents/httpclient-osgi/4.5.2$Bundle-SymbolicName=httpclient&amp;Bundle-Version=4.5.2</bundle> -->
-        <!--<bundle dependency="true"> wrap:mvn:org.apache.httpcomponents/httpcore/4.4.4$Bundle-SymbolicName=httpcore&amp;Bundle-Version=4.4.4</bundle> -->
     </feature>
 </features>
