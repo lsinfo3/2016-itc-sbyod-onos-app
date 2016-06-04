@@ -27,6 +27,7 @@ import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.*;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
+import org.onosproject.net.DeviceId;
 import org.onosproject.net.config.ConfigFactory;
 import org.onosproject.net.config.NetworkConfigEvent;
 import org.onosproject.net.config.NetworkConfigListener;
@@ -50,10 +51,7 @@ import uni.wue.app.service.Service;
 //import org.osgi.service.component.ComponentContext;
 import static org.onosproject.net.config.basics.SubjectFactories.APP_SUBJECT_FACTORY;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -173,9 +171,9 @@ public class PortalManager implements PortalService{
     private void requestIntercepts() {
         TrafficSelector.Builder selector = DefaultTrafficSelector.builder();
         selector.matchEthType(Ethernet.TYPE_IPV4);
-        packetService.requestPackets(selector.build(), PacketPriority.REACTIVE, appId);
+        packetService.requestPackets(selector.build(), PacketPriority.REACTIVE, appId, Optional.<DeviceId>empty());
         selector.matchEthType(Ethernet.TYPE_ARP);
-        packetService.requestPackets(selector.build(), PacketPriority.REACTIVE, appId);
+        packetService.requestPackets(selector.build(), PacketPriority.REACTIVE, appId, Optional.<DeviceId>empty());
     }
 
     /**
@@ -184,9 +182,9 @@ public class PortalManager implements PortalService{
     private void withdrawIntercepts() {
         TrafficSelector.Builder selector = DefaultTrafficSelector.builder();
         selector.matchEthType(Ethernet.TYPE_IPV4);
-        packetService.cancelPackets(selector.build(), PacketPriority.REACTIVE, appId);
+        packetService.cancelPackets(selector.build(), PacketPriority.REACTIVE, appId, Optional.<DeviceId>empty());
         selector.matchEthType(Ethernet.TYPE_ARP);
-        packetService.cancelPackets(selector.build(), PacketPriority.REACTIVE, appId);
+        packetService.cancelPackets(selector.build(), PacketPriority.REACTIVE, appId, Optional.<DeviceId>empty());
     }
 
     /**
