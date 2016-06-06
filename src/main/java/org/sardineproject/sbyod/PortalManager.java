@@ -107,7 +107,7 @@ public class PortalManager implements PortalService{
     private final Set<ConfigFactory> factories = ImmutableSet.of(
             new ConfigFactory<ApplicationId, ByodConfig>(APP_SUBJECT_FACTORY,
                     ByodConfig.class,
-                    "byod"){
+                    "sbyod"){
                 @Override
                 public ByodConfig createConfig(){
                     return new ByodConfig();
@@ -120,7 +120,7 @@ public class PortalManager implements PortalService{
 
     private Ip4Address portalIp = Ip4Address.valueOf("10.0.0.3");
 
-    private TpPort portalPort = TpPort.tpPort(80);
+    private TpPort portalPort = TpPort.tpPort(3000);
 
     // make sure no new host is added to the host service, as long as
     // the hosts are iterated
@@ -487,11 +487,20 @@ public class PortalManager implements PortalService{
             if(cfg == null){
                 return;
             }
-            if(cfg.portalIp() != null){
+
+            // check if portal is set and try to connect to new portal location
+            if(cfg.portalIp() != null && cfg.portalPort() != -1){
                 portalIp = cfg.portalIp();
+                portalPort = TpPort.tpPort(cfg.portalPort());
+                setPortal(portalIp, portalPort);
             }
-            if(cfg.portalPort() != null){
-                portalPort = cfg.portalPort();
+            else if(cfg.portalIp() != null){
+                portalIp = cfg.portalIp();
+                setPortal(portalIp, portalPort);
+            }
+            else if(cfg.portalPort() != -1){
+                portalPort = TpPort.tpPort(cfg.portalPort());
+                setPortal(portalIp, portalPort);
             }
         }
 

@@ -23,6 +23,8 @@ import org.onosproject.core.ApplicationId;
 import org.onosproject.net.config.Config;
 import org.onosproject.net.config.basics.BasicElementConfig;
 
+import static org.onosproject.net.config.Config.FieldPresence.MANDATORY;
+
 /**
  * Created by lorry on 01.04.16.
  */
@@ -30,6 +32,15 @@ public class ByodConfig extends Config<ApplicationId> {
 
     public static final String PORTAL_IP = "portalIp";
     public static final String PORTAL_PORT = "portalPort";
+
+
+    // TODO: check if config is valid
+    @Override
+    public boolean isValid(){
+        return hasOnlyFields(PORTAL_IP, PORTAL_PORT) &&
+                isIpAddress(PORTAL_IP, MANDATORY) &&
+                isNumber(PORTAL_PORT, MANDATORY, 1, 10000);
+    }
 
     /**
      * Returns the portal ip address.
@@ -54,11 +65,10 @@ public class ByodConfig extends Config<ApplicationId> {
     /**
      * Returns the portal transport protocol port.
      *
-     * @return transport protocol port or null if not set
+     * @return transport protocol port integer or -1 if not set
      */
-    public TpPort portalPort(){
-        String portalPort = get(PORTAL_PORT, null);
-        return portalPort != null ? TpPort.tpPort(Integer.valueOf(portalPort)) : null;
+    public int portalPort(){
+        return get(PORTAL_PORT, -1);
     }
 
     /**
