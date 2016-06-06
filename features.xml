@@ -19,7 +19,7 @@
 <features xmlns="http://karaf.apache.org/xmlns/features/v1.2.0" name="${project.artifactId}-${project.version}">
     <feature name="${project.artifactId}" version="${project.version}"
              description="${project.description}">
-        <feature version="1.5.2-SNAPSHOT">onos-api</feature>
+        <feature>onos-api</feature>
         <bundle>mvn:${project.groupId}/${project.artifactId}/${project.version}</bundle>
         <bundle>wrap:mvn:com.ecwid.consul/consul-api/1.1.9$Bundle-SymbolicName=consul-api&amp;Bundle-Version=1.1.9</bundle>
         <bundle>wrap:mvn:org.apache.httpcomponents/httpclient/4.2.5$Bundle-SymbolicName=httpclient&amp;Bundle-Version=4.2.5</bundle>
