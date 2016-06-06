@@ -53,6 +53,7 @@ import static org.onosproject.net.config.basics.SubjectFactories.APP_SUBJECT_FAC
 import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
 
 /**
@@ -100,6 +101,9 @@ public class PortalManager implements PortalService{
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected PacketRedirectService packetRedirectService;
 
+    // portal thread, checking if host the portal is running on is online
+    protected Thread checkPortal;
+
     // Portal configuration
 
     private final InternalConfigListener cfgListener = new InternalConfigListener();
@@ -136,6 +140,7 @@ public class PortalManager implements PortalService{
     protected void activate() {
         appId = coreService.registerApplication(PortalService.APP_ID);
 
+        // configuration listener
         cfgService.addListener(cfgListener);
         factories.forEach(cfgService::registerConfigFactory);
         cfgListener.reconfigureNetwork(cfgService.getConfig(appId, ByodConfig.class));
@@ -144,6 +149,7 @@ public class PortalManager implements PortalService{
         // TODO: Add topology listener -> adding basic rules if new device connected.
         packetService.addProcessor(processor, PacketProcessor.director(2));
 
+        // host listener
         hostService.addListener(new PortalConnectionHostListener());
 
         log.info("Started PortalManager {}", appId.toString());
@@ -157,6 +163,10 @@ public class PortalManager implements PortalService{
         withdrawIntercepts();
         packetService.removeProcessor(processor);
         processor = null;
+
+        if(checkPortal.isAlive()){
+            checkPortal.interrupt();
+        }
 
         // remove all flow rules of this app
         flowRuleService.removeFlowRulesById(appId);
@@ -283,21 +293,26 @@ public class PortalManager implements PortalService{
      * Set the captive portal
      *
      * @param portalIp Ip address of the portal
-     * @param portalTpPort Transport protocol port of the portal
+     * @param portalPort Transport protocol port of the portal
      *
      * @return true if the portal was set correctly
      */
     @Override
-    public boolean setPortal(Ip4Address portalIp, TpPort portalTpPort){
+    public boolean setPortal(Ip4Address portalIp, TpPort portalPort){
         checkNotNull(portalIp, "Portal IPv4 address can not be null");
+        checkNotNull(portalPort, "Portal tpPort can not be null");
 
         // find hosts with portal IP address
         Set<Host> portalHosts = hostService.getHostsByIp(portalIp);
         if(portalHosts.size() == 1) {
 
-            Service portalService = new DefaultService(portalHosts.iterator().next(), portalTpPort, "PortalService", ProviderId.NONE);
+            // create service for existing configuration
+            Service portalService = new DefaultService(portalHosts.iterator().next(), portalPort, "PortalService", ProviderId.NONE);
+
             // update portal if the service not already exists
-            if(serviceStore.addService(portalService)) {
+            if(!serviceStore.contains(portalService)) {
+
+                serviceStore.addService(portalService);
 
                 // remove old connections
                 if (portalId != null) {
@@ -310,19 +325,23 @@ public class PortalManager implements PortalService{
                 connectHostsToPortal();
 
                 log.info("Portal is up. IP = {}, TpPort = {}, ID = {}",
-                        Lists.newArrayList(portalIp.toString(), portalTpPort.toString(), this.portalId.toString()).toArray());
+                        Lists.newArrayList(portalIp.toString(), portalPort.toString(), this.portalId.toString()).toArray());
                 return true;
-            } else if(portalId != null) {
-                if (portalService.equals(serviceStore.getService(portalId))) {
-                    log.info("PortalManager: Portal already up on {}.",
-                            portalIp.toString() + ":" + portalTpPort.toString());
-                    return true;
+            } else {
+                // there is already a service running on portal IP and portal port
+                if (portalId != null) {
+                    if (portalService.equals(serviceStore.getService(portalId))) {
+                        log.info("PortalManager: Portal already up on {}.",
+                                portalIp.toString() + ":" + portalPort.toString());
+                        return true;
+                    }
+                } else{
+                    // the service is no portal service! otherwise the portalId had to be defined at least once!
+                    log.warn("PortalManager: Another service is running on {}:{} ! Portal can not be set up.",
+                            portalIp, portalPort);
+                    return false;
                 }
             }
-
-            log.warn("Could not set portal. Another service is already active on '{}' !",
-                    portalIp.toString() + ":" + portalTpPort.toString());
-            return false;
 
         } else if(portalHosts.size() > 1){
             log.warn("PortalManager: Could not set portal. More than one host with IP = {}", portalIp);
@@ -331,6 +350,106 @@ public class PortalManager implements PortalService{
         }
 
         return false;
+    }
+
+    /**
+     * Thread running in backround, checking if the host for the portal is running,
+     * if true, then the portal service is defined for this host and all clients are connected to it
+     * if the host was removed the service is deleted.
+     */
+    private class CheckPortal extends Thread{
+
+        private final int WAIT_TIME = 5*1000; // in milliseconds
+
+        @Override
+        public void run() {
+
+            while (!isInterrupted()) {
+
+                // first check if portal and port are defined
+                if (portalIp == null || portalPort == null) {
+                    log.warn("Portal IP address or portal port is null!");
+                    continue;
+                }
+
+                // find hosts with portal IP address
+                Set<Host> portalHosts = hostService.getHostsByIp(portalIp);
+
+                if (portalHosts.size() == 1) {
+
+                    // create service for existing configuration
+                    Service portalService = new DefaultService(portalHosts.iterator().next(), portalPort, "PortalService", ProviderId.NONE);
+
+                    // check if a connection is already running for this configuration
+                    if (serviceStore.contains(portalService)) {
+                        // check if the service in the store is a portal service
+
+                        Set<Service> equalServices = serviceStore.getServices().stream()
+                                .filter(s -> s.equals(portalService))
+                                .collect(Collectors.toSet());
+
+                        // services are not allowed to be duplicate
+                        if(equalServices.size() == 1){
+                            Service equalService = equalServices.iterator().next();
+
+                            if(equalService.getName().equals(portalService.getName())){
+                                // the service is a portal service -> set portalId
+                                if(portalId == null)
+                                    portalId = equalService.id();
+                            } else{
+                                // another service is running on the portal ip and port
+                                log.warn("Another service is running on IP={} and tpPort={}!", portalIp, portalPort);
+                            }
+                        } else{
+                            log.warn("Invalid State: More than one equal service in service store!");
+                        }
+
+                        waiting();
+                        continue; // check from new
+
+                    } else {
+                        // no portal service installed yet -> install new portal rules for this host and delete the old ones
+
+                        serviceStore.addService(portalService);
+
+                        // remove old connections
+                        if (portalId != null) {
+                            Service oldPortalService = serviceStore.getService(portalId);
+                            serviceStore.removeService(oldPortalService);
+                        }
+
+                        // establish new connections to portal
+                        portalId = portalService.id();
+                        connectHostsToPortal();
+
+                        log.info("Portal is up. IP = {}, TpPort = {}, ID = {}",
+                                Lists.newArrayList(portalIp.toString(), portalPort.toString(), portalId.toString()).toArray());
+
+                        waiting();
+                        continue; // check from new
+                    }
+
+                } else if (portalHosts.size() > 1) {
+                    // more than one host found, invalid host IP
+                    log.warn("PortalManager: Could not set portal. More than one host with IP = {}", portalIp);
+                    waiting();
+                    continue; // check from new
+                } else {
+                    // no host found, probably not connected yet
+                    log.warn("Could not set portal. No host defined with IP {}!", portalIp.toString());
+                    waiting();
+                    continue; // check from new
+                }
+            }
+        }
+
+        private void waiting(){
+            try {
+                sleep(WAIT_TIME);
+            } catch (InterruptedException e) {
+                return; // end the while loop
+            }
+        }
     }
 
     /**
@@ -522,5 +641,4 @@ public class PortalManager implements PortalService{
             }
         }
     }
-
 }
