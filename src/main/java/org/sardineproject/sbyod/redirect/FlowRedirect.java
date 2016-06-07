@@ -25,6 +25,9 @@ import org.onosproject.core.ApplicationId;
 import org.onosproject.core.ApplicationIdStore;
 import org.onosproject.net.*;
 import org.onosproject.net.flow.*;
+import org.onosproject.net.flowobjective.DefaultForwardingObjective;
+import org.onosproject.net.flowobjective.FlowObjectiveService;
+import org.onosproject.net.flowobjective.ForwardingObjective;
 import org.onosproject.net.packet.InboundPacket;
 import org.onosproject.net.packet.PacketContext;
 import org.sardineproject.sbyod.PortalService;
@@ -62,6 +65,9 @@ public class FlowRedirect extends PacketRedirect {
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected ApplicationIdStore applicationIdStore;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected FlowObjectiveService flowObjectiveService;
 
     protected Host portal;
     private final Logger log = LoggerFactory.getLogger(getClass());
@@ -137,18 +143,16 @@ public class FlowRedirect extends PacketRedirect {
                 .setOutput(outPort);
 
         // create flow rule
-        FlowRule.Builder flowBuilder = DefaultFlowRule.builder();
-        flowBuilder.withSelector(selectorBuilder.build())
+        ForwardingObjective forwardingObjective = DefaultForwardingObjective.builder()
+                .withSelector(selectorBuilder.build())
                 .withTreatment(treatmentBuilder.build())
-                .fromApp(appId)
-                .makeTemporary(TIMEOUT)
                 .withPriority(RULE_PRIORITY)
-                .forTable(FLOW_TABLE)
-                .forDevice(context.inPacket().receivedFrom().deviceId());
+                .withFlag(ForwardingObjective.Flag.VERSATILE)
+                .fromApp(appId)
+                .makePermanent()
+                .add();
 
-        FlowRule fr = flowBuilder.build();
-
-        flowRuleService.applyFlowRules(fr);
+        flowObjectiveService.forward(context.inPacket().receivedFrom().deviceId(), forwardingObjective);
     }
 
     /**
@@ -198,18 +202,16 @@ public class FlowRedirect extends PacketRedirect {
                 .setOutput(outPort);
 
         // create flow rule
-        FlowRule.Builder flowBuilder = DefaultFlowRule.builder();
-        flowBuilder.withSelector(selectorBuilder.build())
+        ForwardingObjective forwardingObjective = DefaultForwardingObjective.builder()
+                .withSelector(selectorBuilder.build())
                 .withTreatment(treatmentBuilder.build())
-                .fromApp(appId)
-                .makeTemporary(TIMEOUT)
                 .withPriority(RULE_PRIORITY)
-                .forTable(FLOW_TABLE)
-                .forDevice(context.inPacket().receivedFrom().deviceId());
+                .withFlag(ForwardingObjective.Flag.VERSATILE)
+                .fromApp(appId)
+                .makePermanent()
+                .add();
 
-        FlowRule fr = flowBuilder.build();
-
-        flowRuleService.applyFlowRules(fr);
+        flowObjectiveService.forward(context.inPacket().receivedFrom().deviceId(), forwardingObjective);
     }
 
 }

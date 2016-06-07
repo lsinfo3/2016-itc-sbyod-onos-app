@@ -25,11 +25,11 @@ import org.onlab.packet.MacAddress;
 import org.onlab.packet.TpPort;
 import org.onosproject.codec.CodecService;
 import org.onosproject.core.ApplicationIdStore;
+import org.onosproject.net.DeviceId;
 import org.onosproject.net.Host;
-import org.onosproject.net.flow.FlowRule;
-import org.onosproject.net.flow.FlowRuleEvent;
-import org.onosproject.net.flow.FlowRuleListener;
 import org.onosproject.net.flow.FlowRuleService;
+import org.onosproject.net.flowobjective.FlowObjectiveService;
+import org.onosproject.net.flowobjective.ForwardingObjective;
 import org.onosproject.net.host.HostEvent;
 import org.onosproject.net.host.HostListener;
 import org.onosproject.net.host.HostService;
@@ -39,6 +39,7 @@ import org.sardineproject.sbyod.PortalService;
 import org.slf4j.Logger;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -73,6 +74,9 @@ public class DefaultConnectionStore implements ConnectionStore {
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected FlowRuleService flowRuleService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected FlowObjectiveService flowObjectiveService;
 
     private final HostListener connectionHostListener = new ConnectionHostListener();
     //private final FlowRuleListener removedFlowRuleListener = new RemovedFlowRuleListener();
@@ -154,10 +158,8 @@ public class DefaultConnectionStore implements ConnectionStore {
         connections.remove(connection);
 
         // remove the flow rules on the network devices
-        Set<FlowRule> flowRules = connection.getFlowRules();
-        for(FlowRule flowRule : flowRules){
-            flowRuleService.removeFlowRules(flowRule);
-        }
+        Map<ForwardingObjective, DeviceId> forwardingObjectives = connection.getObjectives();
+        forwardingObjectives.forEach((forwardingObjective, deviceId) -> flowObjectiveService.forward(deviceId, forwardingObjective));
     }
 
     /**
@@ -301,47 +303,6 @@ public class DefaultConnectionStore implements ConnectionStore {
                     }
                 }
             }
-        }
-    }
-
-    // TODO: Throws NullPointerException even if not active???
-    private class RemovedFlowRuleListener implements FlowRuleListener{
-
-        /**
-         * Indicates whether the specified event is of interest or not.
-         * Default implementation always returns true.
-         *
-         * @param event event to be inspected
-         * @return true if event is relevant; false otherwise
-         */
-        @Override
-        public boolean isRelevant(FlowRuleEvent event) {
-
-            // events of rule removal and with this app id
-            if(event.type().equals(FlowRuleEvent.Type.RULE_REMOVED))
-                if(event.subject().appId() == applicationIdStore.getAppId(APPLICATION_ID).id()){
-                    return true;
-                }
-
-            return false;
-        }
-
-        /**
-         * Reacts to the specified event.
-         *
-         * @param event event to be processed
-         */
-        @Override
-        public void event(FlowRuleEvent event) {
-            FlowRule flowRule = event.subject();
-
-            // collect all connections that depend on this flow rule
-            Set<Connection> relevantConnections = connections.stream()
-                    .filter(c -> c.getFlowRules().contains(flowRule))
-                    .collect(Collectors.toSet());
-
-            // remove all connections depending on the flow rule
-            relevantConnections.forEach(c -> removeConnection(c));
         }
     }
 }

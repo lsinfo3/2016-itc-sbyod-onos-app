@@ -17,6 +17,7 @@
  */
 package org.sardineproject.sbyod.connection;
 
+import com.sun.jersey.core.impl.provider.entity.XMLJAXBElementProvider;
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.EthType;
 import org.onlab.packet.IPv4;
@@ -24,6 +25,9 @@ import org.onlab.packet.IpAddress;
 import org.onosproject.core.ApplicationIdStore;
 import org.onosproject.net.*;
 import org.onosproject.net.flow.*;
+import org.onosproject.net.flowobjective.DefaultForwardingObjective;
+import org.onosproject.net.flowobjective.FlowObjectiveService;
+import org.onosproject.net.flowobjective.ForwardingObjective;
 import org.onosproject.net.host.HostService;
 import org.onosproject.net.topology.TopologyService;
 import org.sardineproject.sbyod.PortalManager;
@@ -61,6 +65,9 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected ApplicationIdStore applicationIdStore;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected FlowObjectiveService flowObjectiveService;
 
 
     @Activate
@@ -172,19 +179,17 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                     TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
                             .setOutput(outPort);
 
-                    FlowRule.Builder flowRuleBuilder = DefaultFlowRule.builder()
+                    DefaultForwardingObjective.Builder forwardingObjective = DefaultForwardingObjective.builder()
                             .withSelector(trafficSelectorBuilder.build())
                             .withTreatment(trafficTreatmentBuilder.build())
-                            .forDevice(forDeviceId)
                             .withPriority(FLOW_PRIORITY)
+                            .withFlag(ForwardingObjective.Flag.VERSATILE)
                             .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
-                            .forTable(FLOW_TABLE)
                             .makePermanent();
 
-                    FlowRule flowRule = flowRuleBuilder.build();
-                    flowRuleService.applyFlowRules(flowRule);
-                    // save flow rule in connection
-                    connection.addFlowRule(flowRule);
+                    flowObjectiveService.forward(forDeviceId, forwardingObjective.add());
+                    // save forwarding objective in connection
+                    connection.addRemoveObjective(forwardingObjective.remove(), forDeviceId);
                 }
     }
 
@@ -206,19 +211,17 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                     TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
                             .setOutput(outPort);
 
-                    FlowRule.Builder flowRuleBuilder = DefaultFlowRule.builder()
+                    DefaultForwardingObjective.Builder forwardingObjective = DefaultForwardingObjective.builder()
                             .withSelector(trafficSelectorBuilder.build())
                             .withTreatment(trafficTreatmentBuilder.build())
-                            .forDevice(forDeviceId)
                             .withPriority(FLOW_PRIORITY)
+                            .withFlag(ForwardingObjective.Flag.VERSATILE)
                             .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
-                            .forTable(FLOW_TABLE)
                             .makePermanent();
 
-                    FlowRule flowRule = flowRuleBuilder.build();
-                    flowRuleService.applyFlowRules(flowRule);
-                    // save flow rule in connection
-                    connection.addFlowRule(flowRule);
+                    flowObjectiveService.forward(forDeviceId, forwardingObjective.add());
+                    // save forwarding objective in connection
+                    connection.addRemoveObjective(forwardingObjective.remove(), forDeviceId);
                 }
     }
 }

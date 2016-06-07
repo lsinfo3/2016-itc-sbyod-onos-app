@@ -17,10 +17,13 @@
  */
 package org.sardineproject.sbyod.connection;
 
+import org.onosproject.net.DeviceId;
 import org.onosproject.net.Host;
 import org.onosproject.net.flow.FlowRule;
+import org.onosproject.net.flowobjective.ForwardingObjective;
 import org.sardineproject.sbyod.service.Service;
 
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -43,16 +46,17 @@ public interface Connection{
     Host getUser();
 
     /**
-     * Add a flow rule establishing the connection
+     * Add an objective to remove the installed flow rules
      *
-     * @param flowRule flow rule utilized in connection
+     * @param forwardingObjective forwarding objective to remove the installed flow rules
      */
-    void addFlowRule(FlowRule flowRule);
+    void addRemoveObjective(ForwardingObjective forwardingObjective, DeviceId deviceId);
 
     /**
-     * Get the flow rules establishing the connection
+     * Returns all forwarding objectives removing the installed objectives
      *
-     * @return set of flow rules
+     * @return forwarding objective
      */
-    Set<FlowRule> getFlowRules();
+    Map<ForwardingObjective, DeviceId> getObjectives();
+
 }

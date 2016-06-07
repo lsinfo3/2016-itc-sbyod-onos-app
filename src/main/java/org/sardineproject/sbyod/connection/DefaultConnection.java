@@ -17,15 +17,20 @@
  */
 package org.sardineproject.sbyod.connection;
 
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import org.onosproject.net.DeviceId;
 import org.onosproject.net.Host;
 import org.onosproject.net.flow.FlowRule;
+import org.onosproject.net.flowobjective.ForwardingObjective;
 import org.sardineproject.sbyod.PortalManager;
 import org.slf4j.Logger;
 import org.sardineproject.sbyod.service.Service;
 
 import java.security.InvalidParameterException;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import static org.slf4j.LoggerFactory.getLogger;
@@ -39,7 +44,7 @@ public class DefaultConnection implements Connection{
 
     private final Host user;
     private final Service service;
-    private Set<FlowRule> flowRules;
+    private Map<ForwardingObjective, DeviceId> forwardingObjectives;
 
 
     public DefaultConnection(Host user, Service service){
@@ -52,7 +57,7 @@ public class DefaultConnection implements Connection{
 
         this.user = user;
         this.service = service;
-        flowRules = new HashSet<>();
+        forwardingObjectives = new HashMap<>();
     }
 
     public Service getService() { return service; }
@@ -60,28 +65,26 @@ public class DefaultConnection implements Connection{
     public Host getUser(){ return user;}
 
     /**
-     * Add a flow rule establishing the connection
+     * Add an objective to remove the installed flow rules
      *
-     * @param flowRule flow rule utilized in connection
+     * @param forwardingObjective forwarding objective to remove the installed flow rules
+     * @param deviceId the device id
      */
     @Override
-    public void addFlowRule(FlowRule flowRule) {
-        if(flowRule == null)
+    public void addRemoveObjective(ForwardingObjective forwardingObjective, DeviceId deviceId) {
+        if(forwardingObjective == null)
             return;
-
-        flowRules.add(flowRule);
+        forwardingObjectives.put(forwardingObjective, deviceId);
     }
 
     /**
-     * Get the flow rules establishing the connection
+     * Returns all forwarding objectives removing the installed objectives
      *
-     * @return set of flow rules
+     * @return forwarding objective
      */
     @Override
-    public Set<FlowRule> getFlowRules() {
-        return Sets.newHashSet(flowRules);
+    public Map<ForwardingObjective, DeviceId> getObjectives() {
+        return Maps.newHashMap(forwardingObjectives);
     }
-
-
 }
 

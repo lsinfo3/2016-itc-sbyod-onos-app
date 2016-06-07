@@ -27,6 +27,9 @@ import org.onosproject.net.Device;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.*;
+import org.onosproject.net.flowobjective.DefaultForwardingObjective;
+import org.onosproject.net.flowobjective.FlowObjectiveService;
+import org.onosproject.net.flowobjective.ForwardingObjective;
 
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -58,10 +61,10 @@ public class DefaultBasicRuleInstaller implements BasicRuleInstaller {
     protected DeviceService deviceService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected FlowRuleService flowRuleService;
+    protected ApplicationIdStore applicationIdStore;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected ApplicationIdStore applicationIdStore;
+    protected FlowObjectiveService flowObjectiveService;
 
     /**
      * Install two rules on every network device:
@@ -76,10 +79,8 @@ public class DefaultBasicRuleInstaller implements BasicRuleInstaller {
             for(Device device : devices){
 
                 // get flow rule to drop packets
-                FlowRule.Builder dropRuleBuilder = getDropRuleBuilder();
-                FlowRule rule = dropRuleBuilder.forDevice(device.id()).build();
-
-                flowRuleService.applyFlowRules(rule);
+                ForwardingObjective forwardingObjective = getDropRuleBuilder();
+                flowObjectiveService.forward(device.id(), forwardingObjective);
             }
         }
 
@@ -87,11 +88,8 @@ public class DefaultBasicRuleInstaller implements BasicRuleInstaller {
         for(Device device : devices){
 
             // get flow rule sending packet to controller
-            FlowRule.Builder controllerRuleBuilder = getControllerRuleBuilder();
-            FlowRule rule = controllerRuleBuilder.forDevice(device.id()).build();
-
-            flowRuleService.applyFlowRules(rule);
-
+            ForwardingObjective forwardingObjective = getControllerRuleBuilder();
+            flowObjectiveService.forward(device.id(), forwardingObjective);
         }
 
     }
@@ -101,22 +99,21 @@ public class DefaultBasicRuleInstaller implements BasicRuleInstaller {
      *
      * @return a flow rule builder for the dropping rule
      */
-    private FlowRule.Builder getDropRuleBuilder(){
+    private ForwardingObjective getDropRuleBuilder(){
 
         TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
                 .matchInPort(PortNumber.ALL);
 
         TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder().drop();
 
-        FlowRule.Builder flowRuleBuilder = DefaultFlowRule.builder();
-        flowRuleBuilder.withSelector(trafficSelectorBuilder.build())
+        return DefaultForwardingObjective.builder()
+                .withSelector(trafficSelectorBuilder.build())
                 .withTreatment(trafficTreatmentBuilder.build())
                 .withPriority(DROP_RULE_PRIORITY)
+                .withFlag(ForwardingObjective.Flag.VERSATILE)
                 .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
-                .forTable(FLOW_TABLE)
-                .makePermanent();
-
-        return flowRuleBuilder;
+                .makePermanent()
+                .add();
     }
 
     /**
@@ -125,7 +122,7 @@ public class DefaultBasicRuleInstaller implements BasicRuleInstaller {
      *
      * @return a flow rule builder for the controller rule
      */
-    private FlowRule.Builder getControllerRuleBuilder() {
+    private ForwardingObjective getControllerRuleBuilder() {
 
         TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
                 .matchEthType(EthType.EtherType.IPV4.ethType().toShort());
@@ -133,15 +130,14 @@ public class DefaultBasicRuleInstaller implements BasicRuleInstaller {
         TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
                 .setOutput(PortNumber.CONTROLLER);
 
-        FlowRule.Builder flowRuleBuilder = DefaultFlowRule.builder();
-        flowRuleBuilder.withSelector(trafficSelectorBuilder.build())
+        return DefaultForwardingObjective.builder()
+                .withSelector(trafficSelectorBuilder.build())
                 .withTreatment(trafficTreatmentBuilder.build())
                 .withPriority(CONTROLLER_RULE_PRIORITY)
+                .withFlag(ForwardingObjective.Flag.VERSATILE)
                 .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
-                .forTable(FLOW_TABLE)
-                .makePermanent();
-
-        return flowRuleBuilder;
+                .makePermanent()
+                .add();
     }
 
 }
