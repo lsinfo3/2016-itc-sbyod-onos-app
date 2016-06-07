@@ -238,7 +238,10 @@ public class DefaultBasicRuleInstaller implements BasicRuleInstaller {
 
             return dnsForwardingObjectives;
         } else {
-            log.warn("BasicRuleInstaller: More than one host found with IP={}", cfg.defaultGateway());
+            if(routers.size() > 1)
+                log.warn("BasicRuleInstaller: More than one host found with IP={}", cfg.defaultGateway());
+            else if(routers.isEmpty())
+                log.warn("BasicRuleInstaller: No host found with IP={}", cfg.defaultGateway());
         }
         return dnsForwardingObjectives;
     }
