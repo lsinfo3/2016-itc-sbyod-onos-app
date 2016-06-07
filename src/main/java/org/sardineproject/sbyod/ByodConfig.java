@@ -32,14 +32,16 @@ public class ByodConfig extends Config<ApplicationId> {
 
     public static final String PORTAL_IP = "portalIp";
     public static final String PORTAL_PORT = "portalPort";
+    public static final String DEFAULT_GATEWAY = "defaultGateway";
 
 
     // TODO: check if config is valid
     @Override
     public boolean isValid(){
-        return hasOnlyFields(PORTAL_IP, PORTAL_PORT) &&
+        return hasOnlyFields(PORTAL_IP, PORTAL_PORT, DEFAULT_GATEWAY) &&
                 isIpAddress(PORTAL_IP, MANDATORY) &&
-                isNumber(PORTAL_PORT, MANDATORY, 1, 10000);
+                isNumber(PORTAL_PORT, MANDATORY, 1, 10000) &&
+                isIpAddress(DEFAULT_GATEWAY, MANDATORY);
     }
 
     /**
@@ -79,6 +81,26 @@ public class ByodConfig extends Config<ApplicationId> {
      */
     public BasicElementConfig portalPort(String portalPort){
         return (BasicElementConfig) setOrClear(PORTAL_PORT, portalPort);
+    }
+
+    /**
+     * Returns the default gateway ip
+     *
+     * @return default gateway ip
+     */
+    public Ip4Address defaultGateway(){
+        String defaultGateway = get(DEFAULT_GATEWAY, null);
+        return defaultGateway != null ? Ip4Address.valueOf(defaultGateway) : null;
+    }
+
+    /**
+     * Sets the default gateway ip address
+     *
+     * @param defaultGateway default gateway ip address; null to clear
+     * @return self
+     */
+    public BasicElementConfig defaultGateway(String defaultGateway){
+        return (BasicElementConfig) setOrClear(DEFAULT_GATEWAY, defaultGateway);
     }
 
 }

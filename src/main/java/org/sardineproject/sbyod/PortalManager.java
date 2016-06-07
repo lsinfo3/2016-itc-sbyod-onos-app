@@ -118,10 +118,9 @@ public class PortalManager implements PortalService{
 
     // Portal configuration values
     // Hardcoded values are default values.
-
     private Ip4Address portalIp = Ip4Address.valueOf("10.0.0.3");
-
     private TpPort portalPort = TpPort.tpPort(3000);
+    private Ip4Address defaultGateway = Ip4Address.valueOf("127.0.0.1");
 
     // make sure no new host is added to the host service, as long as
     // the hosts are iterated
@@ -517,6 +516,10 @@ public class PortalManager implements PortalService{
             else if(cfg.portalPort() != -1){
                 portalPort = TpPort.tpPort(cfg.portalPort());
                 setPortal(portalIp, portalPort);
+            }
+
+            if(cfg.defaultGateway() != null){
+                defaultGateway = cfg.defaultGateway();
             }
         }
 
