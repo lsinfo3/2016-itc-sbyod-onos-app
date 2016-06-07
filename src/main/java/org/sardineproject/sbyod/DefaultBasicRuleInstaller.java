@@ -169,17 +169,19 @@ public class DefaultBasicRuleInstaller implements BasicRuleInstaller {
      * @param deviceId the device id
      * @return Forwarding objective for the dns rules
      */
-    private Set<ForwardingObjective> getDnsObjectives(DeviceId deviceId){
+    private Set<ForwardingObjective> getDnsObjectives(DeviceId deviceId) {
         // TODO add rules for every host for opposite direction!
 
         Set<ForwardingObjective> dnsForwardingObjectives = new HashSet<>();
 
         TrafficSelector trafficSelectorTcp = DefaultTrafficSelector.builder()
+                .matchEthType(EthType.EtherType.IPV4.ethType().toShort())
                 .matchIPProtocol(IPv4.PROTOCOL_TCP)
                 .matchTcpDst(TpPort.tpPort(53))
                 .build();
 
         TrafficSelector trafficSelectorUdp = DefaultTrafficSelector.builder()
+                .matchEthType(EthType.EtherType.IPV4.ethType().toShort())
                 .matchIPProtocol(IPv4.PROTOCOL_UDP)
                 .matchTcpDst(TpPort.tpPort(53))
                 .build();
@@ -189,43 +191,53 @@ public class DefaultBasicRuleInstaller implements BasicRuleInstaller {
         // get the host with ip of the default gateway
         Set<Host> routers = hostService.getHostsByIp(cfg.defaultGateway());
         // if one host was found
-        if(routers.size() != 1){
+        if (routers.size() == 1) {
             Host router = routers.iterator().next();
-            Set<Path> paths = topologyService.getPaths(topologyService.currentTopology(),
-                    deviceId, router.location().deviceId());
-            if (paths.isEmpty()) {
-                log.warn("BasicRuleInstaller: No path found between {} and {}",
-                        deviceId.toString(), router.location().deviceId().toString());
-            } else{
-                log.debug("BasicRuleInstaller: Adding DNS route to router between {} and {}",
-                        deviceId.toString(), router.location().deviceId().toString());
-                Path path = paths.iterator().next();
-                Link link = path.links().iterator().next();
-                TrafficTreatment trafficTreatment = DefaultTrafficTreatment.builder()
-                        .setOutput(link.src().port())
+
+            TrafficTreatment trafficTreatment;
+            if (router.location().deviceId().equals(deviceId)) {
+                // if the route is on the same device
+                trafficTreatment = DefaultTrafficTreatment.builder()
+                        .setOutput(router.location().port())
                         .build();
-
-                dnsForwardingObjectives.add(DefaultForwardingObjective.builder()
-                        .withSelector(trafficSelectorTcp)
-                        .withTreatment(trafficTreatment)
-                        .withPriority(DNS_RULE_PRIORITY)
-                        .withFlag(ForwardingObjective.Flag.VERSATILE)
-                        .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
-                        .makePermanent()
-                        .add());
-
-                dnsForwardingObjectives.add(DefaultForwardingObjective.builder()
-                        .withSelector(trafficSelectorUdp)
-                        .withTreatment(trafficTreatment)
-                        .withPriority(DNS_RULE_PRIORITY)
-                        .withFlag(ForwardingObjective.Flag.VERSATILE)
-                        .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
-                        .makePermanent()
-                        .add());
-
-                return dnsForwardingObjectives;
+            } else {
+                Set<Path> paths = topologyService.getPaths(topologyService.currentTopology(),
+                        deviceId, router.location().deviceId());
+                if (paths.isEmpty()) {
+                    log.warn("BasicRuleInstaller: No path found between {} and {}",
+                            deviceId.toString(), router.location().deviceId().toString());
+                    return dnsForwardingObjectives;
+                } else {
+                    log.debug("BasicRuleInstaller: Adding DNS route to router between {} and {}",
+                            deviceId.toString(), router.location().deviceId().toString());
+                    Path path = paths.iterator().next();
+                    Link link = path.links().iterator().next();
+                    trafficTreatment = DefaultTrafficTreatment.builder()
+                            .setOutput(link.src().port())
+                            .build();
+                }
             }
-        } else{
+
+            dnsForwardingObjectives.add(DefaultForwardingObjective.builder()
+                    .withSelector(trafficSelectorTcp)
+                    .withTreatment(trafficTreatment)
+                    .withPriority(DNS_RULE_PRIORITY)
+                    .withFlag(ForwardingObjective.Flag.VERSATILE)
+                    .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
+                    .makePermanent()
+                    .add());
+
+            dnsForwardingObjectives.add(DefaultForwardingObjective.builder()
+                    .withSelector(trafficSelectorUdp)
+                    .withTreatment(trafficTreatment)
+                    .withPriority(DNS_RULE_PRIORITY)
+                    .withFlag(ForwardingObjective.Flag.VERSATILE)
+                    .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
+                    .makePermanent()
+                    .add());
+
+            return dnsForwardingObjectives;
+        } else {
             log.warn("BasicRuleInstaller: More than one host found with IP={}", cfg.defaultGateway());
         }
         return dnsForwardingObjectives;
