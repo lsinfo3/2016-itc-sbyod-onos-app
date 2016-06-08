@@ -62,6 +62,8 @@ public class DefaultBasicRuleInstaller implements BasicRuleInstaller {
     // 'send to controller rule' is installed or not
     private static final boolean ADD_DROP_RULE = false;
 
+    private static final boolean ADD_DNS_RULE = false;
+
     private static final Logger log = getLogger(PortalManager.class);
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
@@ -105,9 +107,11 @@ public class DefaultBasicRuleInstaller implements BasicRuleInstaller {
             flowObjectiveService.forward(device.id(), forwardingObjective);
 
             // add dns rule
-            Set<ForwardingObjective> forwardingObjectives = getDnsObjectives(device.id());
-            if(!forwardingObjectives.isEmpty())
-                forwardingObjectives.forEach(fo -> flowObjectiveService.forward(device.id(), fo));
+            if(ADD_DNS_RULE) {
+                Set<ForwardingObjective> forwardingObjectives = getDnsObjectives(device.id());
+                if (!forwardingObjectives.isEmpty())
+                    forwardingObjectives.forEach(fo -> flowObjectiveService.forward(device.id(), fo));
+            }
 
         }
     }

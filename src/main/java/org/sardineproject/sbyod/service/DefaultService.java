@@ -17,6 +17,7 @@
  */
 package org.sardineproject.sbyod.service;
 
+import org.onlab.packet.IPv4;
 import org.onlab.packet.TpPort;
 import org.onosproject.net.AbstractElement;
 import org.onosproject.net.Annotations;
@@ -37,6 +38,7 @@ public class DefaultService extends AbstractElement implements Service {
     private static final Logger log = getLogger(PortalManager.class);
 
     private final Host host;
+    //private final int ipProtocol;
     private final TpPort tpPort;
     private final String name;
     private Discovery discovery;
