@@ -266,12 +266,15 @@ public class DefaultConnectionStore implements ConnectionStore {
             switch(event.type()){
                 case HOST_REMOVED:
                     removeHostConnections(event);
+                    log.info("ConnectionStore: Removed host connections for host {}", event.subject().id());
                     break;
                 case HOST_MOVED:
                     updateHostConnections(event);
+                    log.info("ConnectionStore: Updated host connections for host {}", event.subject().id());
                     break;
                 case HOST_UPDATED:
                     updateHostConnections(event);
+                    log.info("ConnectionStore: Updated host connections for host {}", event.subject().id());
                     break;
             }
         }

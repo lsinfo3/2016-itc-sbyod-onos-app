@@ -490,6 +490,7 @@ public class PortalManager implements PortalService{
                 if(!portalService.getHost().equals(event.subject())) {
                     Connection connection = new DefaultConnection(event.subject(), portalService);
                     connectionStore.addConnection(connection);
+                    log.info("PortalManager: Added connection for host {} to the portalService", event.subject());
                 }
             }
 
@@ -509,18 +510,22 @@ public class PortalManager implements PortalService{
                 portalIp = cfg.portalIp();
                 portalPort = TpPort.tpPort(cfg.portalPort());
                 setPortal(portalIp, portalPort);
+                log.info("PortalManager: Set portal ip to {} and port to {} and updated portal", portalIp, portalPort);
             }
             else if(cfg.portalIp() != null){
                 portalIp = cfg.portalIp();
                 setPortal(portalIp, portalPort);
+                log.info("PortalManager: Set portal ip to {} and updated portal", portalIp);
             }
             else if(cfg.portalPort() != -1){
                 portalPort = TpPort.tpPort(cfg.portalPort());
                 setPortal(portalIp, portalPort);
+                log.info("PortalManager: Set portal port to {} and updated portal", portalPort);
             }
 
             if(cfg.defaultGateway() != null){
                 defaultGateway = cfg.defaultGateway();
+                log.info("PortalManager: Default gateway set to {}", defaultGateway);
             }
         }
 
@@ -538,7 +543,7 @@ public class PortalManager implements PortalService{
 
                 ByodConfig cfg = cfgService.getConfig(appId, ByodConfig.class);
                 reconfigureNetwork(cfg);
-                log.info("Reconfigured");
+                log.info("Reconfigured!");
             }
         }
     }
