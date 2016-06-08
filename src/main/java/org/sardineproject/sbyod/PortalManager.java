@@ -451,6 +451,7 @@ public class PortalManager implements PortalService{
                 if(!portalService.getHost().equals(host)) {
                     Connection connection = new DefaultConnection(host, portalService);
                     connectionStore.addConnection(connection);
+                    log.info("PortalManager: connectHostsToPortal() add connection of host {} to portal", host.id());
                 }
 
             }
@@ -490,7 +491,7 @@ public class PortalManager implements PortalService{
                 if(!portalService.getHost().equals(event.subject())) {
                     Connection connection = new DefaultConnection(event.subject(), portalService);
                     connectionStore.addConnection(connection);
-                    log.info("PortalManager: Added connection for host {} to the portalService", event.subject());
+                    log.info("PortalManager: Added connection for host {} to the portalService", event.subject().id());
                 }
             }
 
