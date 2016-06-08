@@ -62,9 +62,6 @@ public class DefaultBasicRuleInstaller implements BasicRuleInstaller {
     // 'send to controller rule' is installed or not
     private static final boolean ADD_DROP_RULE = false;
 
-    private final Lock lock = new ReentrantLock();
-    private final Condition ruleAdded = lock.newCondition();
-
     private static final Logger log = getLogger(PortalManager.class);
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
@@ -85,6 +82,7 @@ public class DefaultBasicRuleInstaller implements BasicRuleInstaller {
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected TopologyService topologyService;
 
+
     /**
      * Install two rules on every network device:
      * First rule:  drops everything
@@ -94,27 +92,24 @@ public class DefaultBasicRuleInstaller implements BasicRuleInstaller {
 
         Iterable<Device> devices = deviceService.getDevices();
 
-        // add default drop rule
-        if(ADD_DROP_RULE) {
-            for(Device device : devices){
+        for(Device device : devices){
+
+            // add default drop rule
+            if(ADD_DROP_RULE) {
                 ForwardingObjective forwardingObjective = getDropRuleObjective();
                 flowObjectiveService.forward(device.id(), forwardingObjective);
             }
-        }
 
-        // add controller rule
-        for(Device device : devices){
+            // add controller rule
             ForwardingObjective forwardingObjective = getControllerObjective();
             flowObjectiveService.forward(device.id(), forwardingObjective);
-        }
 
-        // add dns rule
-        for(Device device : devices){
+            // add dns rule
             Set<ForwardingObjective> forwardingObjectives = getDnsObjectives(device.id());
             if(!forwardingObjectives.isEmpty())
                 forwardingObjectives.forEach(fo -> flowObjectiveService.forward(device.id(), fo));
-        }
 
+        }
     }
 
     /**
@@ -239,9 +234,9 @@ public class DefaultBasicRuleInstaller implements BasicRuleInstaller {
             return dnsForwardingObjectives;
         } else {
             if(routers.size() > 1)
-                log.warn("BasicRuleInstaller: More than one host found with IP={}", cfg.defaultGateway());
+                log.warn("BasicRuleInstaller: More than one host found with IP={} to use as DNS service", cfg.defaultGateway());
             else if(routers.isEmpty())
-                log.warn("BasicRuleInstaller: No host found with IP={}", cfg.defaultGateway());
+                log.warn("BasicRuleInstaller: No host found with IP={} to use as DNS service", cfg.defaultGateway());
         }
         return dnsForwardingObjectives;
     }

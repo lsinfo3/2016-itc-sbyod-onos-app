@@ -141,8 +141,9 @@ public class PortalManager implements PortalService{
         factories.forEach(cfgService::registerConfigFactory);
         cfgListener.reconfigureNetwork(cfgService.getConfig(appId, ByodConfig.class));
 
+        // install drop, controller and dns rules on all devices
         basicRuleInstaller.installRules();
-        // TODO: Add topology listener -> adding basic rules if new device connected.
+        // TODO in future: Add topology listener -> adding basic rules if new device connected.
         packetService.addProcessor(processor, PacketProcessor.director(2));
 
         // host listener
@@ -282,7 +283,7 @@ public class PortalManager implements PortalService{
     }
 
     /**
-     * Set the captive portal
+     * Set the captive portal and update the connections of all hosts in the network
      *
      * @param portalIp Ip address of the portal
      * @param portalPort Transport protocol port of the portal

@@ -139,7 +139,7 @@ public class DefaultConnectionStore implements ConnectionStore {
 
             connectionRuleInstaller.addConnection(connection);
             connections.add(connection);
-            log.debug("Added connection {}", connection);
+            log.debug("ConnectionStore: Added connection {}", connection);
         } else{
             log.debug("ConnectionStore: Connection already installed. Nothing done. Connection = {}", connection);
         }
@@ -157,7 +157,7 @@ public class DefaultConnectionStore implements ConnectionStore {
         // would remove it again
         connections.remove(connection);
 
-        // remove the flow rules on the network devices
+        // remove the flow objectives on the network devices
         Map<ForwardingObjective, DeviceId> forwardingObjectives = connection.getObjectives();
         forwardingObjectives.forEach((forwardingObjective, deviceId) -> flowObjectiveService.forward(deviceId, forwardingObjective));
     }

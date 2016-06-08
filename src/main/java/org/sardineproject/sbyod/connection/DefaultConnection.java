@@ -65,10 +65,10 @@ public class DefaultConnection implements Connection{
     public Host getUser(){ return user;}
 
     /**
-     * Add an objective to remove the installed flow rules
+     * Add an objective to remove the installed flow rules realising the connection
      *
      * @param forwardingObjective forwarding objective to remove the installed flow rules
-     * @param deviceId the device id
+     * @param deviceId the device id the objective is running on
      */
     @Override
     public void addRemoveObjective(ForwardingObjective forwardingObjective, DeviceId deviceId) {
