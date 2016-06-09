@@ -508,20 +508,35 @@ public class PortalManager implements PortalService{
 
             // check if portal is set and try to connect to new portal location
             if(cfg.portalIp() != null && cfg.portalPort() != -1){
-                portalIp = cfg.portalIp();
-                portalPort = TpPort.tpPort(cfg.portalPort());
-                setPortal(portalIp, portalPort);
-                log.info("PortalManager: Set portal ip to {} and port to {} and updated portal", portalIp, portalPort);
+
+                // only change and update if portal config has changed
+                if(!portalIp.equals(cfg.portalIp()) || !portalPort.equals(cfg.portalPort())) {
+
+                    portalIp = cfg.portalIp();
+                    portalPort = TpPort.tpPort(cfg.portalPort());
+                    setPortal(portalIp, portalPort);
+                    log.info("PortalManager: Set portal ip to {} and port to {} and updated portal", portalIp, portalPort);
+                }
             }
             else if(cfg.portalIp() != null){
-                portalIp = cfg.portalIp();
-                setPortal(portalIp, portalPort);
-                log.info("PortalManager: Set portal ip to {} and updated portal", portalIp);
+
+                // only change and update if portal config has changed
+                if(!portalIp.equals(cfg.portalIp())) {
+
+                    portalIp = cfg.portalIp();
+                    setPortal(portalIp, portalPort);
+                    log.info("PortalManager: Set portal ip to {} and updated portal", portalIp);
+                }
             }
             else if(cfg.portalPort() != -1){
-                portalPort = TpPort.tpPort(cfg.portalPort());
-                setPortal(portalIp, portalPort);
-                log.info("PortalManager: Set portal port to {} and updated portal", portalPort);
+                
+                // only change and update if portal config has changed
+                if(!portalPort.equals(cfg.portalPort())) {
+
+                    portalPort = TpPort.tpPort(cfg.portalPort());
+                    setPortal(portalIp, portalPort);
+                    log.info("PortalManager: Set portal port to {} and updated portal", portalPort);
+                }
             }
 
             if(cfg.defaultGateway() != null){

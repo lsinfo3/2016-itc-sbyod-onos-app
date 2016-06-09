@@ -97,6 +97,7 @@ public class ConsulServiceApi implements ConsulService {
         portIcons.put(80, "globe");
         portIcons.put(170, "print");
         portIcons.put(443, "globe");
+        portIcons.put(3299, "search");
 
     }
 
