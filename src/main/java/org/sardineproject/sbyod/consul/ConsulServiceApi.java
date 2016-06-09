@@ -189,11 +189,11 @@ public class ConsulServiceApi implements ConsulService {
 
 
             // add the catalog services to the collection
-            for (CatalogService c : serviceDescription) {
+            for (CatalogService catalogService : serviceDescription) {
 
                 // if the host running the service is known to ONOS,
                 // it is added to the consulServices collection
-                addServiceToCollection(c, consulServices);
+                addServiceToCollection(catalogService, consulServices);
 
             }
         }
@@ -201,20 +201,20 @@ public class ConsulServiceApi implements ConsulService {
         return consulServices;
     }
 
-    private void addServiceToCollection(CatalogService c, Collection consulServices){
+    private void addServiceToCollection(CatalogService catalogService, Collection consulServices){
 
         // get all hosts with corresponding ip address
         Set<Host> hosts;
-        if (c.getServiceAddress().isEmpty()) {
+        if (catalogService.getServiceAddress().isEmpty()) {
             // default ip address is the consul ip address
-            hosts = hostService.getHostsByIp(IpAddress.valueOf(c.getAddress()));
+            hosts = hostService.getHostsByIp(IpAddress.valueOf(catalogService.getAddress()));
         } else {
             try {
                 // try to find the host in the onos cluster
-                hosts = hostService.getHostsByIp(IpAddress.valueOf(c.getServiceAddress()));
+                hosts = hostService.getHostsByIp(IpAddress.valueOf(catalogService.getServiceAddress()));
             } catch (IllegalArgumentException e) {
                 log.warn("ConsulServiceApi: Could not find host with address = {}, Error: {}",
-                        c.getServiceAddress(), e);
+                        catalogService.getServiceAddress(), e);
                 hosts = Sets.newHashSet();
             }
         }
@@ -222,21 +222,21 @@ public class ConsulServiceApi implements ConsulService {
         if (hosts.size() == 1) {
             Host host = hosts.iterator().next();
             log.info("ConsulServiceApi: Consul service {} running on {} is in ONOS cluster.",
-                    c.getServiceName(), host.ipAddresses());
+                    catalogService.getServiceName(), host.ipAddresses());
 
             // create a new byod service corresponding to the CatalogService
-            Service service = new DefaultService(host, TpPort.tpPort(c.getServicePort()), c.getServiceName(),
-                    ProviderId.NONE, c.getServiceId(), Service.Discovery.CONSUL);
-            // add an icon to the service, depending on the port
-            if(portIcons.containsKey(c.getServicePort())) {
-                service.setIcon(portIcons.get(c.getServicePort()));
+            Service service = new DefaultService(host, TpPort.tpPort(catalogService.getServicePort()), catalogService.getServiceName(),
+                    ProviderId.NONE, catalogService.getServiceId(), Service.Discovery.CONSUL);
+            // add an icon to the service, defined as the first tag in description
+            if(!catalogService.getServiceTags().isEmpty()) {
+                service.setIcon(portIcons.get(catalogService.getServiceTags().iterator().next()));
             }
 
             consulServices.add(service);
         } else if (hosts.isEmpty()) {
-            log.debug("ConsulServiceApi: No host found with ip address = {}", c.getAddress());
+            log.debug("ConsulServiceApi: No host found with ip address = {}", catalogService.getAddress());
         } else {
-            log.debug("ConsulServiceApi: More than one host found with ip address = {}", c.getAddress());
+            log.debug("ConsulServiceApi: More than one host found with ip address = {}", catalogService.getAddress());
         }
 
     }
