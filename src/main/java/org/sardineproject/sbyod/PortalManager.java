@@ -255,6 +255,7 @@ public class PortalManager implements PortalService{
                     // add rules to routing devices enabling the connection between user and portal
                     Connection connection = new DefaultConnection(user, portalService);
                     // connectionStore only installs rule, if connection not already exists
+                    // TODO: check if connection is already installed!!!
                     connectionStore.addConnection(connection);
                 }
 

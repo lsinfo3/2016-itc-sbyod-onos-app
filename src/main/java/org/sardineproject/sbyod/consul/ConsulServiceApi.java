@@ -97,7 +97,7 @@ public class ConsulServiceApi implements ConsulService {
         portIcons.put(80, "globe");
         portIcons.put(170, "print");
         portIcons.put(443, "globe");
-        portIcons.put(3299, "search");
+        portIcons.put(3299, "signal");
 
     }
 
@@ -184,6 +184,7 @@ public class ConsulServiceApi implements ConsulService {
 
             // get the information stored about the services
             List<CatalogService> serviceDescription = new LinkedList<>();
+            // TODO: escape space in uri with '%20' probably using UrlEncoder
             services.forEach((s, t) -> serviceDescription.addAll(consulClient.getCatalogService(s.toString(), queryParams)
                     .getValue()));
 
