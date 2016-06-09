@@ -230,7 +230,7 @@ public class ConsulServiceApi implements ConsulService {
                     ProviderId.NONE, catalogService.getServiceId(), Service.Discovery.CONSUL);
             // add an icon to the service, defined as the first tag in description
             if(!catalogService.getServiceTags().isEmpty()) {
-                service.setIcon(portIcons.get(catalogService.getServiceTags().iterator().next()));
+                service.setIcon(catalogService.getServiceTags().iterator().next());
             }
 
             consulServices.add(service);
