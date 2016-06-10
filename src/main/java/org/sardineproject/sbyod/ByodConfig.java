@@ -33,15 +33,19 @@ public class ByodConfig extends Config<ApplicationId> {
     public static final String PORTAL_IP = "portalIp";
     public static final String PORTAL_PORT = "portalPort";
     public static final String DEFAULT_GATEWAY = "defaultGateway";
+    public static final String CONSUL_IP = "consulIp";
+    public static final String CONSUL_PORT = "consulPort";
 
 
     // TODO: check if config is valid
     @Override
     public boolean isValid(){
-        return hasOnlyFields(PORTAL_IP, PORTAL_PORT, DEFAULT_GATEWAY) &&
+        return hasOnlyFields(PORTAL_IP, PORTAL_PORT, DEFAULT_GATEWAY, CONSUL_IP, CONSUL_PORT) &&
                 isIpAddress(PORTAL_IP, MANDATORY) &&
                 isNumber(PORTAL_PORT, MANDATORY, 1, 10000) &&
-                isIpAddress(DEFAULT_GATEWAY, MANDATORY);
+                isIpAddress(DEFAULT_GATEWAY, MANDATORY) &&
+                isIpAddress(CONSUL_IP, MANDATORY) &&
+                isNumber(CONSUL_PORT, MANDATORY, 1, 10000);
     }
 
     /**
@@ -101,6 +105,45 @@ public class ByodConfig extends Config<ApplicationId> {
      */
     public BasicElementConfig defaultGateway(String defaultGateway){
         return (BasicElementConfig) setOrClear(DEFAULT_GATEWAY, defaultGateway);
+    }
+
+    /**
+     * Returns the consul ip address
+     *
+     * @return consul ip address
+     */
+    public Ip4Address consulIp(){
+        String consulIp = get(CONSUL_IP, null);
+        return consulIp != null ? Ip4Address.valueOf(consulIp) : null;
+    }
+
+    /**
+     * Sets the consul ip address
+     *
+     * @param consulIp consul ip address
+     * @return self
+     */
+    public BasicElementConfig consulIp(String consulIp){
+        return (BasicElementConfig) setOrClear(CONSUL_IP,consulIp);
+    }
+
+    /**
+     * Returns the consul transport protocol port.
+     *
+     * @return transport protocol port integer or -1 if not set
+     */
+    public int consulPort(){
+        return get(CONSUL_PORT, -1);
+    }
+
+    /**
+     * Sets the consul port.
+     *
+     * @param consulPort portalPort new transport protocol port; null to clear
+     * @return self
+     */
+    public BasicElementConfig consulPort(String consulPort){
+        return (BasicElementConfig) setOrClear(CONSUL_PORT, consulPort);
     }
 
 }

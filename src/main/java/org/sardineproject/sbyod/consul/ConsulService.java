@@ -44,4 +44,18 @@ public interface ConsulService {
      */
     void disconnectConsul();
 
+    /**
+     * Get the ip address the consul client is running on
+     *
+     * @return Ip address
+     */
+    IpAddress getConsulIp();
+
+    /**
+     * Get the transport protocol port the consul client is running on
+     *
+     * @return transport protocol port
+     */
+    TpPort getConsulTpPort();
+
 }

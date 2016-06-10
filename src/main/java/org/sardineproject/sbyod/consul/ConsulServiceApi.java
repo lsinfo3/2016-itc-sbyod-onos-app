@@ -71,16 +71,17 @@ public class ConsulServiceApi implements ConsulService {
 
 
     protected ConsulClient consulClient;
+    private IpAddress consulIp;
+    private TpPort consulTpPort;
+
+    // thread checking the consul services every WAIT_TIME seconds
     protected Thread checkServices;
-    // mapping port numbers to icon strings
-    protected Map<Integer, String> portIcons = Maps.newHashMap();
 
 
     @Activate
     protected void activate() {
         checkServices = new CheckConsulCatalogServiceUpdates();
         checkServices.setDaemon(true);
-        initiatePortIcons();
     }
 
     @Deactivate
@@ -94,18 +95,6 @@ public class ConsulServiceApi implements ConsulService {
         }
     }
 
-    private void initiatePortIcons(){
-        portIcons.put(20, "folder-open");
-        portIcons.put(22, "console");
-        portIcons.put(25, "envelope");
-        portIcons.put(53, "list-alt");
-        portIcons.put(80, "globe");
-        portIcons.put(170, "print");
-        portIcons.put(443, "globe");
-        portIcons.put(3299, "signal");
-
-    }
-
 
     /**
      * Connect to a running consul agent.
@@ -117,12 +106,12 @@ public class ConsulServiceApi implements ConsulService {
     public boolean connectConsul(IpAddress ipAddress, TpPort tpPort) {
 
         if(checkConnection(ipAddress, tpPort)) {
-            // get all services discovered from consul from the service store
-            Set<Service> storeServices = getConsulServicesFromStore();
-            // remove old consul services in the service store
-            storeServices.forEach(s -> serviceStore.removeService(s));
+            // remove old services
+            disconnectConsul();
 
             consulClient = new ConsulClient(ipAddress.toString(), tpPort.toInt());
+            consulIp = ipAddress;
+            consulTpPort = tpPort;
 
             // add all services from consul to the service store
             Set<Service> consulServices = getServices();
@@ -165,11 +154,39 @@ public class ConsulServiceApi implements ConsulService {
         storeServices.forEach(s -> serviceStore.removeService(s));
 
         consulClient = null;
+        consulIp = null;
+        consulTpPort = null;
 
         // restore service update thread
         checkServices = new CheckConsulCatalogServiceUpdates();
         checkServices.setDaemon(true);
 
+    }
+
+    /**
+     * Get the ip address the consul client is running on
+     *
+     * @return Ip address
+     */
+    @Override
+    public IpAddress getConsulIp() {
+        if(consulClient != null){
+            return consulIp;
+        }
+        return null;
+    }
+
+    /**
+     * Get the transport protocol port the consul client is running on
+     *
+     * @return transport protocol port
+     */
+    @Override
+    public TpPort getConsulTpPort() {
+        if(consulClient != null){
+            return consulTpPort;
+        }
+        return null;
     }
 
     /**

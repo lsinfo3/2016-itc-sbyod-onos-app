@@ -37,6 +37,7 @@ import org.onosproject.net.host.*;
 import org.onosproject.net.packet.*;
 import org.onosproject.net.Host;
 import org.onosproject.net.provider.ProviderId;
+import org.sardineproject.sbyod.consul.ConsulService;
 import org.sardineproject.sbyod.service.ServiceId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,9 +84,6 @@ public class PortalManager implements PortalService{
     protected FlowRuleService flowRuleService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected HostStore hostStore;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected NetworkConfigRegistry cfgService;
 
     // own services
@@ -100,6 +98,9 @@ public class PortalManager implements PortalService{
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected PacketRedirectService packetRedirectService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected ConsulService consulService;
 
     // Portal configuration
 
@@ -543,6 +544,24 @@ public class PortalManager implements PortalService{
             if(cfg.defaultGateway() != null){
                 defaultGateway = cfg.defaultGateway();
                 log.info("PortalManager: Default gateway set to {}", defaultGateway);
+            }
+
+            // check if consul config is set and try to set up consul connection
+            if(cfg.consulIp() != null && cfg.consulPort() != -1){
+                // only change and update if consul config has changed
+                if(!(cfg.consulIp().equals(consulService.getConsulIp())) ||
+                        !(TpPort.tpPort(cfg.consulPort())).equals(consulService.getConsulTpPort())){
+                    // connect to new consul client
+                    consulService.connectConsul(cfg.consulIp(), TpPort.tpPort(cfg.consulPort()));
+                    log.info("PortalManager: Configured consul ip={} and tpPort={}", cfg.consulIp(), cfg.consulPort());
+                }
+            } else if(cfg.consulIp() != null){
+                // only change and update if consul config has changed
+                if(!consulService.getConsulIp().equals(cfg.consulIp())){
+                    // connect to new consul client
+                    consulService.connectConsul(cfg.consulIp());
+                    log.info("PortalManager: Configured consul ip={}", cfg.consulIp());
+                }
             }
         }
 
