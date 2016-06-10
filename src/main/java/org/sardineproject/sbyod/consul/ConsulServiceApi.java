@@ -149,11 +149,20 @@ public class ConsulServiceApi implements ConsulService {
      */
     @Override
     public void disconnectConsul() {
+
+        // interrupt the service update thread if it is running
         if(checkServices.isAlive()) {
             checkServices.interrupt();
         }
+
+        // get all services registered by consul from the service store
+        Set<Service> storeServices = getConsulServicesFromStore();
+        // remove consul services in the service store
+        storeServices.forEach(s -> serviceStore.removeService(s));
+
         consulClient = null;
 
+        // restore service update thread
         checkServices = new CheckConsulCatalogServiceUpdates();
         checkServices.setDaemon(true);
 
@@ -173,7 +182,7 @@ public class ConsulServiceApi implements ConsulService {
             // throws transport exception if no connection to client is available
             testConsulClient.getCatalogServices(new QueryParams(""));
         } catch (TransportException transportException){
-            log.warn("ConsulServiceApi: No connection to consul client available!");
+            log.warn("ConsulServiceApi: No connection to consul client possible!");
             return false;
         } catch (Exception e){
             log.warn("ConsulServiceApi: Exception while connecting to Consul. Exception: {}", e);
@@ -208,14 +217,13 @@ public class ConsulServiceApi implements ConsulService {
             Map<String, List<String>> services = consulClient.getCatalogServices(queryParams).getValue();
 
             // show the services in log
-            services.forEach((s, t) -> log.info("ConsulServiceApi: Found consul service [" + s + " : " + t + "]."));
+            services.forEach((s, t) -> log.debug("ConsulServiceApi: Found consul service [" + s + " : " + t + "]."));
 
             // get the information stored about the services
             List<CatalogService> serviceDescription = new LinkedList<>();
             // TODO: escape space in uri with '%20' probably using UrlEncoder
             services.forEach((s, t) -> serviceDescription.addAll(consulClient.getCatalogService(s.toString(), queryParams)
                     .getValue()));
-
 
             // add the catalog services to the collection
             for (CatalogService catalogService : serviceDescription) {
@@ -291,6 +299,7 @@ public class ConsulServiceApi implements ConsulService {
                 QueryParams queryParams = new QueryParams("");
                 Response<Map<String, List<String>>> services = consulClient.getCatalogServices(queryParams);
 
+                // TODO: check what happens if connection to consul is lost while doing blocking query
                 // start blocking query for index
                 queryParams = new QueryParams(WAIT_TIME, services.getConsulIndex());
                 if(!isInterrupted())
