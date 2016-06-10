@@ -17,6 +17,7 @@
  */
 package org.sardineproject.sbyod.consul;
 
+import com.ecwid.consul.transport.TransportException;
 import com.ecwid.consul.v1.ConsulClient;
 import com.ecwid.consul.v1.QueryParams;
 import com.ecwid.consul.v1.Response;
@@ -111,22 +112,26 @@ public class ConsulServiceApi implements ConsulService {
     @Override
     public boolean connectConsul(IpAddress ipAddress, TpPort tpPort) {
 
-        consulClient = new ConsulClient(ipAddress.toString(), tpPort.toInt());
+        if(checkConnection(ipAddress, tpPort)) {
+            // get all services discovered from consul from the service store
+            Set<Service> storeServices = getConsulServicesFromStore();
+            // remove old consul services in the service store
+            storeServices.forEach(s -> serviceStore.removeService(s));
 
-        // get all services discovered from consul
-        Set<Service> storeServices = getConsulServicesFromStore();
+            consulClient = new ConsulClient(ipAddress.toString(), tpPort.toInt());
 
-        // remove old consul services
-        storeServices.forEach(s -> serviceStore.removeService(s));
+            // add all services from consul to the service store
+            Set<Service> consulServices = getServices();
+            consulServices.forEach(s -> serviceStore.addService(s));
 
-        // add all services from consul to the service store
-        Set<Service> consulServices = getServices();
-        consulServices.forEach(s -> serviceStore.addService(s));
+            // start the thread checking for consul service updates
+            checkServices.start();
 
-        // start the thread checking for consul service updates
-        checkServices.start();
+            return true;
+        } else {
+            return false;
+        }
 
-        return true;
     }
 
     /**
@@ -152,6 +157,29 @@ public class ConsulServiceApi implements ConsulService {
         checkServices = new CheckConsulCatalogServiceUpdates();
         checkServices.setDaemon(true);
 
+    }
+
+    /**
+     * Checks the connection to the consul client
+     *
+     * @param ipAddress IP address of the consul client
+     * @param tpPort Transport protocol port of the consul client
+     * @return true if connection is available, false otherwise
+     */
+    private boolean checkConnection(IpAddress ipAddress, TpPort tpPort){
+        try{
+            // creating consul client to test connection for
+            ConsulClient testConsulClient = new ConsulClient(ipAddress.toString(), tpPort.toInt());
+            // throws transport exception if no connection to client is available
+            testConsulClient.getCatalogServices(new QueryParams(""));
+        } catch (TransportException transportException){
+            log.warn("ConsulServiceApi: No connection to consul client available!");
+            return false;
+        } catch (Exception e){
+            log.warn("ConsulServiceApi: Exception while connecting to Consul. Exception: {}", e);
+            return false;
+        }
+        return true;
     }
 
 
