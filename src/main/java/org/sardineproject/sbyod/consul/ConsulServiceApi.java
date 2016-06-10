@@ -39,6 +39,10 @@ import org.sardineproject.sbyod.connection.ConnectionStore;
 import org.sardineproject.sbyod.service.Service;
 import org.sardineproject.sbyod.service.ServiceStore;
 
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -214,16 +218,33 @@ public class ConsulServiceApi implements ConsulService {
 
         if(consulClient != null) {
             // get the registered service names
-            Map<String, List<String>> services = consulClient.getCatalogServices(queryParams).getValue();
+            Map<String, List<String>> mapOfServices = consulClient.getCatalogServices(queryParams).getValue();
 
             // show the services in log
-            services.forEach((s, t) -> log.debug("ConsulServiceApi: Found consul service [" + s + " : " + t + "]."));
+            mapOfServices.forEach((s, t) -> log.debug("ConsulServiceApi: Found consul service [" + s + " : " + t + "]."));
 
-            // get the information stored about the services
+            // list of services registered in consul
             List<CatalogService> serviceDescription = new LinkedList<>();
-            // TODO: escape space in uri with '%20' probably using UrlEncoder
-            services.forEach((s, t) -> serviceDescription.addAll(consulClient.getCatalogService(s.toString(), queryParams)
-                    .getValue()));
+            // get the information of the services stored in consul
+            for(Map.Entry<String, List<String>> entry : mapOfServices.entrySet()){
+                // the name to search for
+                String serviceName = entry.getKey();
+                try {
+                    // encode name to url - replacing spaces with '%20' for example
+                    URL url = new URI("http", "example.com", "/" + serviceName + "/", "").toURL();
+                    // get only the path part of the url
+                    String serviceNameEncoded = url.getPath();
+                    // remove the backspaces
+                    serviceNameEncoded = serviceNameEncoded.substring(1, serviceNameEncoded.length()-1);
+
+                    // query consul for the service description
+                    serviceDescription.addAll(consulClient.getCatalogService(serviceNameEncoded, queryParams).getValue());
+                } catch (URISyntaxException e) {
+                    e.printStackTrace();
+                } catch (MalformedURLException e) {
+                    e.printStackTrace();
+                }
+            }
 
             // add the catalog services to the collection
             for (CatalogService catalogService : serviceDescription) {
