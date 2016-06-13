@@ -96,7 +96,7 @@ public class DefaultServiceStore implements ServiceStore {
 //                .build();
         services = new HashSet<>();
 
-        //codecService.registerCodec(org.sardineproject.sbyod.service.Service.class, new ServiceCodec());
+        codecService.registerCodec(org.sardineproject.sbyod.service.Service.class, new ServiceCodec());
 
         //log.info("Started ServiceStore");
     }
