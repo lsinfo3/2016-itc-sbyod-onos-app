@@ -296,6 +296,7 @@ public class DefaultConnectionStore implements ConnectionStore {
             }
         }
 
+        // todo: check if portal connection is already installed?
         // update the connections of the host
         private void updateHostConnections(HostEvent event){
             Host host = event.subject();

@@ -164,6 +164,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
     private void addFlowUserToService(PortNumber inPort, PortNumber outPort, DeviceId forDeviceId,
                                       Connection connection){
 
+        // todo: if host has no ip address yet, no rules are installed!
         for(IpAddress userIp : connection.getUser().ipAddresses())
             for(IpAddress serviceIp : connection.getService().getHost().ipAddresses())
                 if(userIp.isIp4() && serviceIp.isIp4()) {
