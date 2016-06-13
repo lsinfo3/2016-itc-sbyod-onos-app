@@ -475,14 +475,6 @@ public class PortalManager implements PortalService{
                     return;
                 }
                 // get the portal service
-                // TODO: serviceStore is null?
-                if(serviceStore == null){
-                    log.warn("PortalManager: No service store defined in PortalConnectionHostListener");
-                    ServiceDirectory sd = new DefaultServiceDirectory();
-                    serviceStore = sd.get(org.sardineproject.sbyod.service.ServiceStore.class);
-                }
-                if(serviceStore == null)
-                    return;
                 Service portalService = serviceStore.getService(portalId);
 
                 if(portalService == null){

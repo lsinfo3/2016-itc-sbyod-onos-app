@@ -85,6 +85,7 @@ public class DefaultServiceStore implements ServiceStore {
             .register(org.onlab.packet.MacAddress.class)
             .build());*/
 
+    // TODO: remove service if host where the service is running on has disconnected!
 
     @Activate
     protected void activate(){

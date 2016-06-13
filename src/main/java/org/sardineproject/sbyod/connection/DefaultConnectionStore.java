@@ -269,15 +269,15 @@ public class DefaultConnectionStore implements ConnectionStore {
             switch(event.type()){
                 case HOST_REMOVED:
                     removeHostConnections(event);
-                    log.info("ConnectionStore: Removed host connections for host {}", event.subject().id());
+                    log.info("ConnectionStore: Host removed -> Removed host connections for host {}", event.subject().id());
                     break;
                 case HOST_MOVED:
                     updateHostConnections(event);
-                    log.info("ConnectionStore: Updated host connections for host {}", event.subject().id());
+                    log.info("ConnectionStore: Host moved -> Updated host connections for host {}", event.subject().id());
                     break;
                 case HOST_UPDATED:
                     updateHostConnections(event);
-                    log.info("ConnectionStore: Updated host connections for host {}", event.subject().id());
+                    log.info("ConnectionStore: Host updated -> Updated host connections for host {}", event.subject().id());
                     break;
             }
         }
@@ -301,6 +301,7 @@ public class DefaultConnectionStore implements ConnectionStore {
             for(IpAddress ipAddress : host.ipAddresses()){
                 if(ipAddress.isIp4()){
                     Set<Connection> connections = getUserConnections(ipAddress.getIp4Address());
+                    log.info("DefaultConnectionStore: ConnectionHostListener event. Update connections: {}", connections);
                     for(Connection connection : connections){
                         // removes the old flow rules from the devices
                         removeConnection(connection);
