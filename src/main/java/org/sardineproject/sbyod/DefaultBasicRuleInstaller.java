@@ -99,18 +99,25 @@ public class DefaultBasicRuleInstaller implements BasicRuleInstaller {
             // add default drop rule
             if(ADD_DROP_RULE) {
                 ForwardingObjective forwardingObjective = getDropRuleObjective();
+                log.info("DefaultBasicRuleInstaller: Adding flow objective \n{} \n" +
+                        "for device {} in method installRules()", forwardingObjective, device.id());
                 flowObjectiveService.forward(device.id(), forwardingObjective);
             }
 
             // add controller rule
             ForwardingObjective forwardingObjective = getControllerObjective();
+            log.info("DefaultBasicRuleInstaller: Adding flow objective \n{} \n" +
+                    "for device {} in method installRules()", forwardingObjective, device.id());
             flowObjectiveService.forward(device.id(), forwardingObjective);
 
             // add dns rule
             if(ADD_DNS_RULE) {
                 Set<ForwardingObjective> forwardingObjectives = getDnsObjectives(device.id());
                 if (!forwardingObjectives.isEmpty())
-                    forwardingObjectives.forEach(fo -> flowObjectiveService.forward(device.id(), fo));
+                    forwardingObjectives.forEach(fo ->
+                            {flowObjectiveService.forward(device.id(), fo);
+                                log.info("DefaultBasicRuleInstaller: Adding flow objective \n{} \n" +
+                                        "for device {} in method installRules()", forwardingObjective, device.id());});
             }
 
         }
