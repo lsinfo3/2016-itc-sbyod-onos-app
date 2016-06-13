@@ -119,6 +119,8 @@ public class PortalManager implements PortalService{
             }
     );
 
+    private HostListener portalConnectionHostListener = new PortalConnectionHostListener();
+
     // Portal configuration values
     // Hardcoded values are default values.
     private Ip4Address portalIp = Ip4Address.valueOf("10.0.0.3");
@@ -153,19 +155,21 @@ public class PortalManager implements PortalService{
         // packetService.addProcessor(processor, PacketProcessor.director(2));
         // requestIntercepts();
 
-        // host listener
-        hostService.addListener(new PortalConnectionHostListener());
+        // adding portal connection if new host was added
+        hostService.addListener(portalConnectionHostListener);
 
         log.info("Started PortalManager {}", appId.toString());
     }
 
     @Deactivate
     protected void deactivate() {
+        hostService.removeListener(portalConnectionHostListener);
+
         cfgService.removeListener(cfgListener);
         factories.forEach(cfgService::unregisterConfigFactory);
 
         //withdrawIntercepts();
-        packetService.removeProcessor(processor);
+        //packetService.removeProcessor(processor);
         processor = null;
 
         // remove all flow rules of this app
