@@ -144,8 +144,12 @@ public class PortalManager implements PortalService{
 
         // install drop, controller and dns rules on all devices
         basicRuleInstaller.installRules();
+
         // TODO in future: Add topology listener -> adding basic rules if new device connected.
-        packetService.addProcessor(processor, PacketProcessor.director(2));
+
+        // not needed as no redirect desired and portalConnectionHostListener should establish the portal connection
+        // packetService.addProcessor(processor, PacketProcessor.director(2));
+        // requestIntercepts();
 
         // host listener
         hostService.addListener(new PortalConnectionHostListener());
@@ -411,28 +415,6 @@ public class PortalManager implements PortalService{
     }
 
     /**
-     * Initiate a test setup
-     */
-    private void testSetup(){
-        // just for development reasons
-
-        Service service = null;
-
-        Set<Host> hosts = hostService.getHostsByIp(IpAddress.valueOf("10.0.0.4"));
-        if(!hosts.isEmpty()) {
-            service = new DefaultService(hosts.iterator().next(), TpPort.tpPort(80), "TestService1", ProviderId.NONE);
-            serviceStore.addService(service);
-            hosts = null;
-        }
-
-        hosts = hostService.getHostsByIp(IpAddress.valueOf("10.0.0.4"));
-        if(!hosts.isEmpty()) {
-            service = new DefaultService(hosts.iterator().next(), TpPort.tpPort(22), "TestService2", ProviderId.NONE);
-            serviceStore.addService(service);
-        }
-    }
-
-    /**
      * Add a connection to the portal for all hosts in the network
      */
     private void connectHostsToPortal(){
@@ -442,6 +424,9 @@ public class PortalManager implements PortalService{
         if(portalId != null)
             portalService = serviceStore.getService(portalId);
 
+        // get the default gateway host
+        Host defaultGw = getDefaultGatewayHost(defaultGateway);
+
         hostLock.lock();
 
         if(portalService != null) {
@@ -449,8 +434,9 @@ public class PortalManager implements PortalService{
             Iterable<Host> hosts = hostService.getHosts();
             for (Host host : hosts) {
 
-                // no connection for the portal itself
-                if(!portalService.getHost().equals(host)) {
+                // no connection for the portal itself and the default gateway
+                if(!portalService.getHost().equals(host) &&
+                        ((defaultGw != null) ? !defaultGw.equals(host) : true)) {
                     Connection connection = new DefaultConnection(host, portalService);
                     connectionStore.addConnection(connection);
                     log.info("PortalManager: connectHostsToPortal() add connection of host {} to portal", host.id());
@@ -489,8 +475,12 @@ public class PortalManager implements PortalService{
                     return;
                 }
 
-                // only install if host is not the portal
-                if(!portalService.getHost().equals(event.subject())) {
+                // get the default gateway host
+                Host defaultGw = getDefaultGatewayHost(defaultGateway);
+
+                // only install if host is not the portal or the default gateway
+                if(!portalService.getHost().equals(event.subject()) &&
+                        ((defaultGw != null) ? !defaultGw.equals(event.subject()) : true)) {
                     Connection connection = new DefaultConnection(event.subject(), portalService);
                     connectionStore.addConnection(connection);
                     log.info("PortalManager: Added connection for host {} to the portalService", event.subject().id());
@@ -498,6 +488,25 @@ public class PortalManager implements PortalService{
             }
 
             hostLock.unlock();
+        }
+    }
+
+    /**
+     * Returns the default gateway host or null if not found
+     *
+     * @param defaultGatewayIp IP address of the default gateway
+     * @return Host or null if no host found
+     */
+    private Host getDefaultGatewayHost(Ip4Address defaultGatewayIp){
+        Set<Host> defaultGateways = hostService.getHostsByIp(defaultGatewayIp);
+        if(defaultGateways.size() != 1){
+            if(defaultGateways.size() == 0)
+                log.warn("PortalManager: No default gateway found for IP={}.", defaultGatewayIp);
+            else
+                log.warn("PortalManager: More than one host with default gateway IP={} found!", defaultGatewayIp);
+            return null;
+        } else{
+            return defaultGateways.iterator().next();
         }
     }
 

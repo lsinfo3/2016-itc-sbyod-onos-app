@@ -359,6 +359,7 @@ public class ConsulServiceApi implements ConsulService {
         Set<Service> storeServices = getConsulServicesFromStore();
 
         for(Service oldService : storeServices){
+            // services in consul with same id as old service
             Set<Service> equalConsulServices = consulServices.stream()
                     .filter(cs -> cs.id().equals(oldService.id()))
                     .collect(Collectors.toSet());

@@ -152,6 +152,7 @@ public class FlowRedirect extends PacketRedirect {
                 .makePermanent()
                 .add();
 
+        log.info("FlowRedirect: Adding flow objective in method flowToPortal():\n{}", forwardingObjective);
         flowObjectiveService.forward(context.inPacket().receivedFrom().deviceId(), forwardingObjective);
     }
 
@@ -211,6 +212,7 @@ public class FlowRedirect extends PacketRedirect {
                 .makePermanent()
                 .add();
 
+        log.info("FlowRedirect: Adding flow objective in method flowFromPortal():\n{}", forwardingObjective);
         flowObjectiveService.forward(context.inPacket().receivedFrom().deviceId(), forwardingObjective);
     }
 
