@@ -51,6 +51,8 @@ import java.util.stream.Collectors;
 @Path("/user")
 public class AppWebUser extends AbstractWebResource {
 
+    // TODO: do not return the portal service
+
     private static final Logger log = getLogger(PortalManager.class);
 
     private static final String INVALID_PARAMETER = "INVALID_PARAMETER\n";
@@ -162,6 +164,8 @@ public class AppWebUser extends AbstractWebResource {
                                     @PathParam("serviceId") String serviceId_){
         log.debug("AppWebUser: Adding connection between user ip = {} and serviceId = {}",
                 new String[]{userIp_, serviceId_});
+
+        // TODO: Do not install a connection for a host to the service running on this host!
 
         if(userIp_ == null || serviceId_ == null)
             return Response.ok(INVALID_PARAMETER).build();

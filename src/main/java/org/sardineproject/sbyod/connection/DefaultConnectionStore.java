@@ -161,7 +161,7 @@ public class DefaultConnectionStore implements ConnectionStore {
         Map<ForwardingObjective, DeviceId> forwardingObjectives = connection.getObjectives();
         forwardingObjectives.forEach((forwardingObjective, deviceId) ->
                 {flowObjectiveService.forward(deviceId, forwardingObjective);
-                    log.info("DefaultConnectionStore: Removing flow objective \n{} \n" +
+                    log.debug("DefaultConnectionStore: Removing flow objective \n{} \n" +
                     "for device {} in method removeConnection()", forwardingObjective, deviceId);});
     }
 

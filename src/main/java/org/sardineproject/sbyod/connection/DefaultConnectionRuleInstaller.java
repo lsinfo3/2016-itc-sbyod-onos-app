@@ -187,7 +187,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                             .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
                             .makePermanent();
 
-                    log.info("DefaultConnectionRuleInstaller: Adding flow objective \n{} \n" +
+                    log.debug("DefaultConnectionRuleInstaller: Adding flow objective \n{} \n" +
                             "for device {} in method addFlowUserToService()", forwardingObjective, forDeviceId);
                     flowObjectiveService.forward(forDeviceId, forwardingObjective.add());
                     // save forwarding objective in connection
@@ -221,8 +221,8 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                             .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
                             .makePermanent();
 
-                    log.info("DefaultConnectionRuleInstaller: Adding flow objective \n{} \n" +
-                            "for device {} in method addFlowServiceToUser()", forwardingObjective, forDeviceId);
+                    log.debug("DefaultConnectionRuleInstaller: Adding flow objective \n{} \n" +
+                            "for device {} in method addFlowServiceToUser()", forwardingObjective.add(), forDeviceId);
                     flowObjectiveService.forward(forDeviceId, forwardingObjective.add());
                     // save forwarding objective in connection
                     connection.addRemoveObjective(forwardingObjective.remove(), forDeviceId);

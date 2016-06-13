@@ -296,7 +296,7 @@ public class ConsulServiceApi implements ConsulService {
 
         if (hosts.size() == 1) {
             Host host = hosts.iterator().next();
-            log.info("ConsulServiceApi: Consul service {} running on {} is in ONOS cluster.",
+            log.debug("ConsulServiceApi: Consul service {} running on {} is in ONOS cluster.",
                     catalogService.getServiceName(), host.ipAddresses());
 
             // create a new byod service corresponding to the CatalogService

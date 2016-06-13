@@ -162,7 +162,7 @@ public class PortalManager implements PortalService{
         cfgService.removeListener(cfgListener);
         factories.forEach(cfgService::unregisterConfigFactory);
 
-        withdrawIntercepts();
+        //withdrawIntercepts();
         packetService.removeProcessor(processor);
         processor = null;
 
@@ -327,7 +327,7 @@ public class PortalManager implements PortalService{
                 portalId = portalService.id();
                 connectHostsToPortal();
 
-                log.info("Portal is up. IP = {}, TpPort = {}, ID = {}",
+                log.debug("Portal is up. IP = {}, TpPort = {}, ID = {}",
                         Lists.newArrayList(portalIp.toString(), portalPort.toString(), this.portalId.toString()).toArray());
                 return true;
             } else {
@@ -498,9 +498,9 @@ public class PortalManager implements PortalService{
      * @return Host or null if no host found
      */
     private Host getDefaultGatewayHost(Ip4Address defaultGatewayIp){
-        log.info("PortalManager: Method getDefaultGatewayHost() called for ip={}", defaultGatewayIp);
+        log.debug("PortalManager: Method getDefaultGatewayHost() called for ip={}", defaultGatewayIp);
         Set<Host> defaultGateways = hostService.getHostsByIp(defaultGatewayIp);
-        log.info("PortalManager: Method getDefaultGatewayHost() with gateway hosts={}", defaultGateways);
+        log.debug("PortalManager: Method getDefaultGatewayHost() with gateway hosts={}", defaultGateways);
 
         if(defaultGateways.size() != 1){
             if(defaultGateways.size() == 0)

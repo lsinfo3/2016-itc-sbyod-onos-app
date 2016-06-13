@@ -50,6 +50,8 @@ import static org.slf4j.LoggerFactory.getLogger;
 @Path("/service")
 public class AppWebService extends AbstractWebResource {
 
+    // TODO: do not return the portal service!
+
     private static final Logger log = getLogger(PortalManager.class);
 
     private static final String INVALID_PARAMETER = "INVALID_PARAMETER\n";
