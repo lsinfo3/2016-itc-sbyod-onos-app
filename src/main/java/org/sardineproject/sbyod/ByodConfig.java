@@ -24,6 +24,7 @@ import org.onosproject.net.config.Config;
 import org.onosproject.net.config.basics.BasicElementConfig;
 
 import static org.onosproject.net.config.Config.FieldPresence.MANDATORY;
+import static org.onosproject.net.config.Config.FieldPresence.OPTIONAL;
 
 /**
  * Created by lorry on 01.04.16.
@@ -41,11 +42,11 @@ public class ByodConfig extends Config<ApplicationId> {
     @Override
     public boolean isValid(){
         return hasOnlyFields(PORTAL_IP, PORTAL_PORT, DEFAULT_GATEWAY, CONSUL_IP, CONSUL_PORT) &&
-                isIpAddress(PORTAL_IP, MANDATORY) &&
-                isNumber(PORTAL_PORT, MANDATORY, 1, 10000) &&
-                isIpAddress(DEFAULT_GATEWAY, MANDATORY) &&
-                isIpAddress(CONSUL_IP, MANDATORY) &&
-                isNumber(CONSUL_PORT, MANDATORY, 1, 10000);
+                isIpAddress(PORTAL_IP, OPTIONAL) &&
+                isNumber(PORTAL_PORT, OPTIONAL, 1, 10000) &&
+                isIpAddress(DEFAULT_GATEWAY, OPTIONAL) &&
+                isIpAddress(CONSUL_IP, OPTIONAL) &&
+                isNumber(CONSUL_PORT, OPTIONAL, 1, 10000);
     }
 
     /**
