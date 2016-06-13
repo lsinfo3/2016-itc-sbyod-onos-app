@@ -140,9 +140,9 @@ public class PortalManager implements PortalService{
         appId = coreService.registerApplication(PortalService.APP_ID);
 
         // configuration listener
-        cfgService.addListener(cfgListener);
         factories.forEach(cfgService::registerConfigFactory);
         cfgListener.reconfigureNetwork(cfgService.getConfig(appId, ByodConfig.class));
+        cfgService.addListener(cfgListener);
 
         // install drop, controller and dns rules on all devices
         basicRuleInstaller.installRules();
@@ -542,8 +542,7 @@ public class PortalManager implements PortalService{
                     setPortal(portalIp, portalPort);
                     log.info("PortalManager: Set portal ip to {} and port to {} and updated portal", portalIp, portalPort);
                 }
-            }
-            else if(cfg.portalIp() != null){
+            } else if(cfg.portalIp() != null){
 
                 // only change and update if portal config has changed
                 if(!portalIp.equals(cfg.portalIp())) {
@@ -552,8 +551,7 @@ public class PortalManager implements PortalService{
                     setPortal(portalIp, portalPort);
                     log.info("PortalManager: Set portal ip to {} and updated portal", portalIp);
                 }
-            }
-            else if(cfg.portalPort() != -1){
+            } else if(cfg.portalPort() != -1){
                 
                 // only change and update if portal config has changed
                 if(!portalPort.equals(cfg.portalPort())) {
