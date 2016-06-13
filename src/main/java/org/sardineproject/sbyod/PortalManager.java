@@ -23,6 +23,8 @@ import static com.google.common.base.Preconditions.checkState;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import org.apache.felix.scr.annotations.*;
+import org.onlab.osgi.DefaultServiceDirectory;
+import org.onlab.osgi.ServiceDirectory;
 import org.onlab.packet.*;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
@@ -470,7 +472,15 @@ public class PortalManager implements PortalService{
                 }
                 // get the portal service
                 // TODO: serviceStore is null?
+                if(serviceStore == null){
+                    log.warn("PortalManager: No service store defined in PortalConnectionHostListener");
+                    ServiceDirectory sd = new DefaultServiceDirectory();
+                    serviceStore = sd.get(org.sardineproject.sbyod.service.ServiceStore.class);
+                }
+                if(serviceStore == null)
+                    return;
                 Service portalService = serviceStore.getService(portalId);
+
                 if(portalService == null){
                     log.warn("PortalManager: No portal defined with ID {}", portalId.toString());
                     return;
