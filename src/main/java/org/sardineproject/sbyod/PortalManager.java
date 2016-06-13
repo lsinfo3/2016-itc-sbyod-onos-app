@@ -505,9 +505,9 @@ public class PortalManager implements PortalService{
      * @return Host or null if no host found
      */
     private Host getDefaultGatewayHost(Ip4Address defaultGatewayIp){
-        log.debug("PortalManager: Method getDefaultGatewayHost() called for ip={}", defaultGatewayIp);
+        log.info("PortalManager: Method getDefaultGatewayHost() called for ip={}", defaultGatewayIp);
         Set<Host> defaultGateways = hostService.getHostsByIp(defaultGatewayIp);
-        log.debug("PortalManager: Method getDefaultGatewayHost() with gateway hosts={}", defaultGateways);
+        log.info("PortalManager: Method getDefaultGatewayHost() with gateway hosts={}", defaultGateways);
 
         if(defaultGateways.size() != 1){
             if(defaultGateways.size() == 0)
