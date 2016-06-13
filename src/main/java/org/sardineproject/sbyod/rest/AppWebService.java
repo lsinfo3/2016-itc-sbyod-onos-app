@@ -47,7 +47,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 /**
  * Web service interface.
  */
-@Path("/service")
+@Path("")
 public class AppWebService extends AbstractWebResource {
 
     // TODO: do not return the portal service!
@@ -64,7 +64,7 @@ public class AppWebService extends AbstractWebResource {
      * @return array of services
      */
     @GET
-    @Path("")
+    @Path("/service")
     public Response getServices(){
         log.debug("AppWebUser: Getting all services");
 
@@ -80,7 +80,7 @@ public class AppWebService extends AbstractWebResource {
      *          service
      */
     @GET
-    @Path("/{serviceId}")
+    @Path("/service/{serviceId}")
     public Response getService(@PathParam("serviceId") String serviceId_){
         log.debug("AppWebUser: Getting service with name = {}", serviceId_);
 
@@ -94,7 +94,7 @@ public class AppWebService extends AbstractWebResource {
     }
 
     @POST
-    @Path("/ip/{ip}/tpPort/{tpPort}/name/{name}")
+    @Path("/service/ip/{ip}/tpPort/{tpPort}/name/{name}")
     public Response setServices(@PathParam("ip") String ip_,
                                 @PathParam("tpPort") String tpPort_,
                                 @PathParam("name") String name_){
@@ -142,7 +142,7 @@ public class AppWebService extends AbstractWebResource {
     }
 
     @DELETE
-    @Path("/serviceID/{id}")
+    @Path("/service/serviceID/{id}")
     public Response deleteService(@PathParam("id") String id_){
 
         log.debug("AppWebService: Deleting service with id={}.", id_);

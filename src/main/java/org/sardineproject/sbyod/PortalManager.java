@@ -469,6 +469,7 @@ public class PortalManager implements PortalService{
                     return;
                 }
                 // get the portal service
+                // TODO: serviceStore is null?
                 Service portalService = serviceStore.getService(portalId);
                 if(portalService == null){
                     log.warn("PortalManager: No portal defined with ID {}", portalId.toString());
