@@ -78,7 +78,7 @@ public class DefaultConnectionStore implements ConnectionStore {
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected FlowObjectiveService flowObjectiveService;
 
-    private final HostListener connectionHostListener = new ConnectionHostListener();
+    private HostListener connectionHostListener;
     //private final FlowRuleListener removedFlowRuleListener = new RemovedFlowRuleListener();
 
     // if a connection is removed, the RemovedFlowRule listener should wait
@@ -113,6 +113,7 @@ public class DefaultConnectionStore implements ConnectionStore {
         codecService.registerCodec(Connection.class, new ConnectionCodec());
 
         // add listener to detect host moved, updated or removed
+        connectionHostListener = new ConnectionHostListener();
         hostService.addListener(connectionHostListener);
 
         //log.info("Started ConnectionStore");
@@ -162,7 +163,7 @@ public class DefaultConnectionStore implements ConnectionStore {
         forwardingObjectives.forEach((forwardingObjective, deviceId) ->
                 {flowObjectiveService.forward(deviceId, forwardingObjective);
                     log.debug("DefaultConnectionStore: Removing flow objective \n{} \n" +
-                    "for device {} in method removeConnection()", forwardingObjective, deviceId);});
+                            "for device {} in method removeConnection()", forwardingObjective, deviceId);});
     }
 
     /**

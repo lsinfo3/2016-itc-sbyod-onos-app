@@ -119,7 +119,7 @@ public class PortalManager implements PortalService{
             }
     );
 
-    private HostListener portalConnectionHostListener = new PortalConnectionHostListener();
+    private HostListener portalConnectionHostListener;
 
     // Portal configuration values
     // Hardcoded values are default values.
@@ -156,6 +156,7 @@ public class PortalManager implements PortalService{
         // requestIntercepts();
 
         // adding portal connection if new host was added
+        portalConnectionHostListener = new PortalConnectionHostListener();
         hostService.addListener(portalConnectionHostListener);
 
         log.info("Started PortalManager {}", appId.toString());
@@ -504,7 +505,7 @@ public class PortalManager implements PortalService{
      * @param defaultGatewayIp IP address of the default gateway
      * @return Host or null if no host found
      */
-    private Host getDefaultGatewayHost(Ip4Address defaultGatewayIp){
+    private Host getDefaultGatewayHost(Ip4Address defaultGatewayIp) {
         log.info("PortalManager: Method getDefaultGatewayHost() called for ip={}", defaultGatewayIp);
         Set<Host> defaultGateways = hostService.getHostsByIp(defaultGatewayIp);
         log.info("PortalManager: Method getDefaultGatewayHost() with gateway hosts={}", defaultGateways);
