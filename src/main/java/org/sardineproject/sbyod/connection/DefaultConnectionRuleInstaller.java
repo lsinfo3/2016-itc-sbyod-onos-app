@@ -161,10 +161,17 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
         addFlowServiceToUser(serviceSidePort, userSidePort, forDeviceId, connection);
     }
 
+    /**
+     * Add the flow from the user to the service direction to the network device
+     *
+     * @param inPort The in port, where the packets are coming in
+     * @param outPort The out port, where the packets are send to
+     * @param forDeviceId The device id where the flow is installed
+     * @param connection The connection the flows are installed for
+     */
     private void addFlowUserToService(PortNumber inPort, PortNumber outPort, DeviceId forDeviceId,
                                       Connection connection){
 
-        // todo: if host has no ip address yet, no rules are installed!
         for(IpAddress userIp : connection.getUser().ipAddresses())
             for(IpAddress serviceIp : connection.getService().getHost().ipAddresses())
                 if(userIp.isIp4() && serviceIp.isIp4()) {
@@ -196,6 +203,14 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                 }
     }
 
+    /**
+     * Add the flow from the service to the user direction to the network device
+     *
+     * @param inPort The in port, where the packets are coming in
+     * @param outPort The out port, where the packets are send to
+     * @param forDeviceId The device id where the flow is installed
+     * @param connection The connection the flows are installed for
+     */
     private void addFlowServiceToUser(PortNumber inPort, PortNumber outPort, DeviceId forDeviceId,
                                       Connection connection){
 

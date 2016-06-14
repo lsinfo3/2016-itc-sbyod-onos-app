@@ -55,6 +55,13 @@ public class DefaultConnection implements Connection{
                     this.getClass().toString()));
         }
 
+        if(user.equals(service.getHost())){
+            log.warn("DefaultConnection: Creating a connection for a host, where the service is running on," +
+                    " is forbidden.\nHost={}\nService={}", user.id(), service);
+            throw new InvalidParameterException(String.format("Invalid parameter in class : %s",
+                    this.getClass().toString()));
+        }
+
         this.user = user;
         this.service = service;
         forwardingObjectives = new HashMap<>();

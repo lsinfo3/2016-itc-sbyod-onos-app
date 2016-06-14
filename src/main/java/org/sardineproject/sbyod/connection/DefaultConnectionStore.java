@@ -193,22 +193,6 @@ public class DefaultConnectionStore implements ConnectionStore {
                 .collect(Collectors.toSet());
     }
 
-    // TODO: Remove! -> better use getConnections(Service)
-    /**
-     * Get the set of connections for destination IP and destination traffic protocol port
-     *
-     * @param dstIp destination IP
-     * @param dstTpPort destination transport protocol port
-     * @return set of connections
-     */
-    @Override
-    public Set<Connection> getServiceConnections(Ip4Address dstIp, TpPort dstTpPort) {
-        return connections.stream()
-                .filter(c -> (c.getService().getHost().ipAddresses().contains(dstIp)
-                        && c.getService().getTpPort().equals(dstTpPort)))
-                .collect(Collectors.toSet());
-    }
-
     /**
      * Get the connection between the user and the service
      *
@@ -237,6 +221,19 @@ public class DefaultConnectionStore implements ConnectionStore {
     public Set<Connection> getConnections(org.sardineproject.sbyod.service.Service service) {
         return connections.stream()
                 .filter(c -> c.getService().equals(service))
+                .collect(Collectors.toSet());
+    }
+
+    /**
+     * Get all connections of a host defined by the id
+     *
+     * @param host Host user of the connection
+     * @return Set of connections
+     */
+    @Override
+    public Set<Connection> getConnections(Host host) {
+        return connections.stream()
+                .filter(c -> c.getUser().id().equals(host.id()))
                 .collect(Collectors.toSet());
     }
 
@@ -283,34 +280,27 @@ public class DefaultConnectionStore implements ConnectionStore {
             }
         }
 
+        // TODO: Do not remove the connection object, just the flows here, if the host only moved and was not removed?
         // remove all connections of the host
         private void removeHostConnections(HostEvent event){
-            Host host = event.subject();
-            for(IpAddress ipAddress : host.ipAddresses()) {
-                if(ipAddress.isIp4()) {
-                    Set<Connection> connections = getUserConnections(ipAddress.getIp4Address());
-                    for(Connection connection : connections){
-                        removeConnection(connection);
-                    }
-                }
+            Host eventSubject = event.subject();
+            Set<Connection> subjectConnections = getConnections(eventSubject);
+            log.info("DefaultConnectionStore: ConnectionHostListener event. Removed connections: {}", subjectConnections);
+            for(Connection connection : subjectConnections){
+                removeConnection(connection);
             }
         }
 
-        // todo: check if portal connection is already installed?
         // update the connections of the host
         private void updateHostConnections(HostEvent event){
-            Host host = event.subject();
-            for(IpAddress ipAddress : host.ipAddresses()){
-                if(ipAddress.isIp4()){
-                    Set<Connection> connections = getUserConnections(ipAddress.getIp4Address());
-                    log.info("DefaultConnectionStore: ConnectionHostListener event. Update connections: {}", connections);
-                    for(Connection connection : connections){
-                        // removes the old flow rules from the devices
-                        removeConnection(connection);
-                        // installs new flow rules depending on the new host location
-                        addConnection(connection);
-                    }
-                }
+            Host eventSubject = event.subject();
+            Set<Connection> subjectConnections = getConnections(eventSubject);
+            log.info("DefaultConnectionStore: ConnectionHostListener event. Update connections: {}", subjectConnections);
+            for(Connection connection : subjectConnections){
+                // removes the old flow rules from the devices
+                removeConnection(connection);
+                // installs new flow rules depending on the new host location
+                addConnection(connection);
             }
         }
     }

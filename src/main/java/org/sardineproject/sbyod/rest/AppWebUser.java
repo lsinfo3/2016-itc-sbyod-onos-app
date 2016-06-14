@@ -20,12 +20,14 @@ package org.sardineproject.sbyod.rest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.sun.javaws.exceptions.InvalidArgumentException;
 import org.onlab.packet.Ip4Address;
 import org.onosproject.net.Host;
 import org.onosproject.net.host.HostService;
 import org.onosproject.rest.AbstractWebResource;
 
 import org.sardineproject.sbyod.PortalManager;
+import org.sardineproject.sbyod.PortalService;
 import org.sardineproject.sbyod.service.ServiceId;
 import org.slf4j.Logger;
 import org.sardineproject.sbyod.connection.Connection;
@@ -42,6 +44,7 @@ import javax.ws.rs.DELETE;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Response;
+import java.security.InvalidParameterException;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -50,8 +53,6 @@ import java.util.stream.Collectors;
  */
 @Path("/user")
 public class AppWebUser extends AbstractWebResource {
-
-    // TODO: do not return the portal service
 
     private static final Logger log = getLogger(PortalManager.class);
 
@@ -86,8 +87,8 @@ public class AppWebUser extends AbstractWebResource {
         if(get(HostService.class).getHostsByIp(userIp).isEmpty())
             return Response.ok(INVALID_PARAMETER).build();
 
-        // get the services the user is allowed to use
-        Iterable<Service> services = get(ServiceStore.class).getServices();
+        // get the services the user is allowed to use without the portal service
+        Iterable<Service> services = removePortalService(get(ServiceStore.class).getServices());
         Set<Service> userServices = get(ConnectionStore.class).getUserConnections(userIp).stream()
                 .map(c -> c.getService())
                 .collect(Collectors.toSet());
@@ -165,8 +166,6 @@ public class AppWebUser extends AbstractWebResource {
         log.debug("AppWebUser: Adding connection between user ip = {} and serviceId = {}",
                 new String[]{userIp_, serviceId_});
 
-        // TODO: Do not install a connection for a host to the service running on this host!
-
         if(userIp_ == null || serviceId_ == null)
             return Response.ok(INVALID_PARAMETER).build();
 
@@ -190,6 +189,7 @@ public class AppWebUser extends AbstractWebResource {
 
         // install connection for every host and service
         for(Host srcHost : srcHosts) {
+            try{
                 Connection connection = new DefaultConnection(srcHost, service);
                 // if the connection does not already exist
                 if (!get(ConnectionStore.class).contains(connection)) {
@@ -198,6 +198,9 @@ public class AppWebUser extends AbstractWebResource {
                 } else{
                     log.debug("AppWebUser: Connection {} already exists", connection.toString());
                 }
+            } catch(InvalidParameterException ipe){
+                log.debug("AppWebUser: InvalidParameterException {}", ipe);
+            }
         }
 
         return Response.ok(ENABLED_TRUE).build();
@@ -223,6 +226,11 @@ public class AppWebUser extends AbstractWebResource {
             return Response.ok(INVALID_PARAMETER).build();
         }
 
+        Service portalService = get(PortalService.class).getPortalService();
+        if(service.equals(portalService)){
+            log.warn("AppWebUser: The portal service can not be disabled.");
+            return Response.ok(ENABLED_TRUE).build();
+        }
 
         if(srcHosts.isEmpty()) {
             log.debug("AppWebUser: No host found with IP = {}", userIp_);
@@ -232,7 +240,7 @@ public class AppWebUser extends AbstractWebResource {
             return Response.ok(ENABLED_FALSE).build();
         }
 
-        // install connection for every host and service
+        // remove connection for every host
         for(Host user : srcHosts) {
             Connection connection = get(ConnectionStore.class).getConnection(user, service);
             if(connection != null) {
@@ -242,5 +250,19 @@ public class AppWebUser extends AbstractWebResource {
         }
 
         return Response.ok(ENABLED_FALSE).build();
+    }
+
+
+    private Iterable<Service> removePortalService(Set<Service> services){
+        // get the portalService
+        Service portalService = get(PortalService.class).getPortalService();
+        // remove the portal service
+        if(portalService != null) {
+            return services.stream()
+                    .filter(s -> !s.equals(portalService))
+                    .collect(Collectors.toSet());
+        } else{
+            return services;
+        }
     }
 }

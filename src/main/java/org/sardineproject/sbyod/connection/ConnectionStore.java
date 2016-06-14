@@ -62,15 +62,6 @@ public interface ConnectionStore {
     Set<Connection> getUserConnections(Ip4Address srcIp, MacAddress srcMac);
 
     /**
-     * Get the set of connections for destination IP and destination traffic protocol port
-     *
-     * @param dstIp destination IP
-     * @param dstTpPort destination transport protocol port
-     * @return set of connections
-     */
-    Set<Connection> getServiceConnections(Ip4Address dstIp, TpPort dstTpPort);
-
-    /**
      * Get the connection between the user and the service
      *
      * @param user user
@@ -80,12 +71,20 @@ public interface ConnectionStore {
     Connection getConnection(Host user, Service service);
 
     /**
-     * Get the connections of a service
+     * Get all connections of a service
      *
      * @param service service
      * @return Set of connections
      */
     Set<Connection> getConnections(Service service);
+
+    /**
+     * Get all connections of a host defined by the id
+     *
+     * @param host Host user of the connection
+     * @return Set of connections
+     */
+    Set<Connection> getConnections(Host host);
 
     /**
      * Get all registered connections

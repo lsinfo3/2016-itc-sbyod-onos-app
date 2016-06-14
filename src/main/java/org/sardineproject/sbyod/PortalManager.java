@@ -267,7 +267,7 @@ public class PortalManager implements PortalService{
                     // add rules to routing devices enabling the connection between user and portal
                     Connection connection = new DefaultConnection(user, portalService);
                     // connectionStore only installs rule, if connection not already exists
-                    // TODO: check if connection is already installed!!!
+                    // TODO: check if connection is already installed!!! Remove as host listener is doing the job?
                     connectionStore.addConnection(connection);
                 }
 
@@ -486,12 +486,26 @@ public class PortalManager implements PortalService{
                 // get the default gateway host
                 Host defaultGw = getDefaultGatewayHost(defaultGateway);
 
+                Host eventSubject = event.subject();
+
                 // only install if host is not the portal or the default gateway
-                if(!portalService.getHost().equals(event.subject()) &&
-                        ((defaultGw != null) ? !defaultGw.equals(event.subject()) : true)) {
-                    Connection connection = new DefaultConnection(event.subject(), portalService);
+                if(!portalService.getHost().equals(eventSubject) &&
+                        ((defaultGw != null) ? !defaultGw.equals(eventSubject) : true)) {
+
+                    // create a new connection between the portal and the subject
+                    Connection connection = new DefaultConnection(eventSubject, portalService);
+
+                    // check if the host has obtained an IP address yet
+                    if(eventSubject.ipAddresses().isEmpty()){
+                        log.info("PortalManager: PortalConnectionHostListener - Portal connection for host {} " +
+                                "installed. Host has no IP address.", eventSubject.id());
+                        // flows are installed as soon as the host gets an ip address (Host_Update event)
+                        // in class defaultConnectionStore
+                    } else{
+                        log.info("PortalManager: PortalConnectionHostListener - Portal connection for host {} " +
+                                "installed.", eventSubject.id());
+                    }
                     connectionStore.addConnection(connection);
-                    log.info("PortalManager: Added connection for host {} to the portalService", event.subject().id());
                 }
             }
 

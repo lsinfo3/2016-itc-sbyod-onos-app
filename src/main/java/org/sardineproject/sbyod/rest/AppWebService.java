@@ -27,6 +27,7 @@ import org.onosproject.net.host.HostService;
 import org.onosproject.net.provider.ProviderId;
 import org.onosproject.rest.AbstractWebResource;
 import org.sardineproject.sbyod.PortalManager;
+import org.sardineproject.sbyod.PortalService;
 import org.sardineproject.sbyod.service.DefaultService;
 import org.sardineproject.sbyod.service.Service;
 import org.sardineproject.sbyod.service.ServiceId;
@@ -41,6 +42,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Response;
 
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.slf4j.LoggerFactory.getLogger;
 
@@ -49,8 +51,6 @@ import static org.slf4j.LoggerFactory.getLogger;
  */
 @Path("/service")
 public class AppWebService extends AbstractWebResource {
-
-    // TODO: do not return the portal service!
 
     private static final Logger log = getLogger(PortalManager.class);
 
@@ -68,7 +68,8 @@ public class AppWebService extends AbstractWebResource {
     public Response getServices(){
         log.debug("AppWebUser: Getting all services");
 
-        Iterable<Service> services = get(ServiceStore.class).getServices();
+        // do not return the portal service
+        Iterable<Service> services = removePortalService(get(ServiceStore.class).getServices());
         return Response.ok(encodeArray(Service.class, "services", services)).build();
     }
 
@@ -93,6 +94,14 @@ public class AppWebService extends AbstractWebResource {
         return Response.ok(encodeArray(Service.class, "services", (Iterable)result)).build();
     }
 
+    /**
+     * Create a new service
+     *
+     * @param ip_ Ip address of the host of the service
+     * @param tpPort_ The transport protocol port of the service
+     * @param name_ The name of the service
+     * @return Invalid_parameter if some parameter was invalid
+     */
     @POST
     @Path("/ip/{ip}/tpPort/{tpPort}/name/{name}")
     public Response setServices(@PathParam("ip") String ip_,
@@ -159,7 +168,9 @@ public class AppWebService extends AbstractWebResource {
         }
 
         Service service = get(ServiceStore.class).getService(id);
-        if(service != null) {
+        Service portalService = get(PortalService.class).getPortalService();
+        // deleting the portal service is not allowed
+        if(service != null && !service.equals(portalService)) {
             if(get(ServiceStore.class).removeService(service)){
                 return Response.ok(ENABLED_FALSE).build();
             } else{
@@ -168,6 +179,19 @@ public class AppWebService extends AbstractWebResource {
         }
         return Response.ok(ENABLED_FALSE).build();
 
+    }
+
+    private Iterable<Service> removePortalService(Set<Service> services){
+        // get the portalService
+        Service portalService = get(PortalService.class).getPortalService();
+        // remove the portal service
+        if(portalService != null) {
+            return services.stream()
+                    .filter(s -> !s.equals(portalService))
+                    .collect(Collectors.toSet());
+        } else{
+            return services;
+        }
     }
 
 }
