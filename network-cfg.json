@@ -1,0 +1,13 @@
+{
+  "apps": {
+    "org.sardineproject.sbyod": {
+      "sbyod" : {
+        "portalIp": "10.0.0.3",
+        "portalPort": 3000,
+        "defaultGateway": "10.0.0.4",
+        "consulIp": "127.0.0.1",
+        "consulPort": 8500
+      }
+    }
+  }
+}
