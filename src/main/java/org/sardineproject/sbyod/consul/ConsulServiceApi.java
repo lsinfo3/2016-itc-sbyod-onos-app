@@ -39,10 +39,7 @@ import org.sardineproject.sbyod.connection.ConnectionStore;
 import org.sardineproject.sbyod.service.Service;
 import org.sardineproject.sbyod.service.ServiceStore;
 
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
+import java.net.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -333,19 +330,26 @@ public class ConsulServiceApi implements ConsulService {
         public void run() {
 
             while(consulClient != null && !isInterrupted()) {
-                // get the consul index to wait for
-                QueryParams queryParams = new QueryParams("");
-                Response<Map<String, List<String>>> services = consulClient.getCatalogServices(queryParams);
+                try {
+                    // get the consul index to wait for
+                    QueryParams queryParams = new QueryParams("");
+                    Response<Map<String, List<String>>> services = consulClient.getCatalogServices(queryParams);
 
-                // TODO: check what happens if connection to consul is lost while doing blocking query
-                // start blocking query for index
-                queryParams = new QueryParams(WAIT_TIME, services.getConsulIndex());
-                if(!isInterrupted())
-                    services = consulClient.getCatalogServices(queryParams);
+                    // TODO: check what happens if connection to consul is lost while doing blocking query
+                    // start blocking query for index
+                    queryParams = new QueryParams(WAIT_TIME, services.getConsulIndex());
+                    if (!isInterrupted())
+                        services = consulClient.getCatalogServices(queryParams);
 
-                if(!isInterrupted()) {
-                    log.info("ConsulServiceApi: Updating consul services - {}", services.toString());
-                    updateConsulServices();
+                    if (!isInterrupted()) {
+                        log.info("ConsulServiceApi: Updating consul services - {}", services.toString());
+                        updateConsulServices();
+                    }
+                } catch(TransportException te){
+                    log.warn("ConsulServiceApi: Transport exception - check if the consul service is running " +
+                            "and restart the consul Sardine-BYOD extension.");
+                } finally {
+                    disconnectConsul();
                 }
             }
         }
