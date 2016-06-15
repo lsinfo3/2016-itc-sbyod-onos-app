@@ -29,6 +29,8 @@ import org.sardineproject.sbyod.ByodConfig;
 import org.sardineproject.sbyod.PortalManager;
 import org.sardineproject.sbyod.PortalService;
 import org.sardineproject.sbyod.connection.Connection;
+import org.sardineproject.sbyod.connection.ConnectionStore;
+import org.sardineproject.sbyod.connection.DefaultConnection;
 import org.sardineproject.sbyod.service.DefaultService;
 import org.sardineproject.sbyod.service.Service;
 import org.sardineproject.sbyod.service.ServiceStore;
@@ -60,10 +62,13 @@ public class DefaultDnsService implements DnsService {
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected ApplicationIdStore applicationIdStore;
 
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected ConnectionStore connectionStore;
+
     // set of dns connections for every host
-    private Set<Connection> dnsConnections;
     private Service dnsService;
 
+    // TODO: add listener for new host and add dns connection
 
     public void activateDns(){
 
@@ -78,7 +83,17 @@ public class DefaultDnsService implements DnsService {
             Host router = routers.iterator().next();
 
             dnsService = new DefaultService(router, TpPort.tpPort(53), "DnsService", ProviderId.NONE);
-            // TODO: install service for every host and remove dns in "DefaultBasicRuleInstalle"
+            serviceStore.addService(dnsService);
+
+            // connect all valid hosts to the dns service
+            for(Host host : hostService.getHosts()){
+                // do not install the service for the router itself
+                if(!host.equals(router)){
+                    Connection connection = new DefaultConnection(host, dnsService);
+                    connectionStore.addConnection(connection);
+                }
+            }
+            // TODO: remove dns in "DefaultBasicRuleInstaller"
         } else if(routers.isEmpty()){
             log.warn("BasicRuleInstaller: No host found with IP={} to use as DNS service", cfg.defaultGateway());
         } else{
@@ -88,6 +103,12 @@ public class DefaultDnsService implements DnsService {
     }
 
     public void deactivateDns(){
-
+        // get all connections to the dns router
+        Set<Connection> dnsConnections = connectionStore.getConnections(dnsService);
+        // remove all connections of the dns router
+        dnsConnections.forEach(dnsC -> connectionStore.removeConnection(dnsC));
+        // remove the dns service from the service store
+        serviceStore.removeService(dnsService);
+        dnsService = null;
     }
 }
