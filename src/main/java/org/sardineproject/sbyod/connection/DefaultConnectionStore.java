@@ -291,6 +291,7 @@ public class DefaultConnectionStore implements ConnectionStore {
             }
         }
 
+        // TODO: Update still not works! Probably no ip assigned yet?
         // update the connections of the host
         private void updateHostConnections(HostEvent event){
             Host eventSubject = event.subject();
