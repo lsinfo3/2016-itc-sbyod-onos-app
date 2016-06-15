@@ -199,6 +199,7 @@ public class AppWebUser extends AbstractWebResource {
                 }
             } catch(InvalidParameterException ipe){
                 log.debug("AppWebUser: InvalidParameterException {}", ipe);
+                return Response.ok(ENABLED_FALSE).build();
             }
         }
 
