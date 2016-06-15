@@ -20,7 +20,6 @@ package org.sardineproject.sbyod.rest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.sun.javaws.exceptions.InvalidArgumentException;
 import org.onlab.packet.Ip4Address;
 import org.onosproject.net.Host;
 import org.onosproject.net.host.HostService;
