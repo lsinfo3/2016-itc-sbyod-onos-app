@@ -348,7 +348,6 @@ public class ConsulServiceApi implements ConsulService {
                 } catch(TransportException te){
                     log.warn("ConsulServiceApi: Transport exception - check if the consul service is running " +
                             "and restart the consul Sardine-BYOD extension.");
-                } finally {
                     disconnectConsul();
                 }
             }
