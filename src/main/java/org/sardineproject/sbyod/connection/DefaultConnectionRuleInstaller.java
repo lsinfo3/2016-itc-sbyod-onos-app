@@ -19,6 +19,7 @@ package org.sardineproject.sbyod.connection;
 
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.EthType;
+import org.onlab.packet.IPv4;
 import org.onlab.packet.IpAddress;
 import org.onosproject.core.ApplicationIdStore;
 import org.onosproject.net.*;
@@ -170,6 +171,8 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
     private void addFlowUserToService(PortNumber inPort, PortNumber outPort, DeviceId forDeviceId,
                                       Connection connection){
 
+        byte protocol = connection.getService().getProtocol();
+
         for(IpAddress userIp : connection.getUser().ipAddresses())
             for(IpAddress serviceIp : connection.getService().getHost().ipAddresses())
                 if(userIp.isIp4() && serviceIp.isIp4()) {
@@ -179,8 +182,15 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                             .matchIPSrc(userIp.toIpPrefix())
                             .matchEthSrc(connection.getUser().mac())
                             .matchIPDst(serviceIp.toIpPrefix())
-                            .matchIPProtocol(connection.getService().getProtocol())
-                            .matchTcpDst(connection.getService().getTpPort());
+                            .matchIPProtocol(protocol);
+                            if(protocol == IPv4.PROTOCOL_TCP){
+                                trafficSelectorBuilder.matchTcpDst(connection.getService().getTpPort());
+                            } else if(protocol == IPv4.PROTOCOL_UDP){
+                                trafficSelectorBuilder.matchUdpDst(connection.getService().getTpPort());
+                            } else{
+                                log.warn("DefaultConnectionRuleInstaller: Defined internet protocol not supported!");
+                                return;
+                            }
 
                     TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
                             .setOutput(outPort);
