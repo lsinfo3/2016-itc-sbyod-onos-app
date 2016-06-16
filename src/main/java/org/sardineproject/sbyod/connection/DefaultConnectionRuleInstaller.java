@@ -181,7 +181,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                             .matchIPSrc(userIp.toIpPrefix())
                             .matchEthSrc(connection.getUser().mac())
                             .matchIPDst(serviceIp.toIpPrefix())
-                            .matchIPProtocol(IPv4.PROTOCOL_TCP)
+                            .matchIPProtocol(connection.getService().getTpProtocol())
                             .matchTcpDst(connection.getService().getTpPort());
 
                     TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()

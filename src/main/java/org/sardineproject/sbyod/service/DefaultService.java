@@ -44,6 +44,10 @@ public class DefaultService extends AbstractElement implements Service {
     private Discovery discovery;
     private String icon = "list";
 
+    // fields describing which ip protocol the service has
+    // every service is by default tcp
+    private byte tpProtocol = IPv4.PROTOCOL_TCP;
+
     // for serialization
     private DefaultService(){
         this.host = null;
@@ -173,6 +177,26 @@ public class DefaultService extends AbstractElement implements Service {
     @Override
     public String getIcon() {
         return icon;
+    }
+
+    /**
+     * Define the transport protocol of the service
+     *
+     * @param tpProtocol the transport protocol of the service
+     */
+    @Override
+    public void setTpProtocol(byte tpProtocol) {
+        this.tpProtocol = tpProtocol;
+    }
+
+    /**
+     * Return the transport protocol of the service
+     *
+     * @return transport protocol
+     */
+    @Override
+    public byte getTpProtocol() {
+        return tpProtocol;
     }
 
     /**

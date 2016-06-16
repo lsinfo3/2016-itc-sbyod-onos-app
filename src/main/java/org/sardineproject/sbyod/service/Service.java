@@ -72,4 +72,16 @@ public interface Service extends Element{
      * @return symbol string
      */
     String getIcon();
+
+    /**
+     * Define the transport protocol of the service
+     * @param tpProtocol the transport protocol of the service
+     */
+    void setTpProtocol(byte tpProtocol);
+
+    /**
+     * Return the transport protocol of the service
+     * @return transport protocol
+     */
+    byte getTpProtocol();
 }
