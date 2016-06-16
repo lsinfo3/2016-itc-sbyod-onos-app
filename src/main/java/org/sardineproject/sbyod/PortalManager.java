@@ -40,6 +40,7 @@ import org.onosproject.net.packet.*;
 import org.onosproject.net.Host;
 import org.onosproject.net.provider.ProviderId;
 import org.sardineproject.sbyod.consul.ConsulService;
+import org.sardineproject.sbyod.dns.DnsService;
 import org.sardineproject.sbyod.service.ServiceId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,6 +85,9 @@ public class PortalManager implements PortalService{
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected FlowRuleService flowRuleService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected DnsService dnsService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected NetworkConfigRegistry cfgService;
@@ -575,6 +579,7 @@ public class PortalManager implements PortalService{
 
             if(cfg.defaultGateway() != null){
                 defaultGateway = cfg.defaultGateway();
+                dnsService.activateDns();
                 log.info("PortalManager: Default gateway set to {}", defaultGateway);
             }
 

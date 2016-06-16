@@ -16,9 +16,7 @@
 
 package org.sardineproject.sbyod.dns;
 
-import org.apache.felix.scr.annotations.Component;
-import org.apache.felix.scr.annotations.Reference;
-import org.apache.felix.scr.annotations.ReferenceCardinality;
+import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.IPv4;
 import org.onlab.packet.TpPort;
 import org.onosproject.core.ApplicationIdStore;
@@ -68,9 +66,24 @@ public class DefaultDnsService implements DnsService {
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected ConnectionStore connectionStore;
 
+    private HostListener dnsHostListener;
+
+    private Host router;
+
     // set of dns connections for every host
     private Service dnsServiceTcp;
     private Service dnsServiceUdp;
+
+    @Activate
+    protected void activate(){
+        dnsHostListener = new DnsHostListener();
+        hostService.addListener(dnsHostListener);
+    }
+
+    @Deactivate
+    protected void deactivate(){
+        hostService.removeListener(dnsHostListener);
+    }
 
     // TODO: add listener for new host and add dns connection
 
@@ -84,7 +97,7 @@ public class DefaultDnsService implements DnsService {
         // if exactly one host was found
         if(routers.size() == 1){
             // get the only one router host
-            Host router = routers.iterator().next();
+            router = routers.iterator().next();
             log.info("DefaultDnsService: Found router with id={}", router.id());
 
             // dns running on both tcp and udp protocol
@@ -143,7 +156,14 @@ public class DefaultDnsService implements DnsService {
          */
         @Override
         public void event(HostEvent event) {
+            if(event.type().equals(HostEvent.Type.HOST_ADDED) &&
+                    !event.subject().equals(router)){
+                Host subject = event.subject();
+                log.info("DefaultDnsService: Adding dns connection for host={}", subject.id());
+                connectionStore.addConnection(new DefaultConnection(subject, dnsServiceTcp));
+                connectionStore.addConnection(new DefaultConnection(subject, dnsServiceUdp));
 
+            }
         }
     }
 }
