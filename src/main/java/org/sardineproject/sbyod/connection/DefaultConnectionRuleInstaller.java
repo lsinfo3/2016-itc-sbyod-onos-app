@@ -17,10 +17,8 @@
  */
 package org.sardineproject.sbyod.connection;
 
-import com.sun.jersey.core.impl.provider.entity.XMLJAXBElementProvider;
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.EthType;
-import org.onlab.packet.IPv4;
 import org.onlab.packet.IpAddress;
 import org.onosproject.core.ApplicationIdStore;
 import org.onosproject.net.*;
@@ -181,7 +179,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                             .matchIPSrc(userIp.toIpPrefix())
                             .matchEthSrc(connection.getUser().mac())
                             .matchIPDst(serviceIp.toIpPrefix())
-                            .matchIPProtocol(connection.getService().getTpProtocol())
+                            .matchIPProtocol(connection.getService().getProtocol())
                             .matchTcpDst(connection.getService().getTpPort());
 
                     TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()

@@ -19,10 +19,13 @@ package org.sardineproject.sbyod.dns;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
+import org.onlab.packet.IPv4;
 import org.onlab.packet.TpPort;
 import org.onosproject.core.ApplicationIdStore;
 import org.onosproject.net.Host;
 import org.onosproject.net.config.NetworkConfigRegistry;
+import org.onosproject.net.host.HostEvent;
+import org.onosproject.net.host.HostListener;
 import org.onosproject.net.host.HostService;
 import org.onosproject.net.provider.ProviderId;
 import org.sardineproject.sbyod.ByodConfig;
@@ -66,7 +69,8 @@ public class DefaultDnsService implements DnsService {
     protected ConnectionStore connectionStore;
 
     // set of dns connections for every host
-    private Service dnsService;
+    private Service dnsServiceTcp;
+    private Service dnsServiceUdp;
 
     // TODO: add listener for new host and add dns connection
 
@@ -81,34 +85,65 @@ public class DefaultDnsService implements DnsService {
         if(routers.size() == 1){
             // get the only one router host
             Host router = routers.iterator().next();
+            log.info("DefaultDnsService: Found router with id={}", router.id());
 
-            dnsService = new DefaultService(router, TpPort.tpPort(53), "DnsService", ProviderId.NONE);
-            serviceStore.addService(dnsService);
+            // dns running on both tcp and udp protocol
+            dnsServiceTcp = new DefaultService(router, TpPort.tpPort(53), "DnsServiceTcp", ProviderId.NONE);
+            dnsServiceTcp.setProtocol(IPv4.PROTOCOL_TCP);
+            serviceStore.addService(dnsServiceTcp);
+
+            dnsServiceUdp = new DefaultService(router, TpPort.tpPort(53), "DnsServiceUdp", ProviderId.NONE);
+            dnsServiceUdp.setProtocol(IPv4.PROTOCOL_UDP);
+            serviceStore.addService(dnsServiceUdp);
+
+            log.info("DefaultDnsService: Added tcp and upd service for dns");
 
             // connect all valid hosts to the dns service
             for(Host host : hostService.getHosts()){
                 // do not install the service for the router itself
                 if(!host.equals(router)){
-                    Connection connection = new DefaultConnection(host, dnsService);
-                    connectionStore.addConnection(connection);
+                    // install the connection for both services
+                    connectionStore.addConnection(new DefaultConnection(host, dnsServiceTcp));
+                    connectionStore.addConnection(new DefaultConnection(host, dnsServiceUdp));
+
+                    log.info("DefaultDnsService: Added dns connection for host={}", host.id());
                 }
             }
-            // TODO: remove dns in "DefaultBasicRuleInstaller"
         } else if(routers.isEmpty()){
-            log.warn("BasicRuleInstaller: No host found with IP={} to use as DNS service", cfg.defaultGateway());
+            log.warn("DefaultDnsService: No host found with IP={} to use as DNS service", cfg.defaultGateway());
         } else{
-            log.warn("BasicRuleInstaller: More than one host found with IP={} to use as DNS service", cfg.defaultGateway());
+            log.warn("DefaultDnsService: More than one host found with IP={} to use as DNS service", cfg.defaultGateway());
         }
 
     }
 
     public void deactivateDns(){
+        removeConnection(dnsServiceTcp);
+        removeConnection(dnsServiceUdp);
+        dnsServiceTcp = null;
+        dnsServiceUdp = null;
+        log.info("DefaultDnsService: Removed dns connections.");
+    }
+
+    private void removeConnection(Service service){
         // get all connections to the dns router
-        Set<Connection> dnsConnections = connectionStore.getConnections(dnsService);
+        Set<Connection> connections = connectionStore.getConnections(service);
         // remove all connections of the dns router
-        dnsConnections.forEach(dnsC -> connectionStore.removeConnection(dnsC));
+        connections.forEach(c -> connectionStore.removeConnection(c));
         // remove the dns service from the service store
-        serviceStore.removeService(dnsService);
-        dnsService = null;
+        serviceStore.removeService(service);
+    }
+
+    private class DnsHostListener implements HostListener{
+
+        /**
+         * Reacts to the specified event.
+         *
+         * @param event event to be processed
+         */
+        @Override
+        public void event(HostEvent event) {
+
+        }
     }
 }

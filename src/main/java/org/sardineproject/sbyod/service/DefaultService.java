@@ -46,7 +46,7 @@ public class DefaultService extends AbstractElement implements Service {
 
     // fields describing which ip protocol the service has
     // every service is by default tcp
-    private byte tpProtocol = IPv4.PROTOCOL_TCP;
+    private byte protocol = IPv4.PROTOCOL_TCP;
 
     // for serialization
     private DefaultService(){
@@ -182,11 +182,11 @@ public class DefaultService extends AbstractElement implements Service {
     /**
      * Define the transport protocol of the service
      *
-     * @param tpProtocol the transport protocol of the service
+     * @param protocol the transport protocol of the service
      */
     @Override
-    public void setTpProtocol(byte tpProtocol) {
-        this.tpProtocol = tpProtocol;
+    public void setProtocol(byte protocol) {
+        this.protocol = protocol;
     }
 
     /**
@@ -195,8 +195,8 @@ public class DefaultService extends AbstractElement implements Service {
      * @return transport protocol
      */
     @Override
-    public byte getTpProtocol() {
-        return tpProtocol;
+    public byte getProtocol() {
+        return protocol;
     }
 
     /**
