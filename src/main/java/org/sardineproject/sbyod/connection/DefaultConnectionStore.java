@@ -158,6 +158,9 @@ public class DefaultConnectionStore implements ConnectionStore {
         // would remove it again
         connections.remove(connection);
 
+        // Fixme: only remove flows for direction service -> user,
+        // Fixme: if no other connection from the user to the service exists!
+
         // remove the flow objectives on the network devices
         Map<ForwardingObjective, DeviceId> forwardingObjectives = connection.getObjectives();
         forwardingObjectives.forEach((forwardingObjective, deviceId) ->
