@@ -104,30 +104,20 @@ public class DefaultConfigurationManager implements ConfigurationManager{
                 return;
             }
 
-            // get the portal service
-            Service portal = portalService.getPortalService();
-
             // check if portal config is set and try to connect to new portal location
             if(cfg.portalIp() != null && cfg.portalPort() != -1){
 
+                // get the portal service
+                Service portal = portalService.getPortalService();
+
                 // only change and update if portal config has changed
-                if(!portal.getHost().ipAddresses().contains(cfg.portalIp()) ||
+                if(portal == null ||
+                        !portal.getHost().ipAddresses().contains(cfg.portalIp()) ||
                         !portal.getTpPort().equals(TpPort.tpPort(cfg.portalPort()))) {
 
                     portalService.setPortal(cfg.portalIp(), TpPort.tpPort(cfg.portalPort()));
                     log.info("DefaultConfigurationManager: Set portal ip to {} and port to {} and updated portal", cfg.portalIp(), cfg.portalPort());
                 }
-            } else if(cfg.portalIp() != null){
-
-                // only change and update if portal config has changed
-                if(!portal.getHost().ipAddresses().contains(cfg.portalIp())) {
-
-                    // set the new ip and leave the old tp port
-                    portalService.setPortal(cfg.portalIp(), portal.getTpPort());
-                    log.info("DefaultConfigurationManager: Set portal ip to {} and updated portal", cfg.portalIp());
-                }
-            } else{
-                log.info("DefaultConfigurationManager: No portal configured");
             }
 
 
