@@ -222,7 +222,7 @@ public class PortalManager implements PortalService{
             }
 
             // install rule only if packet is not coming from the portal
-            if(!portalService.host().ipAddresses().contains(srcIp)) {
+            if(!portalService.ipAddress().equals(srcIp)) {
 
                 // install rules for all users with source ip address
                 for (Host user : hostService.getHostsByIp(srcIp)) {
@@ -237,7 +237,7 @@ public class PortalManager implements PortalService{
                 // TODO: redirect packets directly in the controller without flow rules
                 // TODO: change src ip address of host, bypassing the installed portal flow rules
                 // redirect if the destination of the packet differs from the portal addresses
-                if (!portalService.host().ipAddresses().contains(dstIp)) {
+                if (!portalService.ipAddress().equals(dstIp)) {
                     // install redirect rules in the network device flow table
 
                     // no redirect with flows as requested in issue #1
@@ -330,49 +330,18 @@ public class PortalManager implements PortalService{
     }
 
     /**
-     * Get the Mac Address of the portal
-     *
-     * @return MacAddress
-     */
-    @Override
-    public MacAddress getPortalMac() {
-        Host portal = this.getPortal();
-        if(portal != null){
-            return portal.mac();
-            } else{
-            return null;
-        }
-    }
-
-    /**
      * Get the Ip Address of the portal
      *
      * @return IpAddress
      */
     @Override
-    public Set<IpAddress> getPortalIp() {
-        Host portal = this.getPortal();
-        if(portal != null){
-            return portal.ipAddresses();
+    public Ip4Address getPortalIp() {
+        if(portalId != null) {
+            Service portalService = serviceStore.getService(portalId);
+            return portalService.ipAddress();
         } else{
             return null;
         }
-    }
-
-    /**
-     * Get the portal as host
-     *
-     * @return Host
-     */
-    @Override
-    public Host getPortal() {
-        if(portalId != null){
-            Service portalService = serviceStore.getService(portalId);
-            if(portalService != null){
-                return portalService.host();
-            }
-        }
-        return null;
     }
 
     /**
@@ -409,7 +378,7 @@ public class PortalManager implements PortalService{
             for (Host host : hosts) {
 
                 // no connection for the portal itself and the default gateway
-                if(!portalService.host().equals(host) &&
+                if(!host.ipAddresses().contains(portalService.ipAddress()) &&
                         ((defaultGw != null) ? !defaultGw.equals(host) : true)) {
                     Connection connection = new DefaultConnection(host, portalService);
                     connectionStore.addConnection(connection);
@@ -456,7 +425,7 @@ public class PortalManager implements PortalService{
                 Host eventSubject = event.subject();
 
                 // only install if host is not the portal or the default gateway
-                if(!portalService.host().equals(eventSubject) &&
+                if(!eventSubject.ipAddresses().contains(portalService.ipAddress()) &&
                         ((defaultGw != null) ? !defaultGw.equals(eventSubject) : true)) {
 
                     // create a new connection between the portal and the subject

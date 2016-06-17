@@ -46,25 +46,11 @@ public interface PortalService {
     boolean setPortal(Ip4Address portalIp, TpPort portalTpPort);
 
     /**
-     * Get the Mac Address of the portal
-     *
-     * @return MacAddress
-     */
-    MacAddress getPortalMac();
-
-    /**
      * Get the Ip Address of the portal
      *
      * @return IpAddress
      */
-    Set<IpAddress> getPortalIp();
-
-    /**
-     * Get the portal as host
-     *
-     * @return Host
-     */
-    Host getPortal();
+    Ip4Address getPortalIp();
 
     /**
      * Get the portal service

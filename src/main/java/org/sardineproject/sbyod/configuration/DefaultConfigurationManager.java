@@ -112,7 +112,7 @@ public class DefaultConfigurationManager implements ConfigurationManager{
 
                 // only change and update if portal config has changed
                 if(portal == null ||
-                        !portal.host().ipAddresses().contains(cfg.portalIp()) ||
+                        !portal.ipAddress().equals(cfg.portalIp()) ||
                         !portal.tpPort().equals(TpPort.tpPort(cfg.portalPort()))) {
 
                     portalService.setPortal(cfg.portalIp(), TpPort.tpPort(cfg.portalPort()));

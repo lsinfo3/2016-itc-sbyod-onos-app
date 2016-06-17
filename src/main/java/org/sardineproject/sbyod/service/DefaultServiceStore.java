@@ -207,7 +207,7 @@ public class DefaultServiceStore implements ServiceStore {
     @Override
     public Set<org.sardineproject.sbyod.service.Service> getService(Ip4Address ip4Address) {
         return services.stream()
-                .filter(s -> s.host().ipAddresses().contains(ip4Address))
+                .filter(s -> s.ipAddress().equals(ip4Address))
                 .collect(Collectors.toSet());
     }
 

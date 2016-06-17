@@ -162,8 +162,6 @@ public class DefaultConnectionStore implements ConnectionStore {
 
         // remove the flow objectives on the network devices
         Map<ForwardingObjective, DeviceId> forwardingObjectives = connection.getObjectives();
-        // the host of the service
-        Host serviceHost = connection.getService().host();
 
         for(ForwardingObjective fo : forwardingObjectives.keySet()){
 
@@ -173,10 +171,10 @@ public class DefaultConnectionStore implements ConnectionStore {
             // get the selector source ip criterion of the flow objective
             IPCriterion ip4srcCriterion = (IPCriterion)fo.selector().getCriterion(Criterion.Type.IPV4_SRC);
             // check if the flow objective is an objective for the direction service to user
-            if(serviceHost.ipAddresses().contains(ip4srcCriterion.ip().address())){
+            if(connection.getService().ipAddress().equals(ip4srcCriterion.ip().address())){
                 // check if the user has another connection to the same service host
                 Set<Connection> userConnectionsToSameHost = getConnections(connection.getUser()).stream()
-                        .filter(c -> c.getService().host().equals(serviceHost))
+                        .filter(c -> c.getService().ipAddress().equals(connection.getService().ipAddress()))
                         .collect(Collectors.toSet());
                 if(userConnectionsToSameHost.isEmpty()){
                     // no other connection to same host found -> remove service to host flow objective
