@@ -16,6 +16,7 @@
 
 package org.sardineproject.sbyod.dns;
 
+import com.google.common.collect.Sets;
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.IPv4;
 import org.onlab.packet.TpPort;
@@ -37,6 +38,7 @@ import org.sardineproject.sbyod.service.Service;
 import org.sardineproject.sbyod.service.ServiceStore;
 import org.slf4j.Logger;
 
+import java.util.HashSet;
 import java.util.Set;
 
 import static org.slf4j.LoggerFactory.getLogger;
@@ -84,8 +86,6 @@ public class DefaultDnsService implements DnsService {
     protected void deactivate(){
         hostService.removeListener(dnsHostListener);
     }
-
-    // TODO: add listener for new host and add dns connection
 
     public void activateDns(){
 
@@ -136,6 +136,19 @@ public class DefaultDnsService implements DnsService {
         dnsServiceTcp = null;
         dnsServiceUdp = null;
         log.info("DefaultDnsService: Removed dns connections.");
+    }
+
+    /**
+     * Return a list of the dns services
+     *
+     * @return list of services
+     */
+    @Override
+    public Set<Service> getDnsServices() {
+        if(dnsServiceUdp != null && dnsServiceTcp != null)
+            return Sets.newHashSet(dnsServiceTcp, dnsServiceUdp);
+        else
+            return Sets.newHashSet();
     }
 
     private void removeConnection(Service service){

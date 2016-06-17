@@ -16,6 +16,10 @@
 
 package org.sardineproject.sbyod.dns;
 
+import org.sardineproject.sbyod.service.Service;
+
+import java.util.Set;
+
 /**
  * Created by lorry on 08.06.16.
  */
@@ -30,4 +34,10 @@ public interface DnsService {
      * Deactivating the dns service and removing all flow objectives
      */
     void deactivateDns();
+
+    /**
+     * Return a list of the dns services
+     * @return list of services
+     */
+    Set<Service> getDnsServices();
 }

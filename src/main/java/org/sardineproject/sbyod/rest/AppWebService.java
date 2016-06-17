@@ -28,6 +28,7 @@ import org.onosproject.net.provider.ProviderId;
 import org.onosproject.rest.AbstractWebResource;
 import org.sardineproject.sbyod.PortalManager;
 import org.sardineproject.sbyod.PortalService;
+import org.sardineproject.sbyod.dns.DnsService;
 import org.sardineproject.sbyod.service.DefaultService;
 import org.sardineproject.sbyod.service.Service;
 import org.sardineproject.sbyod.service.ServiceId;
@@ -69,7 +70,7 @@ public class AppWebService extends AbstractWebResource {
         log.debug("AppWebUser: Getting all services");
 
         // do not return the portal service
-        Iterable<Service> services = removePortalService(get(ServiceStore.class).getServices());
+        Iterable<Service> services = removeConfigurationServices(get(ServiceStore.class).getServices());
         return Response.ok(encodeArray(Service.class, "services", services)).build();
     }
 
@@ -181,17 +182,23 @@ public class AppWebService extends AbstractWebResource {
 
     }
 
-    private Iterable<Service> removePortalService(Set<Service> services){
+    /**
+     * This method removes all services from a set that are not intended for the user to manipulate,
+     * for example the portal service or the dns service
+     * @param services a set of services
+     * @return an iterable of services without configuration services
+     */
+    private Iterable<Service> removeConfigurationServices(Set<Service> services){
         // get the portalService
         Service portalService = get(PortalService.class).getPortalService();
-        // remove the portal service
-        if(portalService != null) {
-            return services.stream()
-                    .filter(s -> !s.equals(portalService))
-                    .collect(Collectors.toSet());
-        } else{
-            return services;
-        }
+        // get the dns services
+        Set<Service> dnsServices = get(DnsService.class).getDnsServices();
+
+        // remove the configuration services
+        return services.stream()
+                .filter(s -> !s.equals(portalService))
+                .filter(s -> !dnsServices.contains(s))
+                .collect(Collectors.toSet());
     }
 
 }

@@ -27,6 +27,7 @@ import org.onosproject.rest.AbstractWebResource;
 
 import org.sardineproject.sbyod.PortalManager;
 import org.sardineproject.sbyod.PortalService;
+import org.sardineproject.sbyod.dns.DnsService;
 import org.sardineproject.sbyod.service.ServiceId;
 import org.slf4j.Logger;
 import org.sardineproject.sbyod.connection.Connection;
@@ -59,7 +60,6 @@ public class AppWebUser extends AbstractWebResource {
     private final ObjectNode ENABLED_TRUE = mapper().createObjectNode().put("enabled", true);
     private final ObjectNode ENABLED_FALSE = mapper().createObjectNode().put("enabled", false);
 
-
     /**
      * Get the services the user with userIp is connected to.
      *
@@ -87,7 +87,7 @@ public class AppWebUser extends AbstractWebResource {
             return Response.ok(INVALID_PARAMETER).build();
 
         // get the services the user is allowed to use without the portal service
-        Iterable<Service> services = removePortalService(get(ServiceStore.class).getServices());
+        Iterable<Service> services = removeConfigurationServices(get(ServiceStore.class).getServices());
         Set<Service> userServices = get(ConnectionStore.class).getUserConnections(userIp).stream()
                 .map(c -> c.getService())
                 .collect(Collectors.toSet());
@@ -252,17 +252,22 @@ public class AppWebUser extends AbstractWebResource {
         return Response.ok(ENABLED_FALSE).build();
     }
 
-
-    private Iterable<Service> removePortalService(Set<Service> services){
+    /**
+     * This method removes all services from a set that are not intended for the user to manipulate,
+     * for example the portal service or the dns service
+     * @param services a set of services
+     * @return an iterable of services without configuration services
+     */
+    private Iterable<Service> removeConfigurationServices(Set<Service> services){
         // get the portalService
         Service portalService = get(PortalService.class).getPortalService();
-        // remove the portal service
-        if(portalService != null) {
-            return services.stream()
-                    .filter(s -> !s.equals(portalService))
-                    .collect(Collectors.toSet());
-        } else{
-            return services;
-        }
+        // get the dns services
+        Set<Service> dnsServices = get(DnsService.class).getDnsServices();
+
+        // remove the configuration services
+        return services.stream()
+                .filter(s -> !s.equals(portalService))
+                .filter(s -> !dnsServices.contains(s))
+                .collect(Collectors.toSet());
     }
 }
