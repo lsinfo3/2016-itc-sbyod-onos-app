@@ -125,7 +125,7 @@ public class DefaultConfigurationManager implements ConfigurationManager{
             if(cfg.defaultGateway() != null){
                 dnsService.deactivateDns();
                 dnsService.activateDns();
-                log.info("DefaultConfigurationManager: Activated dns service for default gateway={}", cfg.defaultGateway());
+                log.info("DefaultConfigurationManager: Configured dns service for default gateway={}", cfg.defaultGateway());
             }
 
 
@@ -136,14 +136,14 @@ public class DefaultConfigurationManager implements ConfigurationManager{
                         !(TpPort.tpPort(cfg.consulPort())).equals(consulService.getConsulTpPort())){
                     // connect to new consul client
                     consulService.connectConsul(cfg.consulIp(), TpPort.tpPort(cfg.consulPort()));
-                    log.info("PortalManager: Configured consul ip={} and tpPort={}", cfg.consulIp(), cfg.consulPort());
+                    log.info("DefaultConfigurationManager: Configured consul ip={} and tpPort={}", cfg.consulIp(), cfg.consulPort());
                 }
             } else if(cfg.consulIp() != null){
                 // only change and update if consul config has changed
                 if(!consulService.getConsulIp().equals(cfg.consulIp())){
                     // connect to new consul client
                     consulService.connectConsul(cfg.consulIp());
-                    log.info("PortalManager: Configured consul ip={}", cfg.consulIp());
+                    log.info("DefaultConfigurationManager: Configured consul ip={}", cfg.consulIp());
                 }
             }
         }
@@ -162,7 +162,7 @@ public class DefaultConfigurationManager implements ConfigurationManager{
 
                 ByodConfig cfg = cfgService.getConfig(applicationIdStore.getAppId(APPLICATION_ID), ByodConfig.class);
                 reconfigureNetwork(cfg);
-                log.info("Reconfigured!");
+                log.info("DefaultConfigurationManager: Reconfigured!");
             }
         }
     }
