@@ -28,6 +28,9 @@ import org.onosproject.core.ApplicationIdStore;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.Host;
 import org.onosproject.net.flow.FlowRuleService;
+import org.onosproject.net.flow.criteria.Criteria;
+import org.onosproject.net.flow.criteria.Criterion;
+import org.onosproject.net.flow.criteria.IPCriterion;
 import org.onosproject.net.flowobjective.FlowObjectiveService;
 import org.onosproject.net.flowobjective.ForwardingObjective;
 import org.onosproject.net.host.HostEvent;
@@ -158,15 +161,38 @@ public class DefaultConnectionStore implements ConnectionStore {
         // would remove it again
         connections.remove(connection);
 
-        // Fixme: only remove flows for direction service -> user,
-        // Fixme: if no other connection from the user to the service exists!
+        // todo: also reset flow objectives of the connection if it is not completely deleted?
 
         // remove the flow objectives on the network devices
         Map<ForwardingObjective, DeviceId> forwardingObjectives = connection.getObjectives();
-        forwardingObjectives.forEach((forwardingObjective, deviceId) ->
-                {flowObjectiveService.forward(deviceId, forwardingObjective);
+        // the host of the service
+        Host serviceHost = connection.getService().getHost();
+
+        for(ForwardingObjective fo : forwardingObjectives.keySet()){
+
+            // get the device id where the objective is installed on
+            DeviceId deviceId = forwardingObjectives.get(fo);
+
+            // get the selector source ip criterion of the flow objective
+            IPCriterion ip4srcCriterion = (IPCriterion)fo.selector().getCriterion(Criterion.Type.IPV4_SRC);
+            // check if the flow objective is an objective for the direction service to user
+            if(serviceHost.ipAddresses().contains(ip4srcCriterion.ip())){
+                // check if the user has another connection to the same service host
+                Set<Connection> userConnectionsToSameHost = getConnections(connection.getUser()).stream()
+                        .filter(c -> c.getService().getHost().equals(serviceHost))
+                        .collect(Collectors.toSet());
+                if(userConnectionsToSameHost.isEmpty()){
+                    // no other connection to same host found -> remove service to host flow objective
                     log.debug("DefaultConnectionStore: Removing flow objective \n{} \n" +
-                            "for device {} in method removeConnection()", forwardingObjective, deviceId);});
+                            "for device {} in method removeConnection()", fo, deviceId);
+                    flowObjectiveService.forward(forwardingObjectives.get(fo), fo);
+                }
+            } else{
+                log.debug("DefaultConnectionStore: Removing flow objective \n{} \n" +
+                        "for device {} in method removeConnection()", fo, deviceId);
+                flowObjectiveService.forward(forwardingObjectives.get(fo), fo);
+            }
+        }
     }
 
     /**
