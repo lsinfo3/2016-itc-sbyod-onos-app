@@ -20,15 +20,12 @@ package org.sardineproject.sbyod.connection;
 import org.apache.felix.scr.annotations.*;
 import org.apache.felix.scr.annotations.Service;
 import org.onlab.packet.Ip4Address;
-import org.onlab.packet.IpAddress;
 import org.onlab.packet.MacAddress;
-import org.onlab.packet.TpPort;
 import org.onosproject.codec.CodecService;
 import org.onosproject.core.ApplicationIdStore;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.Host;
 import org.onosproject.net.flow.FlowRuleService;
-import org.onosproject.net.flow.criteria.Criteria;
 import org.onosproject.net.flow.criteria.Criterion;
 import org.onosproject.net.flow.criteria.IPCriterion;
 import org.onosproject.net.flowobjective.FlowObjectiveService;
@@ -166,7 +163,7 @@ public class DefaultConnectionStore implements ConnectionStore {
         // remove the flow objectives on the network devices
         Map<ForwardingObjective, DeviceId> forwardingObjectives = connection.getObjectives();
         // the host of the service
-        Host serviceHost = connection.getService().getHost();
+        Host serviceHost = connection.getService().host();
 
         for(ForwardingObjective fo : forwardingObjectives.keySet()){
 
@@ -179,7 +176,7 @@ public class DefaultConnectionStore implements ConnectionStore {
             if(serviceHost.ipAddresses().contains(ip4srcCriterion.ip().address())){
                 // check if the user has another connection to the same service host
                 Set<Connection> userConnectionsToSameHost = getConnections(connection.getUser()).stream()
-                        .filter(c -> c.getService().getHost().equals(serviceHost))
+                        .filter(c -> c.getService().host().equals(serviceHost))
                         .collect(Collectors.toSet());
                 if(userConnectionsToSameHost.isEmpty()){
                     // no other connection to same host found -> remove service to host flow objective

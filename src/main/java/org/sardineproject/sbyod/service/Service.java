@@ -35,13 +35,13 @@ public interface Service extends Element{
      * Get the host where the service is running on
      * @return host
      */
-    Host getHost();
+    Host host();
 
     /**
      * Get the name of the service
      * @return name
      */
-    String getName();
+    String name();
 
     /**
      * Returns the element identifier.
@@ -55,26 +55,26 @@ public interface Service extends Element{
      * Get the transport protocol port of the service
      * @return TpPort
      */
-    TpPort getTpPort();
+    TpPort tpPort();
 
     /**
      * Get the discovery tag
      * @return Discovery
      */
-    DefaultService.Discovery getServiceDiscovery();
+    DefaultService.Discovery serviceDiscovery();
 
     /**
      * Returning the symbol to display in Portal
      *
      * @return symbol string
      */
-    String getIcon();
+    String icon();
 
     /**
      * Return the transport protocol of the service
      * @return transport protocol
      */
-    byte getProtocol();
+    byte protocol();
 
     /**
      * Get the ip address of the service

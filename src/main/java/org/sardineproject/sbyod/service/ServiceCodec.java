@@ -39,9 +39,9 @@ public class ServiceCodec extends JsonCodec<Service> {
         checkNotNull(service, "Service can not be null");
 
         return context.mapper().createObjectNode()
-                .put(name, service.getName())
+                .put(name, service.name())
                 .put(id, service.id().toString())
-                .put(tpPort, service.getTpPort().toString())
-                .put(icon, service.getIcon());
+                .put(tpPort, service.tpPort().toString())
+                .put(icon, service.icon());
     }
 }

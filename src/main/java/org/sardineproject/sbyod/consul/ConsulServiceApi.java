@@ -22,15 +22,13 @@ import com.ecwid.consul.v1.ConsulClient;
 import com.ecwid.consul.v1.QueryParams;
 import com.ecwid.consul.v1.Response;
 import com.ecwid.consul.v1.catalog.model.CatalogService;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.apache.felix.scr.annotations.*;
+import org.onlab.packet.Ip4Address;
 import org.onlab.packet.IpAddress;
 import org.onlab.packet.TpPort;
-import org.onosproject.net.ElementId;
 import org.onosproject.net.Host;
 import org.onosproject.net.host.HostService;
-import org.onosproject.net.provider.ProviderId;
 import org.sardineproject.sbyod.PortalManager;
 import org.sardineproject.sbyod.connection.DefaultConnection;
 import org.sardineproject.sbyod.service.DefaultService;
@@ -218,7 +216,7 @@ public class ConsulServiceApi implements ConsulService {
      */
     private Set<Service> getConsulServicesFromStore(){
         return serviceStore.getServices().stream()
-                .filter(s -> s.getServiceDiscovery().equals(Service.Discovery.CONSUL))
+                .filter(s -> s.serviceDiscovery().equals(Service.Discovery.CONSUL))
                 .collect(Collectors.toSet());
     }
 
@@ -279,13 +277,16 @@ public class ConsulServiceApi implements ConsulService {
 
         // get all hosts with corresponding ip address
         Set<Host> hosts;
+        Ip4Address serviceIpAddress = null;
         if (catalogService.getServiceAddress().isEmpty()) {
-            // default ip address is the consul ip address
+            // use the default ip address, that is the consul ip address
             hosts = hostService.getHostsByIp(IpAddress.valueOf(catalogService.getAddress()));
+            serviceIpAddress = Ip4Address.valueOf(catalogService.getAddress());
         } else {
             try {
                 // try to find the host in the onos cluster
                 hosts = hostService.getHostsByIp(IpAddress.valueOf(catalogService.getServiceAddress()));
+                serviceIpAddress = Ip4Address.valueOf(catalogService.getServiceAddress());
             } catch (IllegalArgumentException e) {
                 log.warn("ConsulServiceApi: Could not find host with address = {}, Error: {}",
                         catalogService.getServiceAddress(), e);
@@ -301,6 +302,7 @@ public class ConsulServiceApi implements ConsulService {
             // create a new byod service corresponding to the CatalogService
             DefaultService.Builder service = DefaultService.builder()
                     .withHost(host)
+                    .withIp(serviceIpAddress)
                     .withPort(TpPort.tpPort(catalogService.getServicePort()))
                     .withName(catalogService.getServiceName())
                     .withElementId(ServiceId.serviceId(URI.create(catalogService.getServiceId())))

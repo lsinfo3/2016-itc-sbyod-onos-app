@@ -95,12 +95,12 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                             "and service with IP={} Port={}",
                     new String[]{connection.getUser().ipAddresses().toString(),
                             connection.getUser().mac().toString(),
-                            connection.getService().getHost().ipAddresses().toString(),
-                            connection.getService().getTpPort().toString()});
+                            connection.getService().host().ipAddresses().toString(),
+                            connection.getService().tpPort().toString()});
 
 
         HostLocation userLocation = connection.getUser().location();
-        HostLocation serviceLocation = connection.getService().getHost().location();
+        HostLocation serviceLocation = connection.getService().host().location();
 
         // if user and service is connected to the same network device
         if(userLocation.deviceId().equals(serviceLocation.deviceId())){
@@ -171,10 +171,10 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
     private void addFlowUserToService(PortNumber inPort, PortNumber outPort, DeviceId forDeviceId,
                                       Connection connection){
 
-        byte protocol = connection.getService().getProtocol();
+        byte protocol = connection.getService().protocol();
 
         for(IpAddress userIp : connection.getUser().ipAddresses())
-            for(IpAddress serviceIp : connection.getService().getHost().ipAddresses())
+            for(IpAddress serviceIp : connection.getService().host().ipAddresses())
                 if(userIp.isIp4() && serviceIp.isIp4()) {
                     TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
                             .matchEthType(EthType.EtherType.IPV4.ethType().toShort())
@@ -184,9 +184,9 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                             .matchIPDst(serviceIp.toIpPrefix())
                             .matchIPProtocol(protocol);
                             if(protocol == IPv4.PROTOCOL_TCP){
-                                trafficSelectorBuilder.matchTcpDst(connection.getService().getTpPort());
+                                trafficSelectorBuilder.matchTcpDst(connection.getService().tpPort());
                             } else if(protocol == IPv4.PROTOCOL_UDP){
-                                trafficSelectorBuilder.matchUdpDst(connection.getService().getTpPort());
+                                trafficSelectorBuilder.matchUdpDst(connection.getService().tpPort());
                             } else{
                                 log.warn("DefaultConnectionRuleInstaller: Defined internet protocol not supported!");
                                 return;
@@ -223,7 +223,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                                       Connection connection){
 
         for(IpAddress userIp : connection.getUser().ipAddresses())
-            for(IpAddress serviceIp : connection.getService().getHost().ipAddresses())
+            for(IpAddress serviceIp : connection.getService().host().ipAddresses())
                 if(userIp.isIp4() && serviceIp.isIp4()) {
                     TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
                             .matchEthType(EthType.EtherType.IPV4.ethType().toShort())

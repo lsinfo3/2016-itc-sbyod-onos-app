@@ -18,10 +18,8 @@
 package org.sardineproject.sbyod.connection;
 
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.Host;
-import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flowobjective.ForwardingObjective;
 import org.sardineproject.sbyod.PortalManager;
 import org.slf4j.Logger;
@@ -29,9 +27,7 @@ import org.sardineproject.sbyod.service.Service;
 
 import java.security.InvalidParameterException;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 import static org.slf4j.LoggerFactory.getLogger;
 
@@ -55,7 +51,7 @@ public class DefaultConnection implements Connection{
                     this.getClass().toString()));
         }
 
-        if(user.equals(service.getHost())){
+        if(user.equals(service.host())){
             log.warn("DefaultConnection: Creating a connection for a host, where the service is running on," +
                     " is forbidden.\nHost={}\nService={}", user.id(), service);
             throw new InvalidParameterException(String.format("Invalid parameter in class : %s",

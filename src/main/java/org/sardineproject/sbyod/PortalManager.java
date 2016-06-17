@@ -20,26 +20,17 @@ package org.sardineproject.sbyod;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.*;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.net.DeviceId;
-import org.onosproject.net.config.ConfigFactory;
-import org.onosproject.net.config.NetworkConfigEvent;
-import org.onosproject.net.config.NetworkConfigListener;
-import org.onosproject.net.config.NetworkConfigRegistry;
 import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.*;
 import org.onosproject.net.host.*;
 import org.onosproject.net.packet.*;
 import org.onosproject.net.Host;
-import org.onosproject.net.provider.ProviderId;
-import org.sardineproject.sbyod.configuration.ByodConfig;
-import org.sardineproject.sbyod.consul.ConsulService;
-import org.sardineproject.sbyod.dns.DnsService;
 import org.sardineproject.sbyod.service.ServiceId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,7 +42,6 @@ import org.sardineproject.sbyod.service.DefaultService;
 import org.sardineproject.sbyod.service.ServiceStore;
 import org.sardineproject.sbyod.service.Service;
 //import org.osgi.service.component.ComponentContext;
-import static org.onosproject.net.config.basics.SubjectFactories.APP_SUBJECT_FACTORY;
 
 import java.util.*;
 import java.util.concurrent.locks.Lock;
@@ -232,7 +222,7 @@ public class PortalManager implements PortalService{
             }
 
             // install rule only if packet is not coming from the portal
-            if(!portalService.getHost().ipAddresses().contains(srcIp)) {
+            if(!portalService.host().ipAddresses().contains(srcIp)) {
 
                 // install rules for all users with source ip address
                 for (Host user : hostService.getHostsByIp(srcIp)) {
@@ -247,11 +237,11 @@ public class PortalManager implements PortalService{
                 // TODO: redirect packets directly in the controller without flow rules
                 // TODO: change src ip address of host, bypassing the installed portal flow rules
                 // redirect if the destination of the packet differs from the portal addresses
-                if (!portalService.getHost().ipAddresses().contains(dstIp)) {
+                if (!portalService.host().ipAddresses().contains(dstIp)) {
                     // install redirect rules in the network device flow table
 
                     // no redirect with flows as requested in issue #1
-                    // packetRedirectService.redirectToPortal(context, portalService.getHost());
+                    // packetRedirectService.redirectToPortal(context, portalService.host());
                 }
             }
         }
@@ -291,6 +281,7 @@ public class PortalManager implements PortalService{
             // create service for existing configuration
             Service portalService = DefaultService.builder()
                     .withHost(portalHosts.iterator().next())
+                    .withIp(portalIp)
                     .withPort(portalPort)
                     .withName("PortalService")
                     .build();
@@ -378,7 +369,7 @@ public class PortalManager implements PortalService{
         if(portalId != null){
             Service portalService = serviceStore.getService(portalId);
             if(portalService != null){
-                return portalService.getHost();
+                return portalService.host();
             }
         }
         return null;
@@ -418,7 +409,7 @@ public class PortalManager implements PortalService{
             for (Host host : hosts) {
 
                 // no connection for the portal itself and the default gateway
-                if(!portalService.getHost().equals(host) &&
+                if(!portalService.host().equals(host) &&
                         ((defaultGw != null) ? !defaultGw.equals(host) : true)) {
                     Connection connection = new DefaultConnection(host, portalService);
                     connectionStore.addConnection(connection);
@@ -465,7 +456,7 @@ public class PortalManager implements PortalService{
                 Host eventSubject = event.subject();
 
                 // only install if host is not the portal or the default gateway
-                if(!portalService.getHost().equals(eventSubject) &&
+                if(!portalService.host().equals(eventSubject) &&
                         ((defaultGw != null) ? !defaultGw.equals(eventSubject) : true)) {
 
                     // create a new connection between the portal and the subject

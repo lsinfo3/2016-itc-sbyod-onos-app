@@ -21,7 +21,6 @@ import org.onlab.packet.IPv4;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.TpPort;
 import org.onosproject.net.AbstractElement;
-import org.onosproject.net.Annotations;
 import org.onosproject.net.ElementId;
 import org.onosproject.net.Host;
 import org.onosproject.net.provider.ProviderId;
@@ -56,8 +55,8 @@ public class DefaultService extends AbstractElement implements Service {
         this.host = null;
         this.tpPort = null;
         this.name = null;
-        ip4Address = null;
-        discovery = null;
+        this.ip4Address = null;
+        this.discovery = null;
     }
 
     private DefaultService(Builder builder){
@@ -77,7 +76,7 @@ public class DefaultService extends AbstractElement implements Service {
      * @return host
      */
     @Override
-    public Host getHost() {
+    public Host host() {
         return host;
     }
 
@@ -87,7 +86,7 @@ public class DefaultService extends AbstractElement implements Service {
      * @return TpPort
      */
     @Override
-    public TpPort getTpPort() {
+    public TpPort tpPort() {
         return tpPort;
     }
 
@@ -97,7 +96,7 @@ public class DefaultService extends AbstractElement implements Service {
      * @return Discovery
      */
     @Override
-    public Discovery getServiceDiscovery() {
+    public Discovery serviceDiscovery() {
         return discovery;
     }
 
@@ -107,7 +106,7 @@ public class DefaultService extends AbstractElement implements Service {
      * @return icon string
      */
     @Override
-    public String getIcon() {
+    public String icon() {
         return icon;
     }
 
@@ -117,7 +116,7 @@ public class DefaultService extends AbstractElement implements Service {
      * @return transport protocol
      */
     @Override
-    public byte getProtocol() {
+    public byte protocol() {
         return protocol;
     }
 
@@ -137,7 +136,7 @@ public class DefaultService extends AbstractElement implements Service {
      * @return name
      */
     @Override
-    public String getName() {
+    public String name() {
         return name;
     }
 
@@ -207,7 +206,7 @@ public class DefaultService extends AbstractElement implements Service {
 
     public static final class Builder {
 
-        private Ip4Address ip4Address = Ip4Address.valueOf("127.0.0.1");
+        private Ip4Address ip4Address = null;
         private TpPort tpPort;
         private String name;
         private Discovery discovery = Discovery.NONE;
@@ -223,14 +222,14 @@ public class DefaultService extends AbstractElement implements Service {
         // creates a builder set to create a copy of the specified service.
         private Builder(Service service){
             this.ip4Address = service.ipAddress();
-            this.tpPort = service.getTpPort();
-            this.name = service.getName();
-            this.discovery = service.getServiceDiscovery();
-            this.icon = service.getIcon();
-            this.protocol = service.getProtocol();
+            this.tpPort = service.tpPort();
+            this.name = service.name();
+            this.discovery = service.serviceDiscovery();
+            this.icon = service.icon();
+            this.protocol = service.protocol();
             this.providerId = service.providerId();
             this.elementId = service.id();
-            this.host = service.getHost();
+            this.host = service.host();
         }
 
         public Builder withIp(Ip4Address ip4Address){
@@ -280,7 +279,7 @@ public class DefaultService extends AbstractElement implements Service {
 
         public Service build(){
             // Todo: use ip address instead of host
-            //checkNotNull(ip4Address, "Must have an IP address");
+            checkNotNull(ip4Address, "Must have an IP address");
             checkNotNull(tpPort, "Must have an TpPort");
             checkNotNull(name, "Must have a name");
             checkNotNull(host, "Must have a host");
