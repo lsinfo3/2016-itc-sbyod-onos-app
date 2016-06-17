@@ -17,9 +17,12 @@
  */
 package org.sardineproject.sbyod.service;
 
+import org.onlab.packet.Ip4Address;
 import org.onlab.packet.TpPort;
+import org.onosproject.net.ElementId;
 import org.onosproject.net.Host;
 import org.onosproject.net.Element;
+import org.onosproject.net.provider.ProviderId;
 
 /**
  * Created by lorry on 10.03.16.
@@ -84,4 +87,96 @@ public interface Service extends Element{
      * @return transport protocol
      */
     byte getProtocol();
+
+    /**
+     * Get the ip address of the service
+     *
+     * @return a Ip4Address
+     */
+    Ip4Address ipAddress();
+
+    /**
+     * A service builder
+     */
+    interface Builder {
+
+        /**
+         * Set the ip address of the service
+         *
+         * @param ip4Address an IPv4 address
+         * @return a service builder
+         */
+        Builder withIp(Ip4Address ip4Address);
+
+        /**
+         * Set the service name
+         *
+         * @param name a string
+         * @return a service builder
+         */
+        Builder withName(String name);
+
+        /**
+         * Set the transport protocol port
+         *
+         * @param tpPort a transport protocol port
+         * @return a service builder
+         */
+        Builder withPort(TpPort tpPort);
+
+        /**
+         * Set the discovery type
+         *
+         * @param discovery a discovery type
+         * @return a service builder
+         */
+        Builder withDiscovery(Discovery discovery);
+
+        /**
+         * Set the service icon from bootstrap glyphicon
+         *
+         * @param icon a string
+         * @return a service builder
+         */
+        Builder withIcon(String icon);
+
+        /**
+         * Set the ipv4 protocol
+         *
+         * @param protocol a byte
+         * @return a service builder
+         */
+        Builder withProtocol(byte protocol);
+
+        /**
+         * Set the provider id
+         *
+         * @param providerId a provider id
+         * @return a service builder
+         */
+        Builder withProviderId(ProviderId providerId);
+
+        /**
+         * Set the element id
+         *
+         * @param elementId a element id
+         * @return a service builder
+         */
+        Builder withElementId(ElementId elementId);
+
+        /**
+         * Set the host
+         *
+         * @param host a host
+         * @return a service builder
+         */
+        Builder withHost(Host host);
+
+        /**
+         * Builds the service
+         *
+         * @return a service
+         */
+        Service build();
+    }
 }
