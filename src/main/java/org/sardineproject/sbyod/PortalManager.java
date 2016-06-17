@@ -23,8 +23,6 @@ import static com.google.common.base.Preconditions.checkState;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import org.apache.felix.scr.annotations.*;
-import org.onlab.osgi.DefaultServiceDirectory;
-import org.onlab.osgi.ServiceDirectory;
 import org.onlab.packet.*;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
@@ -39,6 +37,7 @@ import org.onosproject.net.host.*;
 import org.onosproject.net.packet.*;
 import org.onosproject.net.Host;
 import org.onosproject.net.provider.ProviderId;
+import org.sardineproject.sbyod.configuration.ByodConfig;
 import org.sardineproject.sbyod.consul.ConsulService;
 import org.sardineproject.sbyod.dns.DnsService;
 import org.sardineproject.sbyod.service.ServiceId;
@@ -57,7 +56,6 @@ import static org.onosproject.net.config.basics.SubjectFactories.APP_SUBJECT_FAC
 import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.stream.Collectors;
 
 
 /**
@@ -86,12 +84,6 @@ public class PortalManager implements PortalService{
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected FlowRuleService flowRuleService;
 
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected DnsService dnsService;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected NetworkConfigRegistry cfgService;
-
     // own services
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected ConnectionStore connectionStore;
@@ -105,23 +97,7 @@ public class PortalManager implements PortalService{
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected PacketRedirectService packetRedirectService;
 
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected ConsulService consulService;
 
-    // Portal configuration
-
-    private final InternalConfigListener cfgListener = new InternalConfigListener();
-
-    private final Set<ConfigFactory> factories = ImmutableSet.of(
-            new ConfigFactory<ApplicationId, ByodConfig>(APP_SUBJECT_FACTORY,
-                    ByodConfig.class,
-                    "sbyod"){
-                @Override
-                public ByodConfig createConfig(){
-                    return new ByodConfig();
-                }
-            }
-    );
 
     private HostListener portalConnectionHostListener;
 
@@ -145,11 +121,6 @@ public class PortalManager implements PortalService{
     protected void activate() {
         appId = coreService.registerApplication(PortalService.APP_ID);
 
-        // configuration listener
-        factories.forEach(cfgService::registerConfigFactory);
-        cfgListener.reconfigureNetwork(cfgService.getConfig(appId, ByodConfig.class));
-        cfgService.addListener(cfgListener);
-
         // install drop, controller and dns rules on all devices
         basicRuleInstaller.installRules();
 
@@ -169,9 +140,6 @@ public class PortalManager implements PortalService{
     @Deactivate
     protected void deactivate() {
         hostService.removeListener(portalConnectionHostListener);
-
-        cfgService.removeListener(cfgListener);
-        factories.forEach(cfgService::unregisterConfigFactory);
 
         //withdrawIntercepts();
         //packetService.removeProcessor(processor);
@@ -536,88 +504,6 @@ public class PortalManager implements PortalService{
             return null;
         } else{
             return defaultGateways.iterator().next();
-        }
-    }
-
-    private class InternalConfigListener implements NetworkConfigListener {
-
-        private void reconfigureNetwork(ByodConfig cfg){
-            if(cfg == null){
-                return;
-            }
-
-            // check if portal is set and try to connect to new portal location
-            if(cfg.portalIp() != null && cfg.portalPort() != -1){
-
-                // only change and update if portal config has changed
-                if(!portalIp.equals(cfg.portalIp()) || !portalPort.equals(cfg.portalPort())) {
-
-                    portalIp = cfg.portalIp();
-                    portalPort = TpPort.tpPort(cfg.portalPort());
-                    setPortal(portalIp, portalPort);
-                    log.info("PortalManager: Set portal ip to {} and port to {} and updated portal", portalIp, portalPort);
-                }
-            } else if(cfg.portalIp() != null){
-
-                // only change and update if portal config has changed
-                if(!portalIp.equals(cfg.portalIp())) {
-
-                    portalIp = cfg.portalIp();
-                    setPortal(portalIp, portalPort);
-                    log.info("PortalManager: Set portal ip to {} and updated portal", portalIp);
-                }
-            } else if(cfg.portalPort() != -1){
-                
-                // only change and update if portal config has changed
-                if(!portalPort.equals(cfg.portalPort())) {
-
-                    portalPort = TpPort.tpPort(cfg.portalPort());
-                    setPortal(portalIp, portalPort);
-                    log.info("PortalManager: Set portal port to {} and updated portal", portalPort);
-                }
-            }
-
-            if(cfg.defaultGateway() != null){
-                defaultGateway = cfg.defaultGateway();
-                dnsService.activateDns();
-                log.info("PortalManager: Default gateway set to {}", defaultGateway);
-            }
-
-            // check if consul config is set and try to set up consul connection
-            if(cfg.consulIp() != null && cfg.consulPort() != -1){
-                // only change and update if consul config has changed
-                if(!(cfg.consulIp().equals(consulService.getConsulIp())) ||
-                        !(TpPort.tpPort(cfg.consulPort())).equals(consulService.getConsulTpPort())){
-                    // connect to new consul client
-                    consulService.connectConsul(cfg.consulIp(), TpPort.tpPort(cfg.consulPort()));
-                    log.info("PortalManager: Configured consul ip={} and tpPort={}", cfg.consulIp(), cfg.consulPort());
-                }
-            } else if(cfg.consulIp() != null){
-                // only change and update if consul config has changed
-                if(!consulService.getConsulIp().equals(cfg.consulIp())){
-                    // connect to new consul client
-                    consulService.connectConsul(cfg.consulIp());
-                    log.info("PortalManager: Configured consul ip={}", cfg.consulIp());
-                }
-            }
-        }
-
-        /**
-         * Reacts to the specified event.
-         *
-         * @param event event to be processed
-         */
-        @Override
-        public void event(NetworkConfigEvent event) {
-
-            if(event.type() == NetworkConfigEvent.Type.CONFIG_ADDED ||
-                    event.type() == NetworkConfigEvent.Type.CONFIG_UPDATED &&
-                    event.configClass().equals(ByodConfig.class)){
-
-                ByodConfig cfg = cfgService.getConfig(appId, ByodConfig.class);
-                reconfigureNetwork(cfg);
-                log.info("Reconfigured!");
-            }
         }
     }
 }

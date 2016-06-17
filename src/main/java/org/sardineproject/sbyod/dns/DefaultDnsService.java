@@ -27,7 +27,7 @@ import org.onosproject.net.host.HostEvent;
 import org.onosproject.net.host.HostListener;
 import org.onosproject.net.host.HostService;
 import org.onosproject.net.provider.ProviderId;
-import org.sardineproject.sbyod.ByodConfig;
+import org.sardineproject.sbyod.configuration.ByodConfig;
 import org.sardineproject.sbyod.PortalManager;
 import org.sardineproject.sbyod.PortalService;
 import org.sardineproject.sbyod.connection.Connection;
@@ -38,7 +38,6 @@ import org.sardineproject.sbyod.service.Service;
 import org.sardineproject.sbyod.service.ServiceStore;
 import org.slf4j.Logger;
 
-import java.util.HashSet;
 import java.util.Set;
 
 import static org.slf4j.LoggerFactory.getLogger;
@@ -131,11 +130,13 @@ public class DefaultDnsService implements DnsService {
     }
 
     public void deactivateDns(){
-        removeConnection(dnsServiceTcp);
-        removeConnection(dnsServiceUdp);
+        if(dnsServiceTcp != null)
+            removeConnection(dnsServiceTcp);
+        if(dnsServiceUdp != null)
+            removeConnection(dnsServiceUdp);
         dnsServiceTcp = null;
         dnsServiceUdp = null;
-        log.info("DefaultDnsService: Removed dns connections.");
+        log.debug("DefaultDnsService: Removed dns connections.");
     }
 
     /**

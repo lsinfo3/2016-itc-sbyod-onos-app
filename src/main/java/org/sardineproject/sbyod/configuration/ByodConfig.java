@@ -15,7 +15,7 @@
  *
  *
  */
-package org.sardineproject.sbyod;
+package org.sardineproject.sbyod.configuration;
 
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.TpPort;
