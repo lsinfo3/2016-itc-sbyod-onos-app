@@ -176,7 +176,7 @@ public class DefaultConnectionStore implements ConnectionStore {
             // get the selector source ip criterion of the flow objective
             IPCriterion ip4srcCriterion = (IPCriterion)fo.selector().getCriterion(Criterion.Type.IPV4_SRC);
             // check if the flow objective is an objective for the direction service to user
-            if(serviceHost.ipAddresses().contains(ip4srcCriterion.ip())){
+            if(serviceHost.ipAddresses().contains(ip4srcCriterion.ip().address())){
                 // check if the user has another connection to the same service host
                 Set<Connection> userConnectionsToSameHost = getConnections(connection.getUser()).stream()
                         .filter(c -> c.getService().getHost().equals(serviceHost))
