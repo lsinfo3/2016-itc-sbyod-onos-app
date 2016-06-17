@@ -64,23 +64,11 @@ public interface Service extends Element{
     DefaultService.Discovery getServiceDiscovery();
 
     /**
-     * Set the glyhpicon symbol to display in portal
-     * @param symbol name of the glyphicon
-     */
-    void setIcon(String symbol);
-
-    /**
      * Returning the symbol to display in Portal
      *
      * @return symbol string
      */
     String getIcon();
-
-    /**
-     * Define the transport protocol of the service
-     * @param tpProtocol the transport protocol of the service
-     */
-    void setProtocol(byte tpProtocol);
 
     /**
      * Return the transport protocol of the service

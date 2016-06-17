@@ -289,7 +289,11 @@ public class PortalManager implements PortalService{
         if(portalHosts.size() == 1) {
 
             // create service for existing configuration
-            Service portalService = new DefaultService(portalHosts.iterator().next(), portalPort, "PortalService", ProviderId.NONE);
+            Service portalService = DefaultService.builder()
+                    .withHost(portalHosts.iterator().next())
+                    .withPort(portalPort)
+                    .withName("PortalService")
+                    .build();
 
             // update portal if the service not already exists
             if(!serviceStore.contains(portalService)) {

@@ -72,81 +72,6 @@ public class DefaultService extends AbstractElement implements Service {
     }
 
     /**
-     * Creates a service
-     *
-     * @param host service host
-     * @param tpPort service transport protocol port
-     * @param name service name
-     * @param providerId identity of the provider
-     * @param annotations optional key/value annotations
-     */
-    public DefaultService(Host host, TpPort tpPort, String name, ProviderId providerId, Annotations... annotations){
-        super(providerId, ServiceId.serviceId(URI.create(name + System.currentTimeMillis())), annotations);
-
-        if(host == null || tpPort == null || name == null) {
-            log.warn("DefaultService: Illegal Arguments");
-            throw new IllegalArgumentException();
-        }
-
-        this.host = host;
-        this.tpPort = tpPort;
-        this.name = name;
-        this.discovery = Discovery.NONE;
-        this.ip4Address = null;
-    }
-
-    /**
-     * Creates a service
-     *
-     * @param host service host
-     * @param tpPort service transport protocol port
-     * @param name service name
-     * @param providerId identity of the provider
-     * @param annotations optional key/value annotations
-     * @param discovery devine wich service discovery was used
-     */
-    public DefaultService(Host host, TpPort tpPort, String name, ProviderId providerId, Discovery discovery, Annotations... annotations){
-        super(providerId, ServiceId.serviceId(URI.create(name + System.currentTimeMillis())), annotations);
-
-        if(host == null || tpPort == null || name == null) {
-            log.warn("DefaultService: Illegal Arguments");
-            throw new IllegalArgumentException();
-        }
-
-        this.host = host;
-        this.tpPort = tpPort;
-        this.name = name;
-        this.discovery = discovery;
-        this.ip4Address = null;
-    }
-
-    /**
-     * Creates a service
-     *
-     * @param host service host
-     * @param tpPort service transport protocol port
-     * @param name service name
-     * @param providerId identity of the provider
-     * @param annotations optional key/value annotations
-     * @param discovery devine wich service discovery was used
-     */
-    public DefaultService(Host host, TpPort tpPort, String name, ProviderId providerId, String id, Discovery discovery, Annotations... annotations){
-        super(providerId, ServiceId.serviceId(URI.create(id)), annotations);
-
-        if(host == null || tpPort == null || name == null) {
-            log.warn("DefaultService: Illegal Arguments");
-            throw new IllegalArgumentException();
-        }
-
-
-        this.host = host;
-        this.tpPort = tpPort;
-        this.name = name;
-        this.discovery = discovery;
-        this.ip4Address = null;
-    }
-
-    /**
      * Get the host where the service is running on
      *
      * @return host
@@ -177,17 +102,6 @@ public class DefaultService extends AbstractElement implements Service {
     }
 
     /**
-     * Set the glyhpicon icon to display in portal
-     *
-     * @param icon name of the glyphicon
-     */
-    @Override
-    public void setIcon(String icon) {
-        if(!icon.isEmpty())
-            this.icon = icon;
-    }
-
-    /**
      * Returning the icon to display in Portal
      *
      * @return icon string
@@ -195,16 +109,6 @@ public class DefaultService extends AbstractElement implements Service {
     @Override
     public String getIcon() {
         return icon;
-    }
-
-    /**
-     * Define the transport protocol of the service
-     *
-     * @param protocol the transport protocol of the service
-     */
-    @Override
-    public void setProtocol(byte protocol) {
-        this.protocol = protocol;
     }
 
     /**

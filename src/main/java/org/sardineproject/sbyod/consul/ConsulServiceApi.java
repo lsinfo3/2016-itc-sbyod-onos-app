@@ -27,12 +27,14 @@ import com.google.common.collect.Sets;
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.IpAddress;
 import org.onlab.packet.TpPort;
+import org.onosproject.net.ElementId;
 import org.onosproject.net.Host;
 import org.onosproject.net.host.HostService;
 import org.onosproject.net.provider.ProviderId;
 import org.sardineproject.sbyod.PortalManager;
 import org.sardineproject.sbyod.connection.DefaultConnection;
 import org.sardineproject.sbyod.service.DefaultService;
+import org.sardineproject.sbyod.service.ServiceId;
 import org.slf4j.Logger;
 import org.sardineproject.sbyod.connection.Connection;
 import org.sardineproject.sbyod.connection.ConnectionStore;
@@ -297,14 +299,19 @@ public class ConsulServiceApi implements ConsulService {
                     catalogService.getServiceName(), host.ipAddresses());
 
             // create a new byod service corresponding to the CatalogService
-            Service service = new DefaultService(host, TpPort.tpPort(catalogService.getServicePort()), catalogService.getServiceName(),
-                    ProviderId.NONE, catalogService.getServiceId(), Service.Discovery.CONSUL);
+            DefaultService.Builder service = DefaultService.builder()
+                    .withHost(host)
+                    .withPort(TpPort.tpPort(catalogService.getServicePort()))
+                    .withName(catalogService.getServiceName())
+                    .withElementId(ServiceId.serviceId(URI.create(catalogService.getServiceId())))
+                    .withDiscovery(Service.Discovery.CONSUL);
+
             // add an icon to the service, defined as the first tag in description
             if(!catalogService.getServiceTags().isEmpty()) {
-                service.setIcon(catalogService.getServiceTags().iterator().next());
+                service.withIcon(catalogService.getServiceTags().iterator().next());
             }
 
-            consulServices.add(service);
+            consulServices.add(service.build());
         } else if (hosts.isEmpty()) {
             log.debug("ConsulServiceApi: No host found with ip address = {}", catalogService.getAddress());
         } else {

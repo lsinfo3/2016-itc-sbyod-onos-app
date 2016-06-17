@@ -100,12 +100,20 @@ public class DefaultDnsService implements DnsService {
             log.info("DefaultDnsService: Found router with id={}", router.id());
 
             // dns running on both tcp and udp protocol
-            dnsServiceTcp = new DefaultService(router, TpPort.tpPort(53), "DnsServiceTcp", ProviderId.NONE);
-            dnsServiceTcp.setProtocol(IPv4.PROTOCOL_TCP);
+            dnsServiceTcp = DefaultService.builder()
+                    .withHost(router)
+                    .withPort(TpPort.tpPort(53))
+                    .withName("DnsServiceTcp")
+                    .withProtocol(IPv4.PROTOCOL_TCP)
+                    .build();
             serviceStore.addService(dnsServiceTcp);
 
-            dnsServiceUdp = new DefaultService(router, TpPort.tpPort(53), "DnsServiceUdp", ProviderId.NONE);
-            dnsServiceUdp.setProtocol(IPv4.PROTOCOL_UDP);
+            dnsServiceUdp = DefaultService.builder()
+                    .withHost(router)
+                    .withPort(TpPort.tpPort(53))
+                    .withName("DnsServiceUdp")
+                    .withProtocol(IPv4.PROTOCOL_UDP)
+                    .build();
             serviceStore.addService(dnsServiceUdp);
 
             log.info("DefaultDnsService: Added tcp and upd service for dns");

@@ -128,7 +128,11 @@ public class AppWebService extends AbstractWebResource {
 
         Set<Host> serviceHosts = get(HostService.class).getHostsByIp(ip);
         if(serviceHosts.size() == 1){
-            Service service = new DefaultService(serviceHosts.iterator().next(), tpPort, name, ProviderId.NONE);
+            Service service = DefaultService.builder()
+                    .withHost(serviceHosts.iterator().next())
+                    .withPort(tpPort)
+                    .withName(name)
+                    .build();
 
             // check if service is already active
             if(!get(ServiceStore.class).contains(service)){
