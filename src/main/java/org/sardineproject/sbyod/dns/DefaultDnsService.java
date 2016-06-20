@@ -67,6 +67,10 @@ public class DefaultDnsService implements DnsService {
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected ConnectionStore connectionStore;
 
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected PortalService portalService;
+
+
     private HostListener dnsHostListener;
 
     private Host router;
@@ -120,8 +124,8 @@ public class DefaultDnsService implements DnsService {
 
             // connect all valid hosts to the dns service
             for(Host host : hostService.getHosts()){
-                // do not install the service for the router itself
-                if(!host.equals(router)){
+                // do not install the service for the router itself and the portal
+                if(!host.equals(router) && !host.ipAddresses().contains(portalService.getPortalIp())){
                     // install the connection for both services
                     connectionStore.addConnection(new DefaultConnection(host, dnsServiceTcp));
                     connectionStore.addConnection(new DefaultConnection(host, dnsServiceUdp));
