@@ -26,11 +26,13 @@ import org.onlab.packet.*;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.net.DeviceId;
+import org.onosproject.net.config.NetworkConfigRegistry;
 import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.*;
 import org.onosproject.net.host.*;
 import org.onosproject.net.packet.*;
 import org.onosproject.net.Host;
+import org.sardineproject.sbyod.configuration.ByodConfig;
 import org.sardineproject.sbyod.service.ServiceId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,6 +76,9 @@ public class PortalManager implements PortalService{
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected FlowRuleService flowRuleService;
 
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected NetworkConfigRegistry cfgService;
+
     // own services
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected ConnectionStore connectionStore;
@@ -90,12 +95,6 @@ public class PortalManager implements PortalService{
 
 
     private HostListener portalConnectionHostListener;
-
-    // Portal configuration values
-    // Hardcoded values are default values.
-    private Ip4Address portalIp = Ip4Address.valueOf("10.0.0.3");
-    private TpPort portalPort = TpPort.tpPort(3000);
-    private Ip4Address defaultGateway = Ip4Address.valueOf("127.0.0.1");
 
     // make sure no new host is added to the host service, as long as
     // the hosts are iterated
@@ -270,10 +269,6 @@ public class PortalManager implements PortalService{
         checkNotNull(portalIp, "Portal IPv4 address can not be null");
         checkNotNull(portalPort, "Portal tpPort can not be null");
 
-        // updating configuration variables
-        this.portalIp = portalIp;
-        this.portalPort = portalPort;
-
         // find hosts with portal IP address
         Set<Host> portalHosts = hostService.getHostsByIp(portalIp);
         if(portalHosts.size() == 1) {
@@ -367,7 +362,8 @@ public class PortalManager implements PortalService{
             portalService = serviceStore.getService(portalId);
 
         // get the default gateway host
-        Host defaultGw = getDefaultGatewayHost(defaultGateway);
+        ByodConfig cfg = cfgService.getConfig(appId, ByodConfig.class);
+        Host defaultGw = getDefaultGatewayHost(cfg.defaultGateway());
 
         hostLock.lock();
 
@@ -378,7 +374,7 @@ public class PortalManager implements PortalService{
 
                 // no connection for the portal itself and the default gateway
                 if(!host.ipAddresses().contains(portalService.ipAddress()) &&
-                        ((defaultGw != null) ? !defaultGw.equals(host) : true)) {
+                        ((defaultGw == null) || !defaultGw.equals(host))) {
                     Connection connection = new DefaultConnection(host, portalService);
                     connectionStore.addConnection(connection);
                     log.info("PortalManager: connectHostsToPortal() add connection of host {} to portal", host.id());
@@ -419,7 +415,8 @@ public class PortalManager implements PortalService{
                 }
 
                 // get the default gateway host
-                Host defaultGw = getDefaultGatewayHost(defaultGateway);
+                ByodConfig cfg = cfgService.getConfig(appId, ByodConfig.class);
+                Host defaultGw = getDefaultGatewayHost(cfg.defaultGateway());
 
                 Host eventSubject = event.subject();
 
