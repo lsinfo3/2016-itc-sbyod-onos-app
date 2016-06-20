@@ -39,7 +39,6 @@ public class DefaultService extends AbstractElement implements Service {
 
     private static final Logger log = getLogger(PortalManager.class);
 
-    private final Host host;
     private final Ip4Address ip4Address;
     private final TpPort tpPort;
     private final String name;
@@ -52,7 +51,6 @@ public class DefaultService extends AbstractElement implements Service {
 
     // for serialization
     private DefaultService(){
-        this.host = null;
         this.tpPort = null;
         this.name = null;
         this.ip4Address = null;
@@ -67,17 +65,6 @@ public class DefaultService extends AbstractElement implements Service {
         this.discovery = builder.discovery;
         this.icon = builder.icon;
         this.protocol = builder.protocol;
-        this.host = builder.host;
-    }
-
-    /**
-     * Get the host where the service is running on
-     *
-     * @return host
-     */
-    @Override
-    public Host host() {
-        return host;
     }
 
     /**
@@ -157,32 +144,31 @@ public class DefaultService extends AbstractElement implements Service {
 
         DefaultService that = (DefaultService) o;
 
-        if (host != null ? !host.equals(that.host) : that.host != null) return false;
+        if (protocol != that.protocol) return false;
+        if (ip4Address != null ? !ip4Address.equals(that.ip4Address) : that.ip4Address != null) return false;
         if (tpPort != null ? !tpPort.equals(that.tpPort) : that.tpPort != null) return false;
-        if (name != null ? !name.equals(that.name) : that.name != null) return false;
-        if (discovery != that.discovery) return false;
-        return !(icon != null ? !icon.equals(that.icon) : that.icon != null);
+        return !(name != null ? !name.equals(that.name) : that.name != null);
 
     }
 
     @Override
     public int hashCode() {
-        int result = host != null ? host.hashCode() : 0;
+        int result = ip4Address != null ? ip4Address.hashCode() : 0;
         result = 31 * result + (tpPort != null ? tpPort.hashCode() : 0);
         result = 31 * result + (name != null ? name.hashCode() : 0);
-        result = 31 * result + (discovery != null ? discovery.hashCode() : 0);
-        result = 31 * result + (icon != null ? icon.hashCode() : 0);
+        result = 31 * result + (int) protocol;
         return result;
     }
 
     @Override
     public String toString() {
         return "DefaultService{" +
-                "host=" + host +
+                "ip4Address=" + ip4Address +
                 ", tpPort=" + tpPort +
                 ", name='" + name + '\'' +
                 ", discovery=" + discovery +
                 ", icon='" + icon + '\'' +
+                ", protocol=" + protocol +
                 '}';
     }
 
@@ -214,7 +200,6 @@ public class DefaultService extends AbstractElement implements Service {
         private byte protocol = IPv4.PROTOCOL_TCP;
         private ProviderId providerId = ProviderId.NONE;
         private ElementId elementId;
-        private Host host;
 
         // creates an empty builder
         private Builder(){}
@@ -229,7 +214,6 @@ public class DefaultService extends AbstractElement implements Service {
             this.protocol = service.protocol();
             this.providerId = service.providerId();
             this.elementId = service.id();
-            this.host = service.host();
         }
 
         public Builder withIp(Ip4Address ip4Address){
@@ -272,17 +256,11 @@ public class DefaultService extends AbstractElement implements Service {
             return this;
         }
 
-        public Builder withHost(Host host){
-            this.host = host;
-            return this;
-        }
-
         public Service build(){
             // Todo: use ip address instead of host
             checkNotNull(ip4Address, "Must have an IP address");
             checkNotNull(tpPort, "Must have an TpPort");
             checkNotNull(name, "Must have a name");
-            checkNotNull(host, "Must have a host");
 
             if(elementId == null){
                 elementId = ServiceId.serviceId(URI.create(name + System.currentTimeMillis()));

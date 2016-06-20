@@ -280,7 +280,6 @@ public class PortalManager implements PortalService{
 
             // create service for existing configuration
             Service portalService = DefaultService.builder()
-                    .withHost(portalHosts.iterator().next())
                     .withIp(portalIp)
                     .withPort(portalPort)
                     .withName("PortalService")

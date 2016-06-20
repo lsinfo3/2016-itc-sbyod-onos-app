@@ -101,7 +101,6 @@ public class DefaultDnsService implements DnsService {
 
             // dns running on both tcp and udp protocol
             dnsServiceTcp = DefaultService.builder()
-                    .withHost(router)
                     .withIp(cfg.defaultGateway())
                     .withPort(TpPort.tpPort(53))
                     .withName("DnsServiceTcp")
@@ -110,7 +109,6 @@ public class DefaultDnsService implements DnsService {
             serviceStore.addService(dnsServiceTcp);
 
             dnsServiceUdp = DefaultService.builder()
-                    .withHost(router)
                     .withIp(cfg.defaultGateway())
                     .withPort(TpPort.tpPort(53))
                     .withName("DnsServiceUdp")

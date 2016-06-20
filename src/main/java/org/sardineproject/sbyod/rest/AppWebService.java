@@ -129,7 +129,6 @@ public class AppWebService extends AbstractWebResource {
         Set<Host> serviceHosts = get(HostService.class).getHostsByIp(ip);
         if(serviceHosts.size() == 1){
             Service service = DefaultService.builder()
-                    .withHost(serviceHosts.iterator().next())
                     .withPort(tpPort)
                     .withName(name)
                     .withIp(ip)

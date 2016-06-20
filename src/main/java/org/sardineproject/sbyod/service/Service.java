@@ -32,12 +32,6 @@ public interface Service extends Element{
     enum Discovery{CONSUL, NONE}
 
     /**
-     * Get the host where the service is running on
-     * @return host
-     */
-    Host host();
-
-    /**
      * Get the name of the service
      * @return name
      */
@@ -151,14 +145,6 @@ public interface Service extends Element{
          * @return a service builder
          */
         Builder withElementId(ElementId elementId);
-
-        /**
-         * Set the host
-         *
-         * @param host a host
-         * @return a service builder
-         */
-        Builder withHost(Host host);
 
         /**
          * Builds the service

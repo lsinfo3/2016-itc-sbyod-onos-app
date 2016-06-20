@@ -301,7 +301,6 @@ public class ConsulServiceApi implements ConsulService {
 
             // create a new byod service corresponding to the CatalogService
             DefaultService.Builder service = DefaultService.builder()
-                    .withHost(host)
                     .withIp(serviceIpAddress)
                     .withPort(TpPort.tpPort(catalogService.getServicePort()))
                     .withName(catalogService.getServiceName())

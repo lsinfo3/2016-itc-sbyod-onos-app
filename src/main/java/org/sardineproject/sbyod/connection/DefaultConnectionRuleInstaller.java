@@ -17,12 +17,14 @@
  */
 package org.sardineproject.sbyod.connection;
 
+import com.google.common.collect.Lists;
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.EthType;
 import org.onlab.packet.IPv4;
 import org.onlab.packet.IpAddress;
 import org.onosproject.core.ApplicationIdStore;
 import org.onosproject.net.*;
+import org.onosproject.net.config.NetworkConfigRegistry;
 import org.onosproject.net.flow.*;
 import org.onosproject.net.flowobjective.DefaultForwardingObjective;
 import org.onosproject.net.flowobjective.FlowObjectiveService;
@@ -31,9 +33,11 @@ import org.onosproject.net.host.HostService;
 import org.onosproject.net.topology.TopologyService;
 import org.sardineproject.sbyod.PortalManager;
 import org.sardineproject.sbyod.PortalService;
+import org.sardineproject.sbyod.configuration.ByodConfig;
 import org.slf4j.Logger;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.slf4j.LoggerFactory.getLogger;
 
@@ -46,8 +50,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
 
     private static final String APPLICATION_ID = PortalService.APP_ID;
     private static final int FLOW_PRIORITY = 300;
-    // defines the table number
-    private static final int FLOW_TABLE = 100;
+
     // does the switch packet selector support ethernet mac matching
     private static final boolean MATCH_ETH_DST = false;
 
@@ -57,9 +60,6 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
     protected TopologyService topologyService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected FlowRuleService flowRuleService;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected HostService hostService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
@@ -67,6 +67,9 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected FlowObjectiveService flowObjectiveService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected NetworkConfigRegistry cfgService;
 
 
     @Activate
@@ -100,49 +103,95 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
 
 
         HostLocation userLocation = connection.getUser().location();
+        // the device the service is connected to
+        HostLocation serviceLocation;
+
+
         // TODO: check if service ip address is in network, otherwise send traffic to default gateway
-        HostLocation serviceLocation = connection.getService().host().location();
+        // get the host of the service ip if possible
+        Set<Host> serviceHosts = hostService.getHostsByIp(connection.getService().ipAddress());
+        if(!serviceHosts.isEmpty()) {
+            if (serviceHosts.size() > 1) {
+                log.info("ConnectionRuleInstaller: Found {} service hosts={} with ip={}, choosing first one = {}.",
+                        Lists.newArrayList(
+                                serviceHosts.size(),
+                                serviceHosts.stream().map(Host::id).collect(Collectors.toSet()),
+                                connection.getService().ipAddress(),
+                                serviceHosts.iterator().next().id())
+                                .toArray());
+            }
+            Host serviceHost = serviceHosts.iterator().next();
+            serviceLocation = serviceHost.location();
+        } else{
+            // no host found in local network -> send traffic to default gateway if possible
+            // get the ip address of the default gateway
+            ByodConfig cfg = cfgService.getConfig(applicationIdStore.getAppId(APPLICATION_ID), ByodConfig.class);
+            Set<Host> defaultGatewayHosts = hostService.getHostsByIp(cfg.defaultGateway());
 
-        // if user and service is connected to the same network device
-        if(userLocation.deviceId().equals(serviceLocation.deviceId())){
-            log.debug("ConnectionRuleInstaller: Installing flow rule only on device {}",
-                    userLocation.deviceId().toString());
-
-            // add one rule directing the traffic from user port to service port on device
-            addFlows(userLocation.port(), serviceLocation.port(), userLocation.deviceId(), connection);
-
-        } else {
-            // get a path between the connected devices
-            Set<Path> paths = topologyService.getPaths(topologyService.currentTopology(),
-                    userLocation.deviceId(), serviceLocation.deviceId());
-            if (paths.isEmpty()) {
-                log.warn("ConnectionRuleInstaller: No path found between {} and {}",
-                        userLocation.toString(), serviceLocation.toString());
-            } else {
-                log.debug("ConnectionRuleInstaller: Installing connection between {} and {}",
-                        userLocation.deviceId().toString(), serviceLocation.deviceId().toString());
-                Path path = paths.iterator().next();
-
-                // rule for first device
-                Iterator<Link> currentLinkIter = path.links().iterator();
-                Link currentLink = currentLinkIter.next();
-                addFlows(userLocation.port(), currentLink.src().port(), userLocation.deviceId(), connection);
-
-                // rule for every pair of links
-                Iterator<Link> previousLinkIter = path.links().iterator();
-                while(currentLinkIter.hasNext()){
-                    Link previousLink = previousLinkIter.next();
-                    currentLink = currentLinkIter.next();
-
-                    addFlows(previousLink.dst().port(), currentLink.src().port(),
-                            currentLink.src().deviceId(), connection);
+            if(!defaultGatewayHosts.isEmpty()){
+                log.info("ConnectionRuleInstaller: Using default gateway with ip={} as route for service {}",
+                        cfg.defaultGateway(), connection.getService().name());
+                if (defaultGatewayHosts.size() > 1) {
+                    log.info("ConnectionRuleInstaller: Found {} default gateway hosts={} with ip={}, choosing first one = {}.",
+                            Lists.newArrayList(
+                                    defaultGatewayHosts.size(),
+                                    defaultGatewayHosts.stream().map(Host::id).collect(Collectors.toSet()),
+                                    cfg.defaultGateway(),
+                                    defaultGatewayHosts.iterator().next().id())
+                                    .toArray());
                 }
+                Host defaultGatewayHost = defaultGatewayHosts.iterator().next();
+                // using the default gateway as service location
+                serviceLocation = defaultGatewayHost.location();
 
-                // rule for last device
-                addFlows(currentLink.dst().port(), serviceLocation.port(), serviceLocation.deviceId(),
-                        connection);
+            } else{
+                // no service host and no default gateway found -> can not install connection!
+                log.warn("ConnectionRuleInstaller: No host in local network and no default gateway found for service" +
+                        "with ip={}. No connection installed!", connection.getService().ipAddress());
+                return;
             }
         }
+
+            // if user and service is connected to the same network device
+            if (userLocation.deviceId().equals(serviceLocation.deviceId())) {
+                log.debug("ConnectionRuleInstaller: Installing flow rule only on device {}",
+                        userLocation.deviceId().toString());
+
+                // add one rule directing the traffic from user port to service port on device and vice versa
+                addFlows(userLocation.port(), serviceLocation.port(), userLocation.deviceId(), connection);
+
+            } else {
+                // get a path between the connected devices
+                Set<Path> paths = topologyService.getPaths(topologyService.currentTopology(),
+                        userLocation.deviceId(), serviceLocation.deviceId());
+                if (paths.isEmpty()) {
+                    log.warn("ConnectionRuleInstaller: No path found between {} and {}",
+                            userLocation.toString(), serviceLocation.toString());
+                } else {
+                    log.debug("ConnectionRuleInstaller: Installing connection between {} and {}",
+                            userLocation.deviceId().toString(), serviceLocation.deviceId().toString());
+                    Path path = paths.iterator().next();
+
+                    // rule for first device
+                    Iterator<Link> currentLinkIter = path.links().iterator();
+                    Link currentLink = currentLinkIter.next();
+                    addFlows(userLocation.port(), currentLink.src().port(), userLocation.deviceId(), connection);
+
+                    // rule for every pair of links
+                    Iterator<Link> previousLinkIter = path.links().iterator();
+                    while (currentLinkIter.hasNext()) {
+                        Link previousLink = previousLinkIter.next();
+                        currentLink = currentLinkIter.next();
+
+                        addFlows(previousLink.dst().port(), currentLink.src().port(),
+                                currentLink.src().deviceId(), connection);
+                    }
+
+                    // rule for last device
+                    addFlows(currentLink.dst().port(), serviceLocation.port(), serviceLocation.deviceId(),
+                            connection);
+                }
+            }
     }
 
     /**
