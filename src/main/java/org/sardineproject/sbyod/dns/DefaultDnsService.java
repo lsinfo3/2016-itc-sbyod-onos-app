@@ -82,7 +82,6 @@ public class DefaultDnsService implements DnsService {
     @Activate
     protected void activate(){
         dnsHostListener = new DnsHostListener();
-        hostService.addListener(dnsHostListener);
     }
 
     @Deactivate
@@ -133,6 +132,10 @@ public class DefaultDnsService implements DnsService {
                     log.info("DefaultDnsService: Added dns connection for host={}", host.id());
                 }
             }
+
+            // activate the dns host listener
+            hostService.addListener(dnsHostListener);
+
         } else if(routers.isEmpty()){
             log.warn("DefaultDnsService: No host found with IP={} to use as DNS service", cfg.defaultGateway());
         } else{
@@ -142,6 +145,10 @@ public class DefaultDnsService implements DnsService {
     }
 
     public void deactivateDns(){
+        // restore host listener
+        hostService.removeListener(dnsHostListener);
+        dnsHostListener = new DnsHostListener();
+
         if(dnsServiceTcp != null)
             removeConnection(dnsServiceTcp);
         if(dnsServiceUdp != null)
