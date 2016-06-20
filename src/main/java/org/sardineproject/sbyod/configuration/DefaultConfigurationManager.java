@@ -105,6 +105,7 @@ public class DefaultConfigurationManager implements ConfigurationManager{
             }
 
             // check if portal config is set and try to connect to new portal location
+            // assume that both fields are defined
             if(cfg.portalIp() != null && cfg.portalPort() != -1){
 
                 // get the portal service
