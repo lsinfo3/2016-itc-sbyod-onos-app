@@ -27,7 +27,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <onos.version>1.5.1</onos.version>
+        <onos.version>1.6.0-SNAPSHOT</onos.version>
         <onos.app.name>org.sardineproject.sbyod</onos.app.name>
         <onos.app.origin>Sardine Project</onos.app.origin>
         <!-- rest begin -->
