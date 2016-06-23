@@ -104,53 +104,10 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
 
         HostLocation userLocation = connection.getUser().location();
         // the device the service is connected to
-        HostLocation serviceLocation;
-
-
-        // TODO: check if service ip address is in network, otherwise send traffic to default gateway
-        // get the host of the service ip if possible
-        Set<Host> serviceHosts = hostService.getHostsByIp(connection.getService().ipAddress());
-        if(!serviceHosts.isEmpty()) {
-            if (serviceHosts.size() > 1) {
-                log.info("ConnectionRuleInstaller: Found {} service hosts={} with ip={}, choosing first one = {}.",
-                        Lists.newArrayList(
-                                serviceHosts.size(),
-                                serviceHosts.stream().map(Host::id).collect(Collectors.toSet()),
-                                connection.getService().ipAddress(),
-                                serviceHosts.iterator().next().id())
-                                .toArray());
-            }
-            Host serviceHost = serviceHosts.iterator().next();
-            serviceLocation = serviceHost.location();
-        } else{
-            // no host found in local network -> send traffic to default gateway if possible
-            // get the ip address of the default gateway
-            ByodConfig cfg = cfgService.getConfig(applicationIdStore.getAppId(APPLICATION_ID), ByodConfig.class);
-            Set<Host> defaultGatewayHosts = hostService.getHostsByIp(cfg.defaultGateway());
-
-            if(!defaultGatewayHosts.isEmpty()){
-                log.info("ConnectionRuleInstaller: Using default gateway with ip={} as route for service {}",
-                        cfg.defaultGateway(), connection.getService().name());
-                if (defaultGatewayHosts.size() > 1) {
-                    log.info("ConnectionRuleInstaller: Found {} default gateway hosts={} with ip={}, choosing first one = {}.",
-                            Lists.newArrayList(
-                                    defaultGatewayHosts.size(),
-                                    defaultGatewayHosts.stream().map(Host::id).collect(Collectors.toSet()),
-                                    cfg.defaultGateway(),
-                                    defaultGatewayHosts.iterator().next().id())
-                                    .toArray());
-                }
-                Host defaultGatewayHost = defaultGatewayHosts.iterator().next();
-                // using the default gateway as service location
-                serviceLocation = defaultGatewayHost.location();
-
-            } else{
-                // no service host and no default gateway found -> can not install connection!
-                log.warn("ConnectionRuleInstaller: No host in local network and no default gateway found for service" +
-                        "with ip={}. No connection installed!", connection.getService().ipAddress());
-                return;
-            }
-        }
+        HostLocation serviceLocation = getConnectionServiceLocation(connection);
+        // check if a valid service location was found
+        if(serviceLocation == null)
+            return;
 
             // if user and service is connected to the same network device
             if (userLocation.deviceId().equals(serviceLocation.deviceId())) {
@@ -158,10 +115,16 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                         userLocation.deviceId().toString());
 
                 // add one rule directing the traffic from user port to service port on device and vice versa
-                addFlows(userLocation.port(), serviceLocation.port(), userLocation.deviceId(), connection);
+                if(userLocation.port().equals(serviceLocation.port())){
+                    log.warn("ConnectionRuleInstaller: User {} and service with IP={} are on the same port! " +
+                            "No connection installed.",
+                            connection.getUser().id(), connection.getService().ipAddress());
+                } else {
+                    addFlows(userLocation.port(), serviceLocation.port(), userLocation.deviceId(), connection);
+                }
 
             } else {
-                // get a path between the connected devices
+                // get a set of all shortest paths between the connected devices
                 Set<Path> paths = topologyService.getPaths(topologyService.currentTopology(),
                         userLocation.deviceId(), serviceLocation.deviceId());
                 if (paths.isEmpty()) {
@@ -170,6 +133,8 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                 } else {
                     log.debug("ConnectionRuleInstaller: Installing connection between {} and {}",
                             userLocation.deviceId().toString(), serviceLocation.deviceId().toString());
+
+                    // pick one path. Under the assumption, that the path is shortest, no loops should be created.
                     Path path = paths.iterator().next();
 
                     // rule for first device
@@ -192,6 +157,72 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                             connection);
                 }
             }
+    }
+
+    /**
+     * Returns the host location of the service ip address.
+     * If no host in local network is found, the default gateway
+     * location is returned if present.
+     * Otherwise null is returned.
+     *
+     * @param connection A connection between a user and a service
+     * @return Service host location, default gateway host location or null
+     */
+    private HostLocation getConnectionServiceLocation(Connection connection){
+
+        // get the host of the service ip if possible
+        Set<Host> serviceHosts = hostService.getHostsByIp(connection.getService().ipAddress());
+        if(!serviceHosts.isEmpty()) {
+            // found a host connected inside the local network, try routing to him
+            if (serviceHosts.size() > 1) {
+                log.info("ConnectionRuleInstaller: Found {} service hosts={} with ip={}, choosing first one = {}.",
+                        Lists.newArrayList(
+                                serviceHosts.size(),
+                                serviceHosts.stream().map(Host::id).collect(Collectors.toSet()),
+                                connection.getService().ipAddress(),
+                                serviceHosts.iterator().next().id())
+                                .toArray());
+            }
+            Host serviceHost = serviceHosts.iterator().next();
+            return serviceHost.location();
+        } else{
+            // no host found in local network -> send traffic to default gateway if possible
+            // get the ip address of the default gateway
+            ByodConfig cfg = cfgService.getConfig(applicationIdStore.getAppId(APPLICATION_ID), ByodConfig.class);
+            // check if a default gateway is defined in the config
+            if(cfg.defaultGateway() != null) {
+                // get the default gateway host
+                Set<Host> defaultGatewayHosts = hostService.getHostsByIp(cfg.defaultGateway());
+
+                if (!defaultGatewayHosts.isEmpty()) {
+                    log.info("ConnectionRuleInstaller: Using default gateway with ip={} as route for service {}",
+                            cfg.defaultGateway(), connection.getService().name());
+                    if (defaultGatewayHosts.size() > 1) {
+                        log.info("ConnectionRuleInstaller: Found {} default gateway hosts={} with ip={}, choosing first one = {}.",
+                                Lists.newArrayList(
+                                        defaultGatewayHosts.size(),
+                                        defaultGatewayHosts.stream().map(Host::id).collect(Collectors.toSet()),
+                                        cfg.defaultGateway(),
+                                        defaultGatewayHosts.iterator().next().id())
+                                        .toArray());
+                    }
+                    Host defaultGatewayHost = defaultGatewayHosts.iterator().next();
+                    // using the default gateway as service location
+                    return defaultGatewayHost.location();
+                } else {
+                    // no service host and no default gateway found -> can not install connection!
+                    log.warn("ConnectionRuleInstaller: No host in local network and no default gateway at {} found! " +
+                                    "No connection installed for service with ip={}.",
+                            cfg.defaultGateway(), connection.getService().ipAddress());
+                    return null;
+                }
+            } else{
+                // no service host and no default gateway found -> can not install connection!
+                log.warn("ConnectionRuleInstaller: No host in local network and no default gateway defined! " +
+                        "No connection installed for service with ip={}.", connection.getService().ipAddress());
+                return null;
+            }
+        }
     }
 
     /**
@@ -275,6 +306,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                                       Connection connection){
 
         // Todo: only install connection for ip addresses inside the network!
+
 
         for(IpAddress userIp : connection.getUser().ipAddresses()) {
                 if (userIp.isIp4()) {
