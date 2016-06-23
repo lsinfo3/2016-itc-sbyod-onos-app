@@ -223,6 +223,8 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
 
         byte protocol = connection.getService().protocol();
 
+        // Todo: only install connection for ip addresses inside the network!
+
         for(IpAddress userIp : connection.getUser().ipAddresses()) {
                 if (userIp.isIp4()) {
                     TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
@@ -271,6 +273,8 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
      */
     private void addFlowServiceToUser(PortNumber inPort, PortNumber outPort, DeviceId forDeviceId,
                                       Connection connection){
+
+        // Todo: only install connection for ip addresses inside the network!
 
         for(IpAddress userIp : connection.getUser().ipAddresses()) {
                 if (userIp.isIp4()) {

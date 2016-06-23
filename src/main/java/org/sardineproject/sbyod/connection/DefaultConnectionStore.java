@@ -325,7 +325,7 @@ public class DefaultConnectionStore implements ConnectionStore {
                 // removes the old flow rules from the devices
                 removeConnection(connection);
                 // installs new flow rules depending on the new host location
-                addConnection(connection);
+                addConnection(new DefaultConnection(eventSubject, connection.getService()));
             }
         }
     }

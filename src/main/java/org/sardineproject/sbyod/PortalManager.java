@@ -422,7 +422,7 @@ public class PortalManager implements PortalService{
 
                 // only install if host is not the portal or the default gateway
                 if(!eventSubject.ipAddresses().contains(portalService.ipAddress()) &&
-                        ((defaultGw != null) ? !defaultGw.equals(eventSubject) : true)) {
+                        ((defaultGw == null) || !defaultGw.equals(eventSubject))) {
 
                     // create a new connection between the portal and the subject
                     Connection connection = new DefaultConnection(eventSubject, portalService);
