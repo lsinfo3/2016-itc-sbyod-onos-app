@@ -315,7 +315,6 @@ public class DefaultConnectionStore implements ConnectionStore {
             }
         }
 
-        // TODO: Update still not works! Probably no ip assigned yet?
         // update the connections of the host
         private void updateHostConnections(HostEvent event){
             Host eventSubject = event.subject();
@@ -324,7 +323,7 @@ public class DefaultConnectionStore implements ConnectionStore {
             for(Connection connection : subjectConnections){
                 // removes the old flow rules from the devices
                 removeConnection(connection);
-                // installs new flow rules depending on the new host location
+                // installs new flow rules depending on the new host object
                 addConnection(new DefaultConnection(eventSubject, connection.getService()));
             }
         }

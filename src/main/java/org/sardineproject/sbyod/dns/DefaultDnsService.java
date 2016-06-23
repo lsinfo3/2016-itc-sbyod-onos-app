@@ -93,6 +93,10 @@ public class DefaultDnsService implements DnsService {
 
         // get the ip address of the default gateway
         ByodConfig cfg = cfgService.getConfig(applicationIdStore.getAppId(APPLICATION_ID), ByodConfig.class);
+        if(cfg.defaultGateway() == null){
+            log.warn("DefaultDnsService: No default gateway defined to route dns traffic to.");
+            return;
+        }
         // get the host with ip of the default gateway
         Set<Host> routers = hostService.getHostsByIp(cfg.defaultGateway());
 

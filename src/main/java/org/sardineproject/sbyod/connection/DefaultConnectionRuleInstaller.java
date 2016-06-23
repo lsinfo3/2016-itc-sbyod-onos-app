@@ -280,10 +280,14 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                     DefaultForwardingObjective.Builder forwardingObjective = DefaultForwardingObjective.builder()
                             .withSelector(trafficSelectorBuilder.build())
                             .withTreatment(trafficTreatmentBuilder.build())
-                            .withPriority(FLOW_PRIORITY)
                             .withFlag(ForwardingObjective.Flag.VERSATILE)
                             .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
                             .makePermanent();
+                    if(connection.getService().name().equals("PortalService")){
+                        forwardingObjective.withPriority(FLOW_PRIORITY + 10);
+                    } else{
+                        forwardingObjective.withPriority(FLOW_PRIORITY);
+                    }
 
                     log.debug("DefaultConnectionRuleInstaller: Adding flow objective \n{} \n" +
                             "for device {} in method addFlowUserToService()", forwardingObjective, forDeviceId);
@@ -325,10 +329,14 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                     DefaultForwardingObjective.Builder forwardingObjective = DefaultForwardingObjective.builder()
                             .withSelector(trafficSelectorBuilder.build())
                             .withTreatment(trafficTreatmentBuilder.build())
-                            .withPriority(FLOW_PRIORITY)
                             .withFlag(ForwardingObjective.Flag.VERSATILE)
                             .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
                             .makePermanent();
+                    if(connection.getService().name().equals("PortalService")){
+                        forwardingObjective.withPriority(FLOW_PRIORITY + 10);
+                    } else{
+                        forwardingObjective.withPriority(FLOW_PRIORITY);
+                    }
 
                     log.debug("DefaultConnectionRuleInstaller: Adding flow objective \n{} \n" +
                             "for device {} in method addFlowServiceToUser()", forwardingObjective.add(), forDeviceId);
