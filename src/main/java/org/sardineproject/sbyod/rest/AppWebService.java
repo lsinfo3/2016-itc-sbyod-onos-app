@@ -126,8 +126,7 @@ public class AppWebService extends AbstractWebResource {
             return Response.ok(INVALID_PARAMETER).build();
         }
 
-        Set<Host> serviceHosts = get(HostService.class).getHostsByIp(ip);
-        if(serviceHosts.size() == 1){
+        // define the service
             Service service = DefaultService.builder()
                     .withPort(tpPort)
                     .withName(name)
@@ -145,14 +144,6 @@ public class AppWebService extends AbstractWebResource {
             } else{
                 return Response.ok(ENABLED_TRUE).build();
             }
-
-        } else if(serviceHosts.size() == 0){
-            log.warn("AppWebService: No host found with ip={}", ip);
-            return Response.ok(ENABLED_FALSE).build();
-        } else{
-            log.warn("AppWebService: More than one host found with ip={}", ip);
-            return Response.ok(ENABLED_FALSE).build();
-        }
     }
 
     /**
