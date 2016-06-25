@@ -49,7 +49,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Web resource.
+ * Manage the users of the Sardine-BYOD network.
  */
 @Path("/user")
 public class AppWebUser extends AbstractWebResource {
@@ -206,6 +206,14 @@ public class AppWebUser extends AbstractWebResource {
         return Response.ok(ENABLED_TRUE).build();
     }
 
+    /**
+     * Disconnect a user from a service.
+     * @param userIp_ the IP address of the user
+     * @param serviceId_ the ID of the service
+     * @return INVALID_PARAMETER if some parameter was wrong
+     *          "enabled : false" if user is disconnected
+     *          "enabled : true" if user disconnection went wrong
+     */
     @DELETE
     @Path("/{userIp}/service/{serviceId}")
     public Response deleteHostTraffic(@PathParam("userIp") String userIp_,

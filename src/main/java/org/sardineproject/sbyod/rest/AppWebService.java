@@ -48,7 +48,7 @@ import java.util.stream.Collectors;
 import static org.slf4j.LoggerFactory.getLogger;
 
 /**
- * Web service interface.
+ * Manage the services available.
  */
 @Path("/service")
 public class AppWebService extends AbstractWebResource {
@@ -96,12 +96,12 @@ public class AppWebService extends AbstractWebResource {
     }
 
     /**
-     * Create a new service
+     * Create a new service.
      *
      * @param ip_ Ip address of the host of the service
      * @param tpPort_ The transport protocol port of the service
      * @param name_ The name of the service
-     * @return Invalid_parameter if some parameter was invalid
+     * @return INVALID_PARAMETER if some parameter was wrong
      */
     @POST
     @Path("/ip/{ip}/tpPort/{tpPort}/name/{name}")
@@ -155,9 +155,14 @@ public class AppWebService extends AbstractWebResource {
         }
     }
 
+    /**
+     * Delete a service.
+     * @param id_ the service ID
+     * @return INVALID_PARAMETER if some parameter was wrong
+     */
     @DELETE
-    @Path("/serviceID/{id}")
-    public Response deleteService(@PathParam("id") String id_){
+    @Path("/{serviceId}")
+    public Response deleteService(@PathParam("serviceId") String id_){
 
         log.debug("AppWebService: Deleting service with id={}.", id_);
 
