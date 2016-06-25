@@ -33,7 +33,7 @@ import javax.ws.rs.core.Response;
 import static org.slf4j.LoggerFactory.getLogger;
 
 /**
- * Web portal interface.
+ * Define a host where the portal is running on.
  */
 @Path("/portal")
 public class AppWebPortal extends AbstractWebResource {

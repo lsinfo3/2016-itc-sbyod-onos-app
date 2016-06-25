@@ -34,7 +34,7 @@ import javax.ws.rs.core.Response;
 import static org.slf4j.LoggerFactory.getLogger;
 
 /**
- * REST consul interface.
+ * Configure the Consul service discovery extension.
  */
 @Path("/consul")
 public class AppWebConsul extends AbstractWebResource{
@@ -46,7 +46,7 @@ public class AppWebConsul extends AbstractWebResource{
     private final ObjectNode ENABLED_FALSE = mapper().createObjectNode().put("enabled", false);
 
     /**
-     * Connecting to consul running on server with IP and transport protocol port.
+     * Connecting to consul running on server with given IP address and transport protocol port.
      * @param ip_ Consul server IP address
      * @param tpPort_ Consul transport protocol port
      * @return "enabled: true" if connection to server is active
@@ -80,7 +80,8 @@ public class AppWebConsul extends AbstractWebResource{
     }
 
     /**
-     * Connecting to consul running on server with IP
+     * Connecting to consul running on server with given IP address.
+     * @param ip_ Consul server IP address
      * @return "enabled: true" if connection to server is active
      */
     @POST
