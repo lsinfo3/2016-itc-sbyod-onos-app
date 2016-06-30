@@ -22,6 +22,7 @@ import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.EthType;
 import org.onlab.packet.IPv4;
 import org.onlab.packet.IpAddress;
+import org.onlab.packet.MacAddress;
 import org.onosproject.core.ApplicationIdStore;
 import org.onosproject.net.*;
 import org.onosproject.net.config.NetworkConfigRegistry;
@@ -274,6 +275,12 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                         return;
                     }
 
+                    if(MATCH_ETH_DST){
+                        // get the connection point the service is available at
+                        HostId serviceDestinationId = getConnectionServiceLocation(connection).hostId();
+                        trafficSelectorBuilder.matchEthDst(hostService.getHost(serviceDestinationId).mac());
+                    }
+
                     TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
                             .setOutput(outPort);
 
@@ -314,10 +321,16 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
 
         for(IpAddress userIp : connection.getUser().ipAddresses()) {
                 if (userIp.isIp4()) {
+
+                    // get the connection point the service is available at
+                    HostId serviceDestinationId = getConnectionServiceLocation(connection).hostId();
+                    MacAddress serviceMac = hostService.getHost(serviceDestinationId).mac();
+
                     TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
                             .matchEthType(EthType.EtherType.IPV4.ethType().toShort())
                             .matchInPort(inPort)
                             .matchIPSrc(connection.getService().ipAddress().toIpPrefix())
+                            .matchEthSrc(serviceMac)
                             .matchIPDst(userIp.toIpPrefix());
                     if (MATCH_ETH_DST) {
                         trafficSelectorBuilder.matchEthDst(connection.getUser().mac());
