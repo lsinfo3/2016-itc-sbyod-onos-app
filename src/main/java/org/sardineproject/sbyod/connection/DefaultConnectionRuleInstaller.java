@@ -52,9 +52,6 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
     private static final String APPLICATION_ID = PortalService.APP_ID;
     private static final int FLOW_PRIORITY = 300;
 
-    // does the switch packet selector support ethernet mac matching
-    private static final boolean MATCH_ETH_DST = false;
-
     private static final Logger log = getLogger(PortalManager.class);
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
@@ -278,7 +275,9 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                         return;
                     }
 
-                    if(MATCH_ETH_DST){
+                    // check if the match ethernet destination is set true in config
+                    if(cfgService.getConfig(applicationIdStore.getAppId(APPLICATION_ID),ByodConfig.class)
+                            .matchEthDst()){
                         trafficSelectorBuilder.matchEthDst(serviceMac);
                     }
 
@@ -329,7 +328,10 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                             .matchIPSrc(connection.getService().ipAddress().toIpPrefix())
                             .matchEthSrc(serviceMac)
                             .matchIPDst(userIp.toIpPrefix());
-                    if (MATCH_ETH_DST) {
+
+                    // check if the match ethernet destination is set true in config
+                    if (cfgService.getConfig(applicationIdStore.getAppId(APPLICATION_ID),ByodConfig.class)
+                            .matchEthDst()) {
                         trafficSelectorBuilder.matchEthDst(connection.getUser().mac());
                     }
 

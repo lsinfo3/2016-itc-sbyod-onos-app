@@ -36,17 +36,19 @@ public class ByodConfig extends Config<ApplicationId> {
     public static final String DEFAULT_GATEWAY = "defaultGateway";
     public static final String CONSUL_IP = "consulIp";
     public static final String CONSUL_PORT = "consulPort";
+    public static final String MATCH_ETH_DST = "matchEthDst";
 
 
     // TODO: check if config is valid
     @Override
     public boolean isValid(){
-        return hasOnlyFields(PORTAL_IP, PORTAL_PORT, DEFAULT_GATEWAY, CONSUL_IP, CONSUL_PORT) &&
+        return hasOnlyFields(PORTAL_IP, PORTAL_PORT, DEFAULT_GATEWAY, CONSUL_IP, CONSUL_PORT, MATCH_ETH_DST) &&
                 isIpAddress(PORTAL_IP, OPTIONAL) &&
                 isNumber(PORTAL_PORT, OPTIONAL, 1, 10000) &&
                 isIpAddress(DEFAULT_GATEWAY, OPTIONAL) &&
                 isIpAddress(CONSUL_IP, OPTIONAL) &&
-                isNumber(CONSUL_PORT, OPTIONAL, 1, 10000);
+                isNumber(CONSUL_PORT, OPTIONAL, 1, 10000) &&
+                isBoolean(MATCH_ETH_DST, OPTIONAL);
     }
 
     /**
@@ -145,6 +147,25 @@ public class ByodConfig extends Config<ApplicationId> {
      */
     public BasicElementConfig consulPort(String consulPort){
         return (BasicElementConfig) setOrClear(CONSUL_PORT, consulPort);
+    }
+
+    /**
+     * Returns if ethernet destination should be matched in flow rules
+     *
+     * @return boolean
+     */
+    public boolean matchEthDst(){
+        return get(MATCH_ETH_DST, false);
+    }
+
+    /**
+     * Sets the value if ethernet destination should be matched for flow rules
+     *
+     * @param match boolean
+     * @return self
+     */
+    public BasicElementConfig matchEthDst(boolean match){
+        return (BasicElementConfig) setOrClear(MATCH_ETH_DST, match);
     }
 
 }
