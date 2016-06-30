@@ -309,7 +309,8 @@ public class DefaultConnectionStore implements ConnectionStore {
         private void removeHostConnections(HostEvent event){
             Host eventSubject = event.subject();
             Set<Connection> subjectConnections = getConnections(eventSubject);
-            log.info("DefaultConnectionStore: ConnectionHostListener event. Removed connections: {}", subjectConnections);
+            log.info("DefaultConnectionStore: ConnectionHostListener event. Removed connections of host {} to services: {}",
+                    eventSubject, subjectConnections.stream().map(Connection::getService).collect(Collectors.toSet()));
             for(Connection connection : subjectConnections){
                 removeConnection(connection);
             }
@@ -319,7 +320,8 @@ public class DefaultConnectionStore implements ConnectionStore {
         private void updateHostConnections(HostEvent event){
             Host eventSubject = event.subject();
             Set<Connection> subjectConnections = getConnections(eventSubject);
-            log.info("DefaultConnectionStore: ConnectionHostListener event. Update connections: {}", subjectConnections);
+            log.info("DefaultConnectionStore: ConnectionHostListener event. Update connections of host {} to services: {}",
+                    eventSubject, subjectConnections.stream().map(Connection::getService).collect(Collectors.toSet()));
             for(Connection connection : subjectConnections){
                 // removes the old flow rules from the devices
                 removeConnection(connection);

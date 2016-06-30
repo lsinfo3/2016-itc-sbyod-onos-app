@@ -89,5 +89,34 @@ public class DefaultConnection implements Connection{
     public Map<ForwardingObjective, DeviceId> getObjectives() {
         return Maps.newHashMap(forwardingObjectives);
     }
+
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        DefaultConnection that = (DefaultConnection) o;
+
+        if (!user.equals(that.user)) return false;
+        return service.equals(that.service);
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = user.hashCode();
+        result = 31 * result + service.hashCode();
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return "DefaultConnection{" +
+                "user=" + user +
+                ", service=" + service +
+                '}';
+
+    }
 }
 
