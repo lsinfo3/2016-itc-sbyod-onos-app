@@ -31,6 +31,7 @@ import org.onosproject.net.config.NetworkConfigListener;
 import org.onosproject.net.config.NetworkConfigRegistry;
 import org.sardineproject.sbyod.PortalManager;
 import org.sardineproject.sbyod.PortalService;
+import org.sardineproject.sbyod.connection.*;
 import org.sardineproject.sbyod.consul.ConsulService;
 import org.sardineproject.sbyod.dns.DnsService;
 import org.sardineproject.sbyod.service.Service;
@@ -63,6 +64,9 @@ public class DefaultConfigurationManager implements ConfigurationManager{
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected ConsulService consulService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected ConnectionStore connectionStore;
 
 
 
@@ -146,6 +150,17 @@ public class DefaultConfigurationManager implements ConfigurationManager{
                     consulService.connectConsul(cfg.consulIp());
                     log.info("DefaultConfigurationManager: Configured consul ip={}", cfg.consulIp());
                 }
+            }
+
+            // if rule match eth dst has changed
+            if(cfg.matchEthDst() != DefaultConnectionRuleInstaller.MATCH_ETH_DST){
+                DefaultConnectionRuleInstaller.MATCH_ETH_DST = cfg.matchEthDst();
+                // update all installed connections
+                Set<Connection> connections = connectionStore.getConnections();
+                connections.forEach(c -> connectionStore.removeConnection(c));
+                connections.forEach(c -> {Connection newConnection = new DefaultConnection(c.getUser(), c.getService());
+                                            connectionStore.addConnection(newConnection);});
+                log.info("DefaultConfigurationManager: Updated connections to matchEthDst = {}", cfg.matchEthDst());
             }
         }
 

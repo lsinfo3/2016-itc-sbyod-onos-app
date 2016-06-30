@@ -52,6 +52,8 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
     private static final String APPLICATION_ID = PortalService.APP_ID;
     private static final int FLOW_PRIORITY = 300;
 
+    public static boolean MATCH_ETH_DST = false;
+
     private static final Logger log = getLogger(PortalManager.class);
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
@@ -276,8 +278,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                     }
 
                     // check if the match ethernet destination is set true in config
-                    if(cfgService.getConfig(applicationIdStore.getAppId(APPLICATION_ID),ByodConfig.class)
-                            .matchEthDst()){
+                    if(MATCH_ETH_DST) {
                         trafficSelectorBuilder.matchEthDst(serviceMac);
                     }
 
@@ -330,8 +331,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                             .matchIPDst(userIp.toIpPrefix());
 
                     // check if the match ethernet destination is set true in config
-                    if (cfgService.getConfig(applicationIdStore.getAppId(APPLICATION_ID),ByodConfig.class)
-                            .matchEthDst()) {
+                    if (MATCH_ETH_DST) {
                         trafficSelectorBuilder.matchEthDst(connection.getUser().mac());
                     }
 
