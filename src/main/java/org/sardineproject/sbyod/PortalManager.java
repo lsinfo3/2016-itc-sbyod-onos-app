@@ -68,12 +68,6 @@ public class PortalManager implements PortalService{
     protected CoreService coreService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected PacketService packetService;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected DeviceService deviceService;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected FlowRuleService flowRuleService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
@@ -88,10 +82,6 @@ public class PortalManager implements PortalService{
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected BasicRuleInstaller basicRuleInstaller;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected PacketRedirectService packetRedirectService;
-
 
 
     private HostListener portalConnectionHostListener;
