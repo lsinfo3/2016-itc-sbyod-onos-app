@@ -100,8 +100,6 @@ public class PortalManager implements PortalService{
     // the hosts are iterated
     private final Lock hostLock = new ReentrantLock();
 
-    private ReactivePacketProcessor processor = new ReactivePacketProcessor();
-
     // ID of the portal service
     ServiceId portalId = null;
 
@@ -115,10 +113,6 @@ public class PortalManager implements PortalService{
 
         // TODO in future: Add topology listener -> adding basic rules if new device connected.
 
-        // not needed as no redirect desired and portalConnectionHostListener should establish the portal connection
-        // packetService.addProcessor(processor, PacketProcessor.director(2));
-        // requestIntercepts();
-
         // adding portal connection if new host was added
         portalConnectionHostListener = new PortalConnectionHostListener();
         hostService.addListener(portalConnectionHostListener);
@@ -130,130 +124,10 @@ public class PortalManager implements PortalService{
     protected void deactivate() {
         hostService.removeListener(portalConnectionHostListener);
 
-        //withdrawIntercepts();
-        //packetService.removeProcessor(processor);
-        processor = null;
-
         // remove all flow rules of this app
         flowRuleService.removeFlowRulesById(appId);
 
         log.info("Stopped PortalManager {}", appId.toString());
-    }
-
-    /**
-     * Request packet in via packet service.
-     */
-    private void requestIntercepts() {
-        TrafficSelector.Builder selector = DefaultTrafficSelector.builder();
-        selector.matchEthType(Ethernet.TYPE_IPV4);
-        packetService.requestPackets(selector.build(), PacketPriority.REACTIVE, appId, Optional.<DeviceId>empty());
-        selector.matchEthType(Ethernet.TYPE_ARP);
-        packetService.requestPackets(selector.build(), PacketPriority.REACTIVE, appId, Optional.<DeviceId>empty());
-    }
-
-    /**
-     * Cancel request for packet in via packet service.
-     */
-    private void withdrawIntercepts() {
-        TrafficSelector.Builder selector = DefaultTrafficSelector.builder();
-        selector.matchEthType(Ethernet.TYPE_IPV4);
-        packetService.cancelPackets(selector.build(), PacketPriority.REACTIVE, appId, Optional.<DeviceId>empty());
-        selector.matchEthType(Ethernet.TYPE_ARP);
-        packetService.cancelPackets(selector.build(), PacketPriority.REACTIVE, appId, Optional.<DeviceId>empty());
-    }
-
-    /**
-     * Packet processor establishing connection to the portal.
-     * Also doing the redirect if packets with no registered destination are received.
-     */
-    private class ReactivePacketProcessor implements PacketProcessor {
-
-        @Override
-        public void process(PacketContext context) {
-
-            // Stop processing if the packet has been handled, since we
-            // can't do any more to it.
-            if (context.isHandled()) {
-                return;
-            }
-
-            //parse the packet of the context
-            InboundPacket pkt = context.inPacket();
-            Ethernet ethPkt = pkt.parsed();
-
-            if (ethPkt == null) {
-                return;
-            }
-
-            // Bail if this is deemed to be a control packet.
-            if (isControlPacket(ethPkt)) {
-                return;
-            }
-
-            IPacket iPkt = ethPkt.getPayload();
-            Ip4Address srcIp;
-            Ip4Address dstIp;
-            if(iPkt instanceof IPv4) {
-                srcIp = Ip4Address.valueOf(((IPv4) iPkt).getSourceAddress());
-                dstIp = Ip4Address.valueOf(((IPv4) iPkt).getDestinationAddress());
-            } else{
-                log.debug("PortalManager: Payload of {} is no IPv4 packet.", ethPkt.toString());
-                return;
-            }
-
-            /*  ### the packet is ipv4 ethernet type, no rules have been added for it yet,
-                ### otherwise it would have been handled by these rules.
-                ### Therefore the connection to the portal is checked for the source host
-                ### and a redirect is done to the portal. */
-
-            // get the portal service
-            Service portalService = null;
-            if(portalId != null) {
-                portalService = serviceStore.getService(portalId);
-                if (portalService == null) {
-                    log.warn("PortalManager: No portal defined with ID {}", portalId.toString());
-                    return;
-                }
-            } else{
-                // no portal defined
-                log.warn("PortalManager: Packet received. No portal defined. No rules installed.");
-                return;
-            }
-
-            // install rule only if packet is not coming from the portal
-            if(!portalService.ipAddress().equals(srcIp)) {
-
-                // install rules for all users with source ip address
-                for (Host user : hostService.getHostsByIp(srcIp)) {
-                    // add rules to routing devices enabling the connection between user and portal
-                    Connection connection = new DefaultConnection(user, portalService);
-                    // connectionStore only installs rule, if connection not already exists
-                    // TODO: check if connection is already installed!!! Remove as host listener is doing the job?
-                    connectionStore.addConnection(connection);
-                }
-
-                // TODO: change redirect:
-                // TODO: redirect packets directly in the controller without flow rules
-                // TODO: change src ip address of host, bypassing the installed portal flow rules
-                // redirect if the destination of the packet differs from the portal addresses
-                if (!portalService.ipAddress().equals(dstIp)) {
-                    // install redirect rules in the network device flow table
-
-                    // no redirect with flows as requested in issue #1
-                    // packetRedirectService.redirectToPortal(context, portalService.host());
-                }
-            }
-        }
-    }
-
-    /**
-     * Indicates whether this is a control packet, e.g. LLDP, BDDP
-     * @param eth Ethernet packet
-     * @return true if eth is a control packet
-     */
-    private boolean isControlPacket(Ethernet eth) {
-        short type = eth.getEtherType();
-        return type == Ethernet.TYPE_LLDP || type == Ethernet.TYPE_BSN;
     }
 
     /**

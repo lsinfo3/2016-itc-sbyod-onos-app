@@ -44,8 +44,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * Created by lorry on 11.12.15.
  */
-@Component(immediate = true, inherit = true)
-@Service
+//@Component(immediate = true, inherit = true)
+//@Service
 public class FlowRedirect extends PacketRedirect {
 
     private static final String APPLICATION_ID = PortalService.APP_ID;

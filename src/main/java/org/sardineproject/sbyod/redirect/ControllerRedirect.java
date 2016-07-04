@@ -17,24 +17,34 @@
  */
 package org.sardineproject.sbyod.redirect;
 
+import com.sun.xml.internal.bind.v2.runtime.reflect.Lister;
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.Ethernet;
+import org.onlab.packet.IPacket;
 import org.onlab.packet.IPv4;
+import org.onlab.packet.Ip4Address;
 import org.onosproject.core.ApplicationId;
+import org.onosproject.core.ApplicationIdStore;
+import org.onosproject.net.DeviceId;
 import org.onosproject.net.Host;
 import org.onosproject.net.PortNumber;
+import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
+import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
-import org.onosproject.net.packet.DefaultOutboundPacket;
-import org.onosproject.net.packet.InboundPacket;
-import org.onosproject.net.packet.PacketContext;
-import org.onosproject.net.packet.PacketService;
+import org.onosproject.net.packet.*;
+import org.sardineproject.sbyod.PortalService;
+import org.sardineproject.sbyod.connection.Connection;
+import org.sardineproject.sbyod.connection.DefaultConnection;
+import org.sardineproject.sbyod.service.*;
+import org.sardineproject.sbyod.service.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -42,41 +52,155 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * Created by lorry on 11.12.15.
  */
-//@Component(immediate = false, inherit = true)
+@Component(immediate = false, inherit = true)
+@org.apache.felix.scr.annotations.Service
 public class ControllerRedirect extends PacketRedirect {
+
+    private static final String APPLICATION_ID = PortalService.APP_ID;
+    private final Logger log = LoggerFactory.getLogger(getClass());
+
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected PacketService packetService;
 
-//    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-//    protected HostService hostService;
-//
-//    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-//    protected CoreService coreService;
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected PortalService portalService;
 
-    private final Logger log = LoggerFactory.getLogger(getClass());
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected ApplicationIdStore applicationIdStore;
 
-    protected ApplicationId appId;
+
+    private ReactivePacketProcessor processor = new ReactivePacketProcessor();
+
+    private Map<Ip4Address, Ip4Address> newToOldIpAddress;
+
     // source and destination pairs of changed packets
     private Map<Host, Host> primaryDst;
 
-    /*public ControllerRedirect() {
-        this.primaryDst = new HashMap<>();
-    }*/
-
     @Activate
     protected void activate(){
+
+        packetService.addProcessor(processor, PacketProcessor.director(2));
+        requestIntercepts();
+
+        this.newToOldIpAddress = new HashMap<>();
+
         this.primaryDst = new HashMap<>();
 
-        log.info("Started ControllerRedirect");
     }
 
     @Deactivate
     protected void deactivate(){
+
+        withdrawIntercepts();
+        packetService.removeProcessor(processor);
+
+        this.newToOldIpAddress = null;
+
         this.primaryDst = null;
-        log.info("Stopped ControllerRedirect");
     }
 
+    /**
+     * Request packet in via packet service.
+     */
+    private void requestIntercepts() {
+        TrafficSelector.Builder selector = DefaultTrafficSelector.builder();
+        selector.matchEthType(Ethernet.TYPE_IPV4);
+        packetService.requestPackets(selector.build(), PacketPriority.REACTIVE,
+                applicationIdStore.getAppId(APPLICATION_ID), Optional.<DeviceId>empty());
+        selector.matchEthType(Ethernet.TYPE_ARP);
+        packetService.requestPackets(selector.build(), PacketPriority.REACTIVE,
+                applicationIdStore.getAppId(APPLICATION_ID), Optional.<DeviceId>empty());
+    }
+
+    /**
+     * Cancel request for packet in via packet service.
+     */
+    private void withdrawIntercepts() {
+        TrafficSelector.Builder selector = DefaultTrafficSelector.builder();
+        selector.matchEthType(Ethernet.TYPE_IPV4);
+        packetService.cancelPackets(selector.build(), PacketPriority.REACTIVE,
+                applicationIdStore.getAppId(APPLICATION_ID), Optional.<DeviceId>empty());
+        selector.matchEthType(Ethernet.TYPE_ARP);
+        packetService.cancelPackets(selector.build(), PacketPriority.REACTIVE,
+                applicationIdStore.getAppId(APPLICATION_ID), Optional.<DeviceId>empty());
+    }
+
+    /**
+     * Packet processor establishing connection to the portal.
+     * Also doing the redirect if packets with no registered destination are received.
+     */
+    private class ReactivePacketProcessor implements PacketProcessor {
+
+        @Override
+        public void process(PacketContext context) {
+
+            // Stop processing if the packet has been handled, since we
+            // can't do any more to it.
+            if (context.isHandled()) {
+                return;
+            }
+
+            //parse the packet of the context
+            Ethernet packet = context.inPacket().parsed();
+
+            if (packet == null) {
+                return;
+            }
+
+            // Bail if this is deemed to be a control packet.
+            if (isControlPacket(packet)) {
+                return;
+            }
+
+            if(packet.getEtherType() == Ethernet.TYPE_IPV4){
+                IPv4 ipv4Packet = (IPv4) packet.getPayload();
+
+                /*
+                ### The packet is of ipv4 ethernet type, no rules have been added for it yet,
+                ### otherwise it would have been handled by these rules.
+                ### Therefore the connection to the portal is checked for the source host
+                ### and a redirect is done to the portal.
+                */
+
+                Service portal = portalService.getPortalService();
+
+                // if packet destination was changed and source is the portal
+                if(newToOldIpAddress.keySet().contains(Ip4Address.valueOf(ipv4Packet.getDestinationAddress())) &&
+                        portalService.getPortalIp().toInt() == ipv4Packet.getSourceAddress()){
+                    // restore old src and destination
+                    restoreSource(context);
+                } else if(portalService.getPortalIp().toInt() != (ipv4Packet.getDestinationAddress())){
+                    // if the packet destination differs from the portal address -> redirect packet to portal
+                    redirectToPortal(context);
+                } else{
+                    log.warn("ControllerRedirect: Packet with portal destination was not forwarded. {}", ipv4Packet);
+                }
+            }
+        }
+    }
+
+    /**
+     * Indicates whether this is a control packet, e.g. LLDP, BDDP
+     * @param eth Ethernet packet
+     * @return true if eth is a control packet
+     */
+    private boolean isControlPacket(Ethernet eth) {
+        short type = eth.getEtherType();
+        return type == Ethernet.TYPE_LLDP || type == Ethernet.TYPE_BSN;
+    }
+
+    private void redirectToPortal(PacketContext context){
+        IPv4 ipv4Packet = (IPv4) context.inPacket().parsed().getPayload();
+
+        log.info("ControllerRedirect: Redirecting destination {} of source {} to portal {}",
+                ipv4Packet.getDestinationAddress(), ipv4Packet.getSourceAddress(), portalService.getPortalIp());
+
+    }
+
+    private void restoreSource(PacketContext context){
+
+    }
     /**
      * Create new packet and send it to the portal
      * @param context the packet context
