@@ -147,7 +147,8 @@ public class DefaultService extends AbstractElement implements Service {
         if (protocol != that.protocol) return false;
         if (ip4Address != null ? !ip4Address.equals(that.ip4Address) : that.ip4Address != null) return false;
         if (tpPort != null ? !tpPort.equals(that.tpPort) : that.tpPort != null) return false;
-        return !(name != null ? !name.equals(that.name) : that.name != null);
+        if (name != null ? !name.equals(that.name) : that.name != null) return false;
+        return !(icon != null ? !icon.equals(that.icon) : that.icon != null);
 
     }
 
@@ -156,6 +157,7 @@ public class DefaultService extends AbstractElement implements Service {
         int result = ip4Address != null ? ip4Address.hashCode() : 0;
         result = 31 * result + (tpPort != null ? tpPort.hashCode() : 0);
         result = 31 * result + (name != null ? name.hashCode() : 0);
+        result = 31 * result + (icon != null ? icon.hashCode() : 0);
         result = 31 * result + (int) protocol;
         return result;
     }
