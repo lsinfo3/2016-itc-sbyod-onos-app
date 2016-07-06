@@ -99,7 +99,7 @@ public class PortalManager implements PortalService{
         appId = coreService.registerApplication(PortalService.APP_ID);
 
         // install drop, controller and dns rules on all devices
-        basicRuleInstaller.installRules();
+        // basicRuleInstaller.installRules();
 
         // TODO in future: Add topology listener -> adding basic rules if new device connected.
 
