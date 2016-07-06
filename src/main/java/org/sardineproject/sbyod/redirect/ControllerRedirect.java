@@ -307,6 +307,7 @@ public class ControllerRedirect extends PacketRedirect {
 
             // reset packet checksum
             ipv4Packet.resetChecksum();
+            packet.resetChecksum();
             // create a buffer for the serialized packet
             ByteBuffer buf = ByteBuffer.wrap(packet.serialize());
 
@@ -361,6 +362,7 @@ public class ControllerRedirect extends PacketRedirect {
                 ipv4Packet.setSourceAddress(newSrcIp.toInt());
                 packet.setSourceMACAddress(newSrcMac);
                 ipv4Packet.resetChecksum();
+                packet.resetChecksum();
                 ByteBuffer buf = ByteBuffer.wrap(packet.serialize());
 
                 TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
@@ -407,7 +409,6 @@ public class ControllerRedirect extends PacketRedirect {
         ipPkt.setDestinationAddress((portal.ipAddresses().iterator().next().getIp4Address()).toInt());
 
         ipPkt.resetChecksum();
-        ethPkt.resetChecksum();
         //wrap the packet as buffer
         ByteBuffer buf = ByteBuffer.wrap(ethPkt.serialize());
 
