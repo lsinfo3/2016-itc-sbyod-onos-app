@@ -134,6 +134,7 @@ public class ControllerRedirect extends PacketRedirect {
     private ForwardingObjective.Builder getPort80ToControllerRule(){
         TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
                 .matchEthType(Ethernet.TYPE_IPV4)
+                .matchIPProtocol(IPv4.PROTOCOL_TCP)
                 .matchTcpDst(TpPort.tpPort(80));
 
         TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
@@ -151,6 +152,7 @@ public class ControllerRedirect extends PacketRedirect {
     private ForwardingObjective.Builder getPortalToControllerRule(Ip4Address portalIp){
         TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
                 .matchEthType(Ethernet.TYPE_IPV4)
+                .matchIPProtocol(IPv4.PROTOCOL_TCP)
                 .matchTcpSrc(TpPort.tpPort(80))
                 .matchIPSrc(portalIp.toIpPrefix());
 
