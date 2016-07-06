@@ -405,7 +405,9 @@ public class ControllerRedirect extends PacketRedirect {
         ethPkt.setDestinationMACAddress(portal.mac());
         // set the ip address of the portal as destination
         ipPkt.setDestinationAddress((portal.ipAddresses().iterator().next().getIp4Address()).toInt());
+
         ipPkt.resetChecksum();
+        ethPkt.resetChecksum();
         //wrap the packet as buffer
         ByteBuffer buf = ByteBuffer.wrap(ethPkt.serialize());
 
