@@ -91,11 +91,6 @@ public class ControllerRedirect extends PacketRedirect {
     @Activate
     protected void activate(){
 
-        try {
-            wait(3*1000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
         // install rules sending relevant packets to controller
         installRedirectRules();
 
@@ -160,8 +155,8 @@ public class ControllerRedirect extends PacketRedirect {
 
     private ForwardingObjective.Builder getPortalToControllerRule(){
 
-        ByodConfig cfg = cfgService.getConfig(applicationIdStore.getAppId(APPLICATION_ID), ByodConfig.class);
-        Ip4Address portalIp = cfg.portalIp();
+        //ByodConfig cfg = cfgService.getConfig(applicationIdStore.getAppId(APPLICATION_ID), ByodConfig.class);
+        Ip4Address portalIp = Ip4Address.valueOf("10.1.0.2");
         if(portalIp != null) {
 
             TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
