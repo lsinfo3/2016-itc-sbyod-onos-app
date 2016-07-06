@@ -328,10 +328,18 @@ public class ControllerRedirect extends PacketRedirect {
                     TpPort.tpPort(tcpPacket.getSourcePort())),
                     new IpMacPair(oldIpDst, oldMacDst));
 
-            log.info("ControllerRedirect: redirectToPortal: redirected packet with (srcIP={}, dstIP={}, srcMac={}, " +
-                            "dstMac={}) -> (srcIP={}, dstIP={}, srcMac={}, dstMac={})",
-                    Lists.newArrayList(Ip4Address.valueOf(ipv4Packet.getSourceAddress()), oldIpDst, packet.getSourceMAC(), packet.getDestinationMAC(),
-                            Ip4Address.valueOf(ipv4Packet.getSourceAddress()), portal.ipAddress(), packet.getSourceMAC(), portalHost.mac()).toArray());
+            log.info("ControllerRedirect: redirectToPortal: redirected packet\n(srcIP={}, srcMac={}, dstIP={}, " +
+                            "dstMac={}) -> (srcIP={}, srcMac={}, dstIP={}, dstMac={})",
+                    Lists.newArrayList(
+                            Ip4Address.valueOf(ipv4Packet.getSourceAddress()),
+                            packet.getSourceMAC(),
+                            oldIpDst,
+                            packet.getDestinationMAC(),
+                            Ip4Address.valueOf(ipv4Packet.getSourceAddress()),
+                            packet.getSourceMAC(),
+                            portal.ipAddress(),
+                            portalHost.mac())
+                            .toArray());
 
         } else if(portalHosts.isEmpty()){
             log.warn("ControllerRedirect: RedirectToPortal: no portal host found with ip={}", portal.ipAddress());
@@ -343,43 +351,69 @@ public class ControllerRedirect extends PacketRedirect {
     }
 
     private void restoreSource(PacketContext context){
+        // parsing packet
         Ethernet packet = context.inPacket().parsed();
         IPv4 ipv4Packet = (IPv4) packet.getPayload();
         TCP tcpPacket = (TCP) ipv4Packet.getPayload();
 
-        log.info("ControllerRedirect: Restoring source IP={}, destination IP={}",
-                Ip4Address.valueOf(ipv4Packet.getSourceAddress()), Ip4Address.valueOf(ipv4Packet.getDestinationAddress()));
-
+        // creating the ip-port pair for the packet
         IpPortPair ipPortPair = new IpPortPair(Ip4Address.valueOf(ipv4Packet.getDestinationAddress()),
                 TpPort.tpPort(tcpPacket.getDestinationPort()));
+        // check if an entry was created for this ipPortPair
         if(portToMac.keySet().contains(ipPortPair)){
-            // save old mac and ip destination
+
+            // get the src ip and mac address to restore
             IpMacPair ipMacPair = portToMac.get(ipPortPair);
             Ip4Address newSrcIp = ipMacPair.getIp4Address();
             MacAddress newSrcMac = ipMacPair.getMacAddress();
 
+            log.info("ControllerRedirect: restoreSource: restoring source\n(srcIp={}, srcMac={}, dstIp={}," +
+                            " dstMac={}) ->\n(srcIP={}, srcMac={}, dstIP={}, dstMac={})",
+                    Lists.newArrayList(
+                            Ip4Address.valueOf(ipv4Packet.getSourceAddress()),
+                            packet.getSourceMAC(),
+                            Ip4Address.valueOf(ipv4Packet.getDestinationAddress()),
+                            packet.getDestinationMAC(),
+                            newSrcIp,
+                            newSrcMac,
+                            Ip4Address.valueOf(ipv4Packet.getDestinationAddress()),
+                            packet.getDestinationMAC())
+                            .toArray());
+
+            // get the destination host
             Host destinationHost = hostService.getHost(HostId.hostId(packet.getDestinationMAC(),
                     VlanId.vlanId(packet.getVlanID())));
+
             if(destinationHost != null){
+
+                // set the new source ip address
                 ipv4Packet.setSourceAddress(newSrcIp.toInt());
+                // set the new source mac address
                 packet.setSourceMACAddress(newSrcMac);
+
+                // reset the packet checksum
                 ipv4Packet.resetChecksum();
                 packet.resetChecksum();
                 tcpPacket.resetChecksum();
+
                 ByteBuffer buf = ByteBuffer.wrap(packet.serialize());
 
+                // create the traffic treatment for the restored packet
                 TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
                         .setIpDst(Ip4Address.valueOf(ipv4Packet.getDestinationAddress()))
                         .setEthDst(packet.getDestinationMAC())
                         .setOutput(destinationHost.location().port());
 
+                // emit the packet at the device the host is connected to
                 packetService.emit(new DefaultOutboundPacket(destinationHost.location().deviceId(),
                         trafficTreatmentBuilder.build(),
                         buf));
-
+                // block the old context
                 context.block();
+
             } else{
-                log.warn("ControllerRedirect: No destination Host found while restoring source");
+                log.warn("ControllerRedirect: No destination Host found for ip={} while restoring source",
+                        Ip4Address.valueOf(ipv4Packet.getSourceAddress()));
             }
         } else{
             log.warn("ControllerRedirect: No IP and Mac known for this IP and port while restoring source");
