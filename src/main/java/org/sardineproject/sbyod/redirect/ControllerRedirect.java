@@ -21,10 +21,7 @@ import com.google.common.collect.Lists;
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.*;
 import org.onosproject.core.ApplicationIdStore;
-import org.onosproject.net.Device;
-import org.onosproject.net.DeviceId;
-import org.onosproject.net.Host;
-import org.onosproject.net.PortNumber;
+import org.onosproject.net.*;
 import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
@@ -77,6 +74,8 @@ public class ControllerRedirect extends PacketRedirect {
 
     private ReactivePacketProcessor processor = new ReactivePacketProcessor();
 
+    private Map<IpPortPair, IpMacPair> portToMac;
+
     private Map<PacketValues, PacketValues> newToOldIpAddress;
 
     private IpCounter ipCounter;
@@ -95,6 +94,8 @@ public class ControllerRedirect extends PacketRedirect {
 
         this.newToOldIpAddress = new HashMap<>();
 
+        this.portToMac = new HashMap<>();
+
         this.primaryDst = new HashMap<>();
 
         // starting at ip *.*.*.1
@@ -105,10 +106,14 @@ public class ControllerRedirect extends PacketRedirect {
     @Deactivate
     protected void deactivate(){
 
+        // TODO: remove flows
+
         withdrawIntercepts();
         packetService.removeProcessor(processor);
 
         this.newToOldIpAddress = null;
+
+        this.portToMac = null;
 
         this.primaryDst = null;
     }
@@ -217,30 +222,35 @@ public class ControllerRedirect extends PacketRedirect {
             if(packet.getEtherType() == Ethernet.TYPE_IPV4) {
                 IPv4 ipv4Packet = (IPv4) packet.getPayload();
 
-                /*
-                ### The packet is of ipv4 ethernet type, no rules have been added for it yet,
-                ### otherwise it would have been handled by these rules.
-                ### Therefore the connection to the portal is checked for the source host
-                ### and a redirect is done to the portal.
-                */
+                if (ipv4Packet.getProtocol() == IPv4.PROTOCOL_TCP) {
+                    TCP tcpPacket = (TCP) ipv4Packet.getPayload();
 
-                Service portal = portalManager.getPortalService();
-                // only redirect if portal is defined
-                if (portal != null) {
+                    /*
+                    ### The packet is of ipv4 ethernet type, no rules have been added for it yet,
+                    ### otherwise it would have been handled by these rules.
+                    ### Therefore the connection to the portal is checked for the source host
+                    ### and a redirect is done to the portal.
+                    */
 
-                    // if packet destination was changed and source is the portal
-                    if (newToOldIpAddress.keySet().contains(Ip4Address.valueOf(ipv4Packet.getDestinationAddress())) &&
-                            portalManager.getPortalIp().toInt() == ipv4Packet.getSourceAddress()) {
-                        // restore old src and destination
-                        restoreSource(context);
-                    } else if (portalManager.getPortalIp().toInt() != (ipv4Packet.getDestinationAddress())) {
-                        // if the packet destination differs from the portal address -> redirect packet to portal
-                        redirectToPortal(context);
+                    Service portal = portalManager.getPortalService();
+                    // only redirect if portal is defined
+                    if (portal != null) {
+
+                        // if packet destination was changed and source is the portal on port 80
+                        if (ipv4Packet.getSourceAddress() == portal.ipAddress().toInt() &&
+                                tcpPacket.getSourcePort() == 80) {
+                            // restore old src and destination
+                            restoreSource(context);
+                        } else if (tcpPacket.getDestinationPort() == 80 &&
+                                portalManager.getPortalIp().toInt() != (ipv4Packet.getDestinationAddress())) {
+                            // if the packet destination differs from the portal address -> redirect packet to portal
+                            redirectToPortal(context);
+                        } else if (tcpPacket.getDestinationPort() == 80){
+                            log.warn("ControllerRedirect: Packet with portal destination was not forwarded. {}", ipv4Packet);
+                        }
                     } else {
-                        log.warn("ControllerRedirect: Packet with portal destination was not forwarded. {}", ipv4Packet);
+                        log.warn("ControllerRedirect: No portal defined.");
                     }
-                } else{
-                    log.warn("ControllerRedirect: No portal defined.");
                 }
             }
         }
@@ -259,15 +269,15 @@ public class ControllerRedirect extends PacketRedirect {
     private void redirectToPortal(PacketContext context){
         Ethernet packet = context.inPacket().parsed();
         IPv4 ipv4Packet = (IPv4) packet.getPayload();
+        TCP tcpPacket = (TCP) ipv4Packet.getPayload();
 
         log.info("ControllerRedirect: Redirecting (source IP={}, destination IP={}) -> to portal IP={}",
                 ipv4Packet.getSourceAddress(), ipv4Packet.getDestinationAddress(), portalManager.getPortalIp());
 
         // save old values
-        Ip4Address oldIPSrc = Ip4Address.valueOf(ipv4Packet.getSourceAddress());
-        Ip4Address oldIPDst = Ip4Address.valueOf(ipv4Packet.getDestinationAddress());
+        Ip4Address oldIpDst = Ip4Address.valueOf(ipv4Packet.getDestinationAddress());
+        MacAddress oldMacDst = packet.getDestinationMAC();
         // save old values in packet value class for later reconstruction
-        PacketValues oldPacketValues = new PacketValues(oldIPSrc, oldIPDst, packet.getSourceMAC(), packet.getDestinationMAC());
 
         // get the host where the portal is running on
         Service portal = portalManager.getPortalService();
@@ -275,47 +285,36 @@ public class ControllerRedirect extends PacketRedirect {
         if(portalHosts.size() == 1){
             Host portalHost = portalHosts.iterator().next();
 
-            // get an ip address from another network
-            Ip4Address newIpSrc = Ip4Address.valueOf("10.2.0." + ipCounter.getCount());
-            // set the temporary new ip source address
-            ipv4Packet.setSourceAddress(newIpSrc.toInt());
             // set the portal ip the packet is redirected to
             ipv4Packet.setDestinationAddress(portal.ipAddress().toInt());
             // set the mac address of the portal as destination
             packet.setDestinationMACAddress(portalHost.mac());
 
-            PacketValues newPacketValues = new PacketValues(newIpSrc, portal.ipAddress(), packet.getSourceMAC(), portalHost.mac());
-
             // reset packet checksum
             ipv4Packet.resetChecksum();
             // create a buffer for the serialized packet
             ByteBuffer buf = ByteBuffer.wrap(packet.serialize());
-            // TODO: emit the packet directly on the switch where the portal is connected to
-            // get the port number where the portal is located
-            PortNumber outPort = getDstPort(context.inPacket(), portalHost);
-
-            if(outPort == null) {
-                log.warn("Could not find a path from {} to the portal.",
-                        context.inPacket().receivedFrom().deviceId().toString());
-                return;
-            }
 
             // set up the traffic management
             TrafficTreatment.Builder builder = DefaultTrafficTreatment.builder()
                     .setIpDst(portal.ipAddress())
                     .setEthDst(portalHost.mac())
-                    .setOutput(outPort);
+                    .setOutput(portalHost.location().port());
 
-            //send new packet to the device where received packet came from
-            packetService.emit(new DefaultOutboundPacket(context.inPacket().receivedFrom().deviceId(),
+            //send new packet to the device where the portal is connected to
+            packetService.emit(new DefaultOutboundPacket(portalHost.location().deviceId(),
                     builder.build(), buf));
             context.block();
 
-            newToOldIpAddress.put(newPacketValues, oldPacketValues);
+            // save src ip - port and dst ip - mac pairs
+            portToMac.put(new IpPortPair(Ip4Address.valueOf(ipv4Packet.getSourceAddress()),
+                    TpPort.tpPort(tcpPacket.getSourcePort())),
+                    new IpMacPair(oldIpDst, oldMacDst));
+
             log.info("ControllerRedirect: redirectToPortal: redirected packet with (srcIP={}, dstIP={}, srcMac={}, " +
-                    "dstMac={}) -> (srcIP={}, dstIP={}, srcMac={}, dstMac={})",
-                    Lists.newArrayList(oldIPSrc, oldIPDst, packet.getSourceMAC(), packet.getDestinationMAC(),
-                            newIpSrc, portal.ipAddress(), packet.getSourceMAC(), portalHost.mac()).toArray());
+                            "dstMac={}) -> (srcIP={}, dstIP={}, srcMac={}, dstMac={})",
+                    Lists.newArrayList(ipv4Packet.getSourceAddress(), oldIpDst, packet.getSourceMAC(), packet.getDestinationMAC(),
+                            ipv4Packet.getSourceAddress(), portal.ipAddress(), packet.getSourceMAC(), portalHost.mac()).toArray());
 
         } else if(portalHosts.isEmpty()){
             log.warn("ControllerRedirect: RedirectToPortal: no portal host found with ip={}", portal.ipAddress());
@@ -327,10 +326,44 @@ public class ControllerRedirect extends PacketRedirect {
     }
 
     private void restoreSource(PacketContext context){
-        IPv4 ipv4Packet = (IPv4) context.inPacket().parsed().getPayload();
+        Ethernet packet = context.inPacket().parsed();
+        IPv4 ipv4Packet = (IPv4) packet.getPayload();
+        TCP tcpPacket = (TCP) ipv4Packet.getPayload();
 
         log.info("ControllerRedirect: Restoring source IP={}, destination IP={}",
                 ipv4Packet.getSourceAddress(), ipv4Packet.getDestinationAddress());
+
+        IpPortPair ipPortPair = new IpPortPair(Ip4Address.valueOf(ipv4Packet.getDestinationAddress()),
+                TpPort.tpPort(tcpPacket.getDestinationPort()));
+        if(portToMac.keySet().contains(ipPortPair)){
+            IpMacPair ipMacPair = portToMac.get(ipPortPair);
+            Ip4Address newSrcIp = ipMacPair.getIp4Address();
+            MacAddress newSrcMac = ipMacPair.getMacAddress();
+
+            Host destinationHost = hostService.getHost(HostId.hostId(packet.getDestinationMAC(),
+                    VlanId.vlanId(packet.getVlanID())));
+            if(destinationHost != null){
+                ipv4Packet.setSourceAddress(newSrcIp.toInt());
+                packet.setSourceMACAddress(newSrcMac);
+                ipv4Packet.resetChecksum();
+                ByteBuffer buf = ByteBuffer.wrap(packet.serialize());
+
+                TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
+                        .setIpDst(Ip4Address.valueOf(ipv4Packet.getDestinationAddress()))
+                        .setEthDst(packet.getDestinationMAC())
+                        .setOutput(destinationHost.location().port());
+
+                packetService.emit(new DefaultOutboundPacket(destinationHost.location().deviceId(),
+                        trafficTreatmentBuilder.build(),
+                        buf));
+
+                context.block();
+            } else{
+                log.warn("ControllerRedirect: No destination Host found while restoring source");
+            }
+        } else{
+            log.warn("ControllerRedirect: No IP and Mac known for this IP and port while restoring source");
+        }
     }
     /**
      * Create new packet and send it to the portal
@@ -477,6 +510,63 @@ public class ControllerRedirect extends PacketRedirect {
 
         public MacAddress getMacDst(){
             return macDst;
+        }
+    }
+
+    private class IpPortPair{
+
+        private Ip4Address ip4Address;
+        private TpPort tpPort;
+
+        public IpPortPair(Ip4Address ip4Address, TpPort tpPort){
+            this.ip4Address = ip4Address;
+            this.tpPort = tpPort;
+        }
+
+        public Ip4Address getIp4Address() {
+            return ip4Address;
+        }
+
+        public TpPort getTpPort() {
+            return tpPort;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            IpPortPair that = (IpPortPair) o;
+
+            if (ip4Address != null ? !ip4Address.equals(that.ip4Address) : that.ip4Address != null) return false;
+            return !(tpPort != null ? !tpPort.equals(that.tpPort) : that.tpPort != null);
+
+        }
+
+        @Override
+        public int hashCode() {
+            int result = ip4Address != null ? ip4Address.hashCode() : 0;
+            result = 31 * result + (tpPort != null ? tpPort.hashCode() : 0);
+            return result;
+        }
+    }
+
+    private class IpMacPair{
+
+        private Ip4Address ip4Address;
+        private MacAddress macAddress;
+
+        public IpMacPair(Ip4Address ip4Address, MacAddress macAddress){
+            this.ip4Address = ip4Address;
+            this.macAddress = macAddress;
+        }
+
+        public Ip4Address getIp4Address() {
+            return ip4Address;
+        }
+
+        public MacAddress getMacAddress() {
+            return macAddress;
         }
     }
 }
