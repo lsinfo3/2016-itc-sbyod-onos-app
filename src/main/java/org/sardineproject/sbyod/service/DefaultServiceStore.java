@@ -123,6 +123,8 @@ public class DefaultServiceStore implements ServiceStore {
             return false;
         }
 
+        // TODO: check if service host is online, if not -> arp to host! via host monitor?
+
         if(!services.contains(service)) {
             log.debug("ServiceStore: Added service {}", service.toString());
             return services.add(service);

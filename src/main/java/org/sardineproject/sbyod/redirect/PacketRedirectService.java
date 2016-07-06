@@ -25,6 +25,8 @@ import org.onosproject.net.packet.PacketContext;
  */
 public interface PacketRedirectService {
 
+    // TODO: change interface? no need for portal host!
+
     /**
      * Change the destination to match with portal
      * @param context of the packet

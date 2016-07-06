@@ -31,6 +31,7 @@ import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flowobjective.DefaultForwardingObjective;
 import org.onosproject.net.flowobjective.FlowObjectiveService;
 import org.onosproject.net.flowobjective.ForwardingObjective;
+import org.onosproject.net.host.HostService;
 import org.onosproject.net.packet.*;
 import org.sardineproject.sbyod.PortalService;
 import org.sardineproject.sbyod.configuration.ByodConfig;
@@ -49,9 +50,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * Created by lorry on 11.12.15.
  */
-@Component(immediate = true, inherit = true)
+@Component(immediate = true)
 @org.apache.felix.scr.annotations.Service
-public class ControllerRedirect extends PacketRedirect {
+public class ControllerRedirect implements PacketRedirectService {
 
     private static final int REDIRECT_PRIORITY = 200;
     private static final String APPLICATION_ID = PortalService.APP_ID;
@@ -76,17 +77,13 @@ public class ControllerRedirect extends PacketRedirect {
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected NetworkConfigRegistry cfgService;
 
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected HostService hostService;
+
 
     private ReactivePacketProcessor processor = new ReactivePacketProcessor();
 
     private Map<IpPortPair, IpMacPair> portToMac;
-
-    private Map<PacketValues, PacketValues> newToOldIpAddress;
-
-    private IpCounter ipCounter;
-
-    // source and destination pairs of changed packets
-    private Map<Host, Host> primaryDst;
 
     @Activate
     protected void activate(){
@@ -97,14 +94,7 @@ public class ControllerRedirect extends PacketRedirect {
         packetService.addProcessor(processor, PacketProcessor.director(2));
         requestIntercepts();
 
-        this.newToOldIpAddress = new HashMap<>();
-
         this.portToMac = new HashMap<>();
-
-        this.primaryDst = new HashMap<>();
-
-        // starting at ip *.*.*.1
-        ipCounter = new IpCounter();
 
     }
 
@@ -116,11 +106,7 @@ public class ControllerRedirect extends PacketRedirect {
         withdrawIntercepts();
         packetService.removeProcessor(processor);
 
-        this.newToOldIpAddress = null;
-
         this.portToMac = null;
-
-        this.primaryDst = null;
     }
 
     private void installRedirectRules(){
@@ -156,6 +142,7 @@ public class ControllerRedirect extends PacketRedirect {
     private ForwardingObjective.Builder getPortalToControllerRule(){
 
         //ByodConfig cfg = cfgService.getConfig(applicationIdStore.getAppId(APPLICATION_ID), ByodConfig.class);
+        // TODO: find portal address!
         Ip4Address portalIp = Ip4Address.valueOf("10.1.0.2");
         if(portalIp != null) {
 
@@ -248,6 +235,7 @@ public class ControllerRedirect extends PacketRedirect {
                     */
 
                     Service portal = portalManager.getPortalService();
+                    Host portalHost = hostService.getHostsByIp(portal.ipAddress()).iterator().next();
                     // only redirect if portal is defined
                     if (portal != null) {
 
@@ -255,11 +243,11 @@ public class ControllerRedirect extends PacketRedirect {
                         if (ipv4Packet.getSourceAddress() == portal.ipAddress().toInt() &&
                                 tcpPacket.getSourcePort() == 80) {
                             // restore old src and destination
-                            restoreSource(context);
+                            restoreSource(context, portalHost);
                         } else if (tcpPacket.getDestinationPort() == 80 &&
                                 portalManager.getPortalIp().toInt() != (ipv4Packet.getDestinationAddress())) {
                             // if the packet destination differs from the portal address -> redirect packet to portal
-                            redirectToPortal(context);
+                            redirectToPortal(context, portalHost);
                         } else if (tcpPacket.getDestinationPort() == 80){
                             log.warn("ControllerRedirect: Packet with portal destination was not forwarded. {}", ipv4Packet);
                         }
@@ -281,7 +269,7 @@ public class ControllerRedirect extends PacketRedirect {
         return type == Ethernet.TYPE_LLDP || type == Ethernet.TYPE_BSN;
     }
 
-    private void redirectToPortal(PacketContext context){
+    public void redirectToPortal(PacketContext context, Host inPortalHost){
         Ethernet packet = context.inPacket().parsed();
         IPv4 ipv4Packet = (IPv4) packet.getPayload();
         TCP tcpPacket = (TCP) ipv4Packet.getPayload();
@@ -350,7 +338,7 @@ public class ControllerRedirect extends PacketRedirect {
 
     }
 
-    private void restoreSource(PacketContext context){
+    public void restoreSource(PacketContext context, Host portal){
         // parsing packet
         Ethernet packet = context.inPacket().parsed();
         IPv4 ipv4Packet = (IPv4) packet.getPayload();
@@ -416,155 +404,8 @@ public class ControllerRedirect extends PacketRedirect {
                         Ip4Address.valueOf(ipv4Packet.getSourceAddress()));
             }
         } else{
-            log.warn("ControllerRedirect: No IP and Mac known for this IP and port while restoring source");
-        }
-    }
-    /**
-     * Create new packet and send it to the portal
-     * @param context the packet context
-     * @param portal the portal all packets are send to
-     */
-    @Override
-    public void redirectToPortal(PacketContext context, Host portal) {
-        //parse the packet of the context
-        InboundPacket pkt = context.inPacket();
-        Ethernet ethPkt = pkt.parsed();
-        IPv4 ipPkt = (IPv4)ethPkt.getPayload();
-
-        // save the destination and source pairs to restore it later
-        Set<Host> src = hostService.getHostsByMac(ethPkt.getSourceMAC());
-        Set<Host> dst = hostService.getHostsByMac(ethPkt.getDestinationMAC());
-        if(src.iterator().hasNext() && dst.iterator().hasNext())
-            primaryDst.put(src.iterator().next(), dst.iterator().next());
-
-        checkNotNull(portal, "No portal defined!");
-        checkNotNull(portal.ipAddresses().iterator().next(), "Portal has no IP-address!");
-
-        //set the mac address of the portal as destination
-        ethPkt.setDestinationMACAddress(portal.mac());
-        // set the ip address of the portal as destination
-        ipPkt.setDestinationAddress((portal.ipAddresses().iterator().next().getIp4Address()).toInt());
-
-        ipPkt.resetChecksum();
-        //wrap the packet as buffer
-        ByteBuffer buf = ByteBuffer.wrap(ethPkt.serialize());
-
-        PortNumber outPort = getDstPort(pkt, portal);
-        if(outPort == null) {
-            log.warn(byodMarker, String.format("Could not find a path from %s to the portal.",
-                    pkt.receivedFrom().deviceId().toString()));
-            return;
-        }
-        TrafficTreatment.Builder builder = DefaultTrafficTreatment.builder();
-        // set up the traffic management
-        builder.setIpDst(portal.ipAddresses().iterator().next())
-                .setEthDst(portal.mac())
-                .setOutput(outPort);
-
-        //send new packet to the device where received packet came from
-        packetService.emit(new DefaultOutboundPacket(pkt.receivedFrom().deviceId(), builder.build(), buf));
-        context.block();
-    }
-
-    /**
-     * Restores the packet source from the portal to the previous intended source
-     * and send a copy of the packet
-     *
-     * @param context the packet context
-     */
-    @Override
-    public void restoreSource(PacketContext context, Host portal) {
-        checkNotNull(context, "No context defined!");
-        //parse the packet of the context
-        InboundPacket pkt = context.inPacket();
-        Ethernet ethPkt = pkt.parsed();
-        IPv4 ipPkt = (IPv4)ethPkt.getPayload();
-
-        // get the destination host
-        Set<Host> dst = hostService.getHostsByMac(ethPkt.getDestinationMAC());
-        if(dst.iterator().hasNext()) {
-            Host dstHost = dst.iterator().next();
-            // check if the packet of the dstHost was changed before
-            if(primaryDst.containsKey(dstHost)) {
-                Host previousSrc = primaryDst.get(dstHost);
-                if(!previousSrc.ipAddresses().iterator().hasNext())
-                    log.warn(byodMarker, String.format("No ip address for previous source %s defined!",
-                            previousSrc.id().toString()));
-                else {
-
-                    log.debug(byodMarker, "Restore the source of the previous intended packet source");
-                    // restore the mac address
-                    ethPkt.setSourceMACAddress(previousSrc.mac());
-                    // restore the ip address
-                    ipPkt.setSourceAddress(previousSrc.ipAddresses().iterator().next().getIp4Address().toInt());
-                    ipPkt.resetChecksum();
-                    // wrap the packet
-                    ByteBuffer buf = ByteBuffer.wrap(ethPkt.serialize());
-
-                    PortNumber outPort = getDstPort(pkt, dstHost);
-                    if(outPort == null) {
-                        log.warn(byodMarker, String.format("Could not find a path from %s to %s.",
-                                pkt.receivedFrom().deviceId().toString(), dstHost.id().toString()));
-                        return;
-                    }
-                    TrafficTreatment.Builder builder = DefaultTrafficTreatment.builder();
-                    // set up the traffic management
-                    builder.setIpSrc(previousSrc.ipAddresses().iterator().next())
-                            .setEthSrc(previousSrc.mac())
-                            .setOutput(outPort);
-
-                    //send new packet to the device where received packet came from
-                    packetService.emit(new DefaultOutboundPacket(pkt.receivedFrom().deviceId(), builder.build(), buf));
-                    context.block();
-                }
-            }
-        }
-    }
-
-    private class IpCounter{
-        private int count;
-
-        public IpCounter(){
-            count = 1;
-        }
-
-        public int getCount(){
-            if(count <= 254) {
-                return count++;
-            } else{
-                count = 1;
-                return count;
-            }
-        }
-    }
-
-    private class PacketValues {
-        private Ip4Address ipSrc;
-        private Ip4Address ipDst;
-        private MacAddress macSrc;
-        private MacAddress macDst;
-
-        public PacketValues(Ip4Address ipSrc, Ip4Address ipDst, MacAddress macSrc, MacAddress macDst){
-            this.ipSrc = ipSrc;
-            this.ipDst = ipDst;
-            this.macSrc = macSrc;
-            this.macDst = macDst;
-        }
-
-        public Ip4Address getIpSrc(){
-            return ipSrc;
-        }
-
-        public Ip4Address getIpDst(){
-            return ipDst;
-        }
-
-        public MacAddress getMacSrc(){
-            return macSrc;
-        }
-
-        public MacAddress getMacDst(){
-            return macDst;
+            log.warn("ControllerRedirect: No IP and Mac known for ip={} and port={} while restoring source",
+                    ipPortPair.getIp4Address(), ipPortPair.getTpPort());
         }
     }
 
