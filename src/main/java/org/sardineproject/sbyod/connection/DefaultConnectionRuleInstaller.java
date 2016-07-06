@@ -319,6 +319,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
 
         // Todo: only install connection for ip addresses inside the network!
 
+        byte protocol = connection.getService().protocol();
 
         for(IpAddress userIp : connection.getUser().ipAddresses()) {
                 if (userIp.isIp4()) {
@@ -328,7 +329,17 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                             .matchInPort(inPort)
                             .matchIPSrc(connection.getService().ipAddress().toIpPrefix())
                             .matchEthSrc(serviceMac)
-                            .matchIPDst(userIp.toIpPrefix());
+                            .matchIPDst(userIp.toIpPrefix())
+                            .matchIPProtocol(protocol);
+
+                    if (protocol == IPv4.PROTOCOL_TCP) {
+                        trafficSelectorBuilder.matchTcpSrc(connection.getService().tpPort());
+                    } else if (protocol == IPv4.PROTOCOL_UDP) {
+                        trafficSelectorBuilder.matchUdpSrc(connection.getService().tpPort());
+                    } else {
+                        log.warn("DefaultConnectionRuleInstaller: Defined internet protocol not supported!");
+                        return;
+                    }
 
                     // check if the match ethernet destination is set true in config
                     if (MATCH_ETH_DST) {
