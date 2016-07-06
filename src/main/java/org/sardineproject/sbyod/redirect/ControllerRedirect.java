@@ -365,6 +365,7 @@ public class ControllerRedirect extends PacketRedirect {
                 packet.setSourceMACAddress(newSrcMac);
                 ipv4Packet.resetChecksum();
                 packet.resetChecksum();
+                tcpPacket.resetChecksum();
                 ByteBuffer buf = ByteBuffer.wrap(packet.serialize());
 
                 TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
