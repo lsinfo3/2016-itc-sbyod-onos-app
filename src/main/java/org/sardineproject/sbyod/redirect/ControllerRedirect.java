@@ -47,7 +47,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * Created by lorry on 11.12.15.
  */
-@Component(immediate = false, inherit = true)
+@Component(immediate = true, inherit = true)
 @org.apache.felix.scr.annotations.Service
 public class ControllerRedirect extends PacketRedirect {
 
