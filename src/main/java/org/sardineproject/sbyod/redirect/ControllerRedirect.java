@@ -21,13 +21,18 @@ import com.google.common.collect.Lists;
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.*;
 import org.onosproject.core.ApplicationIdStore;
+import org.onosproject.net.Device;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.Host;
 import org.onosproject.net.PortNumber;
+import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
+import org.onosproject.net.flowobjective.DefaultForwardingObjective;
+import org.onosproject.net.flowobjective.FlowObjectiveService;
+import org.onosproject.net.flowobjective.ForwardingObjective;
 import org.onosproject.net.packet.*;
 import org.sardineproject.sbyod.PortalService;
 import org.sardineproject.sbyod.service.Service;
@@ -49,6 +54,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 @org.apache.felix.scr.annotations.Service
 public class ControllerRedirect extends PacketRedirect {
 
+    private static final int REDIRECT_PRIORITY = 200;
     private static final String APPLICATION_ID = PortalService.APP_ID;
     private final Logger log = LoggerFactory.getLogger(getClass());
 
@@ -62,10 +68,16 @@ public class ControllerRedirect extends PacketRedirect {
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected ApplicationIdStore applicationIdStore;
 
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected DeviceService deviceService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected FlowObjectiveService flowObjectiveService;
+
 
     private ReactivePacketProcessor processor = new ReactivePacketProcessor();
 
-    private Map<Ip4Address, PacketValues> newToOldIpAddress;
+    private Map<PacketValues, PacketValues> newToOldIpAddress;
 
     private IpCounter ipCounter;
 
@@ -74,6 +86,9 @@ public class ControllerRedirect extends PacketRedirect {
 
     @Activate
     protected void activate(){
+
+        // install rules sending relevant packets to controller
+        installRedirectRules();
 
         packetService.addProcessor(processor, PacketProcessor.director(2));
         requestIntercepts();
@@ -96,6 +111,54 @@ public class ControllerRedirect extends PacketRedirect {
         this.newToOldIpAddress = null;
 
         this.primaryDst = null;
+    }
+
+    private void installRedirectRules(){
+
+        for(Device device : deviceService.getDevices()){
+            // get the ip address of the portal
+            Ip4Address portalIp = portalManager.getPortalIp();
+
+            // install rule sending every unhandled traffic on port 80 to controller
+            flowObjectiveService.forward(device.id(), getPort80ToControllerRule().add());
+            // install rule sending every answer from portal received on port 80 to controller
+            flowObjectiveService.forward(device.id(), getPortalToControllerRule(portalIp).add());
+        }
+    }
+
+    private ForwardingObjective.Builder getPort80ToControllerRule(){
+        TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
+                .matchEthType(Ethernet.TYPE_IPV4)
+                .matchTcpDst(TpPort.tpPort(80));
+
+        TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
+                .setOutput(PortNumber.CONTROLLER);
+
+        return DefaultForwardingObjective.builder()
+                .withSelector(trafficSelectorBuilder.build())
+                .withTreatment(trafficTreatmentBuilder.build())
+                .withPriority(REDIRECT_PRIORITY)
+                .withFlag(ForwardingObjective.Flag.VERSATILE)
+                .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
+                .makePermanent();
+    }
+
+    private ForwardingObjective.Builder getPortalToControllerRule(Ip4Address portalIp){
+        TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
+                .matchEthType(Ethernet.TYPE_IPV4)
+                .matchTcpSrc(TpPort.tpPort(80))
+                .matchIPSrc(portalIp.toIpPrefix());
+
+        TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
+                .setOutput(PortNumber.CONTROLLER);
+
+        return DefaultForwardingObjective.builder()
+                .withSelector(trafficSelectorBuilder.build())
+                .withTreatment(trafficTreatmentBuilder.build())
+                .withPriority(REDIRECT_PRIORITY)
+                .withFlag(ForwardingObjective.Flag.VERSATILE)
+                .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
+                .makePermanent();
     }
 
     /**
@@ -203,8 +266,8 @@ public class ControllerRedirect extends PacketRedirect {
         // save old values
         Ip4Address oldIPSrc = Ip4Address.valueOf(ipv4Packet.getSourceAddress());
         Ip4Address oldIPDst = Ip4Address.valueOf(ipv4Packet.getDestinationAddress());
-        MacAddress oldMacDst = packet.getDestinationMAC();
-        // TODO: save old values in map!
+        // save old values in packet value class for later reconstruction
+        PacketValues oldPacketValues = new PacketValues(oldIPSrc, oldIPDst, packet.getSourceMAC(), packet.getDestinationMAC());
 
         // get the host where the portal is running on
         Service portal = portalManager.getPortalService();
@@ -212,13 +275,16 @@ public class ControllerRedirect extends PacketRedirect {
         if(portalHosts.size() == 1){
             Host portalHost = portalHosts.iterator().next();
 
-            // set the mac address of the portal as destination
-            packet.setDestinationMACAddress(portalHost.mac());
+            // get an ip address from another network
+            Ip4Address newIpSrc = Ip4Address.valueOf("10.2.0." + ipCounter.getCount());
+            // set the temporary new ip source address
+            ipv4Packet.setSourceAddress(newIpSrc.toInt());
             // set the portal ip the packet is redirected to
             ipv4Packet.setDestinationAddress(portal.ipAddress().toInt());
-            // set the temporary new ip source address
-            Ip4Address newIpSrc = Ip4Address.valueOf("10.2.0." + ipCounter.getCount());
-            ipv4Packet.setSourceAddress(newIpSrc.toInt());
+            // set the mac address of the portal as destination
+            packet.setDestinationMACAddress(portalHost.mac());
+
+            PacketValues newPacketValues = new PacketValues(newIpSrc, portal.ipAddress(), packet.getSourceMAC(), portalHost.mac());
 
             // reset packet checksum
             ipv4Packet.resetChecksum();
@@ -244,9 +310,11 @@ public class ControllerRedirect extends PacketRedirect {
             packetService.emit(new DefaultOutboundPacket(context.inPacket().receivedFrom().deviceId(),
                     builder.build(), buf));
             context.block();
+
+            newToOldIpAddress.put(newPacketValues, oldPacketValues);
             log.info("ControllerRedirect: redirectToPortal: redirected packet with (srcIP={}, dstIP={}, srcMac={}, " +
                     "dstMac={}) -> (srcIP={}, dstIP={}, srcMac={}, dstMac={})",
-                    Lists.newArrayList(oldIPSrc, oldIPDst, packet.getSourceMAC(), oldMacDst,
+                    Lists.newArrayList(oldIPSrc, oldIPDst, packet.getSourceMAC(), packet.getDestinationMAC(),
                             newIpSrc, portal.ipAddress(), packet.getSourceMAC(), portalHost.mac()).toArray());
 
         } else if(portalHosts.isEmpty()){
