@@ -22,6 +22,7 @@ import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.*;
 import org.onosproject.core.ApplicationIdStore;
 import org.onosproject.net.*;
+import org.onosproject.net.config.NetworkConfigRegistry;
 import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
@@ -32,6 +33,7 @@ import org.onosproject.net.flowobjective.FlowObjectiveService;
 import org.onosproject.net.flowobjective.ForwardingObjective;
 import org.onosproject.net.packet.*;
 import org.sardineproject.sbyod.PortalService;
+import org.sardineproject.sbyod.configuration.ByodConfig;
 import org.sardineproject.sbyod.service.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,6 +72,9 @@ public class ControllerRedirect extends PacketRedirect {
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected FlowObjectiveService flowObjectiveService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected NetworkConfigRegistry cfgService;
 
 
     private ReactivePacketProcessor processor = new ReactivePacketProcessor();
@@ -121,13 +126,12 @@ public class ControllerRedirect extends PacketRedirect {
     private void installRedirectRules(){
 
         for(Device device : deviceService.getDevices()){
-            // get the ip address of the portal
-            Ip4Address portalIp = portalManager.getPortalIp();
-
             // install rule sending every unhandled traffic on port 80 to controller
             flowObjectiveService.forward(device.id(), getPort80ToControllerRule().add());
             // install rule sending every answer from portal received on port 80 to controller
-            flowObjectiveService.forward(device.id(), getPortalToControllerRule(portalIp).add());
+            ForwardingObjective.Builder portalToControllerRule = getPortalToControllerRule();
+            if(portalToControllerRule != null)
+                flowObjectiveService.forward(device.id(), portalToControllerRule.add());
         }
     }
 
@@ -149,23 +153,32 @@ public class ControllerRedirect extends PacketRedirect {
                 .makePermanent();
     }
 
-    private ForwardingObjective.Builder getPortalToControllerRule(Ip4Address portalIp){
-        TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
-                .matchEthType(Ethernet.TYPE_IPV4)
-                .matchIPProtocol(IPv4.PROTOCOL_TCP)
-                .matchTcpSrc(TpPort.tpPort(80))
-                .matchIPSrc(portalIp.toIpPrefix());
+    private ForwardingObjective.Builder getPortalToControllerRule(){
 
-        TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
-                .setOutput(PortNumber.CONTROLLER);
+        ByodConfig cfg = cfgService.getConfig(applicationIdStore.getAppId(APPLICATION_ID), ByodConfig.class);
+        Ip4Address portalIp = cfg.portalIp();
+        if(portalIp != null) {
 
-        return DefaultForwardingObjective.builder()
-                .withSelector(trafficSelectorBuilder.build())
-                .withTreatment(trafficTreatmentBuilder.build())
-                .withPriority(REDIRECT_PRIORITY)
-                .withFlag(ForwardingObjective.Flag.VERSATILE)
-                .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
-                .makePermanent();
+            TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
+                    .matchEthType(Ethernet.TYPE_IPV4)
+                    .matchIPProtocol(IPv4.PROTOCOL_TCP)
+                    .matchTcpSrc(TpPort.tpPort(80))
+                    .matchIPSrc(portalIp.toIpPrefix());
+
+            TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
+                    .setOutput(PortNumber.CONTROLLER);
+
+            return DefaultForwardingObjective.builder()
+                    .withSelector(trafficSelectorBuilder.build())
+                    .withTreatment(trafficTreatmentBuilder.build())
+                    .withPriority(REDIRECT_PRIORITY)
+                    .withFlag(ForwardingObjective.Flag.VERSATILE)
+                    .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
+                    .makePermanent();
+        } else{
+            log.warn("ControllerRedirect: No default IP defined in config file.");
+            return null;
+        }
     }
 
     /**
