@@ -308,6 +308,7 @@ public class ControllerRedirect extends PacketRedirect {
             // reset packet checksum
             ipv4Packet.resetChecksum();
             packet.resetChecksum();
+            tcpPacket.resetChecksum();
             // create a buffer for the serialized packet
             ByteBuffer buf = ByteBuffer.wrap(packet.serialize());
 
@@ -352,6 +353,7 @@ public class ControllerRedirect extends PacketRedirect {
         IpPortPair ipPortPair = new IpPortPair(Ip4Address.valueOf(ipv4Packet.getDestinationAddress()),
                 TpPort.tpPort(tcpPacket.getDestinationPort()));
         if(portToMac.keySet().contains(ipPortPair)){
+            // save old mac and ip destination
             IpMacPair ipMacPair = portToMac.get(ipPortPair);
             Ip4Address newSrcIp = ipMacPair.getIp4Address();
             MacAddress newSrcMac = ipMacPair.getMacAddress();
