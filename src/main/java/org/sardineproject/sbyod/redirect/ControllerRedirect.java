@@ -287,7 +287,7 @@ public class ControllerRedirect extends PacketRedirect {
         TCP tcpPacket = (TCP) ipv4Packet.getPayload();
 
         log.info("ControllerRedirect: Redirecting (source IP={}, destination IP={}) -> to portal IP={}",
-                Ip4Address.valueOf(ipv4Packet.getSourceAddress()), ipv4Packet.getDestinationAddress(), portalManager.getPortalIp());
+                Ip4Address.valueOf(ipv4Packet.getSourceAddress()), Ip4Address.valueOf(ipv4Packet.getDestinationAddress()), portalManager.getPortalIp());
 
         // save old values
         Ip4Address oldIpDst = Ip4Address.valueOf(ipv4Packet.getDestinationAddress());
@@ -328,7 +328,7 @@ public class ControllerRedirect extends PacketRedirect {
 
             log.info("ControllerRedirect: redirectToPortal: redirected packet with (srcIP={}, dstIP={}, srcMac={}, " +
                             "dstMac={}) -> (srcIP={}, dstIP={}, srcMac={}, dstMac={})",
-                    Lists.newArrayList(ipv4Packet.getSourceAddress(), oldIpDst, packet.getSourceMAC(), packet.getDestinationMAC(),
+                    Lists.newArrayList(Ip4Address.valueOf(ipv4Packet.getSourceAddress()), oldIpDst, packet.getSourceMAC(), packet.getDestinationMAC(),
                             Ip4Address.valueOf(ipv4Packet.getSourceAddress()), portal.ipAddress(), packet.getSourceMAC(), portalHost.mac()).toArray());
 
         } else if(portalHosts.isEmpty()){
@@ -346,7 +346,7 @@ public class ControllerRedirect extends PacketRedirect {
         TCP tcpPacket = (TCP) ipv4Packet.getPayload();
 
         log.info("ControllerRedirect: Restoring source IP={}, destination IP={}",
-                Ip4Address.valueOf(ipv4Packet.getSourceAddress()), ipv4Packet.getDestinationAddress());
+                Ip4Address.valueOf(ipv4Packet.getSourceAddress()), Ip4Address.valueOf(ipv4Packet.getDestinationAddress()));
 
         IpPortPair ipPortPair = new IpPortPair(Ip4Address.valueOf(ipv4Packet.getDestinationAddress()),
                 TpPort.tpPort(tcpPacket.getDestinationPort()));
