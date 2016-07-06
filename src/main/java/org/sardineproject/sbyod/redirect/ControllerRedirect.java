@@ -91,6 +91,11 @@ public class ControllerRedirect extends PacketRedirect {
     @Activate
     protected void activate(){
 
+        try {
+            wait(3*1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         // install rules sending relevant packets to controller
         installRedirectRules();
 
