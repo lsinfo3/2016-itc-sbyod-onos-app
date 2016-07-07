@@ -91,7 +91,7 @@ public class ControllerRedirect implements PacketRedirectService {
 
     @Activate
     protected void activate(){
-        activateRedirect(hostService.getHostsByIp(Ip4Address.valueOf("10.1.0.2")).iterator().next());
+        activateRedirect(null);
     }
 
     @Deactivate
