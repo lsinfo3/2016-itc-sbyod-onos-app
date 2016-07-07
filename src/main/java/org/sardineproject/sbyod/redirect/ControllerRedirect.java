@@ -18,6 +18,8 @@
 package org.sardineproject.sbyod.redirect;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.*;
 import org.onosproject.core.ApplicationIdStore;
@@ -40,10 +42,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -81,43 +80,76 @@ public class ControllerRedirect implements PacketRedirectService {
     protected HostService hostService;
 
 
-    private ReactivePacketProcessor processor = new ReactivePacketProcessor();
+    private ReactivePacketProcessor processor;
 
+    // the host the traffic is redirected to
+    private Host redirectHost;
+    // a map with all src ip and src port pairs and dst ip and dst mac pairs
     private Map<IpPortPair, IpMacPair> portToMac;
+
+    Map<DeviceId, List<ForwardingObjective>> installedRules;
 
     @Activate
     protected void activate(){
-
-        // install rules sending relevant packets to controller
-        installRedirectRules();
-
-        packetService.addProcessor(processor, PacketProcessor.director(2));
-        requestIntercepts();
-
-        this.portToMac = new HashMap<>();
-
+        activateRedirect(hostService.getHostsByIp(Ip4Address.valueOf("10.1.0.2")).iterator().next());
     }
 
     @Deactivate
     protected void deactivate(){
+        stopRedirect();
+    }
 
-        // TODO: remove flows
+    public void activateRedirect(Host redirectHost){
+        // define the host to redirect the traffic to
+        this.redirectHost = redirectHost;
 
-        withdrawIntercepts();
-        packetService.removeProcessor(processor);
+        // initiate empty rules map
+        installedRules = new HashMap<>();
+        // install rules sending relevant packets to controller
+        installRedirectRules();
+
+        // add packet processor monitoring packets
+        processor = new ReactivePacketProcessor();
+        packetService.addProcessor(processor, PacketProcessor.director(2));
+        requestIntercepts();
+    }
+
+    public void stopRedirect(){
+
+        // remove packet processor
+        if(processor != null) {
+            withdrawIntercepts();
+            packetService.removeProcessor(processor);
+            processor = null;
+        }
+
+        // remove installed redirect rules
+        if(installedRules != null) {
+            for (DeviceId deviceId : installedRules.keySet()) {
+                installedRules.get(deviceId)
+                        .forEach(fo -> flowObjectiveService.forward(deviceId, fo));
+            }
+            installedRules = null;
+        }
 
         this.portToMac = null;
+        this.redirectHost = null;
     }
 
     private void installRedirectRules(){
 
+        ForwardingObjective.Builder port80ToControllerRule = getPort80ToControllerRule();
+        ForwardingObjective.Builder portalToControllerRule = getPortalToControllerRule();
+
         for(Device device : deviceService.getDevices()){
             // install rule sending every unhandled traffic on port 80 to controller
-            flowObjectiveService.forward(device.id(), getPort80ToControllerRule().add());
+            flowObjectiveService.forward(device.id(), port80ToControllerRule.add());
+            installedRules.get(device.id()).add(port80ToControllerRule.remove());
+            // fixme: check if value is null?
+
             // install rule sending every answer from portal received on port 80 to controller
-            ForwardingObjective.Builder portalToControllerRule = getPortalToControllerRule();
-            if(portalToControllerRule != null)
-                flowObjectiveService.forward(device.id(), portalToControllerRule.add());
+            flowObjectiveService.forward(device.id(), portalToControllerRule.add());
+            installedRules.get(device.id()).add(portalToControllerRule.remove());
         }
     }
 

@@ -34,6 +34,7 @@ import org.sardineproject.sbyod.PortalService;
 import org.sardineproject.sbyod.connection.*;
 import org.sardineproject.sbyod.consul.ConsulService;
 import org.sardineproject.sbyod.dns.DnsService;
+import org.sardineproject.sbyod.redirect.PacketRedirectService;
 import org.sardineproject.sbyod.service.Service;
 import org.slf4j.Logger;
 
@@ -67,6 +68,9 @@ public class DefaultConfigurationManager implements ConfigurationManager{
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected ConnectionStore connectionStore;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected PacketRedirectService packetRedirectService;
 
 
 
@@ -121,6 +125,8 @@ public class DefaultConfigurationManager implements ConfigurationManager{
                         !portal.tpPort().equals(TpPort.tpPort(cfg.portalPort()))) {
 
                     portalService.setPortal(cfg.portalIp(), TpPort.tpPort(cfg.portalPort()));
+                    // Todo: update redirect!
+
                     log.info("DefaultConfigurationManager: Set portal ip to {} and port to {} and updated portal", cfg.portalIp(), cfg.portalPort());
                 }
             }
