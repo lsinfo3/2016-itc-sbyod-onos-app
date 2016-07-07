@@ -176,12 +176,13 @@ public class DefaultConnectionStore implements ConnectionStore {
                 Set<Connection> userConnectionsToSameHost = getConnections(connection.getUser()).stream()
                         .filter(c -> c.getService().ipAddress().equals(connection.getService().ipAddress()))
                         .collect(Collectors.toSet());
-                if(userConnectionsToSameHost.isEmpty()){
+                // fixme: no check for duplicate connections needed any more, as tpSource port is included in flow rules
+                //if(userConnectionsToSameHost.isEmpty()){
                     // no other connection to same host found -> remove service to host flow objective
                     log.debug("DefaultConnectionStore: Removing flow objective \n{} \n" +
                             "for device {} in method removeConnection()", fo, deviceId);
                     flowObjectiveService.forward(forwardingObjectives.get(fo), fo);
-                }
+                //}
             } else{
                 log.debug("DefaultConnectionStore: Removing flow objective \n{} \n" +
                         "for device {} in method removeConnection()", fo, deviceId);
