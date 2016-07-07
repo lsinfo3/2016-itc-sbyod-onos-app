@@ -105,6 +105,9 @@ public class ControllerRedirect implements PacketRedirectService {
 
         // initiate empty rules map
         installedRules = new HashMap<>();
+        // initiate empty port to mac map
+        portToMac = new HashMap<>();
+
         // install rules sending relevant packets to controller
         installRedirectRules();
 
@@ -133,6 +136,7 @@ public class ControllerRedirect implements PacketRedirectService {
         }
 
         this.portToMac = null;
+        this.installedRules = null;
         this.redirectHost = null;
     }
 
