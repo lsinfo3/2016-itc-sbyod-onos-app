@@ -144,12 +144,20 @@ public class ControllerRedirect implements PacketRedirectService {
         for(Device device : deviceService.getDevices()){
             // install rule sending every unhandled traffic on port 80 to controller
             flowObjectiveService.forward(device.id(), port80ToControllerRule.add());
-            installedRules.get(device.id()).add(port80ToControllerRule.remove());
+            if(installedRules.get(device.id()) != null) {
+                installedRules.get(device.id()).add(port80ToControllerRule.remove());
+            } else{
+                installedRules.put(device.id(), Lists.newArrayList(port80ToControllerRule.remove()));
+            }
             // fixme: check if value is null?
 
             // install rule sending every answer from portal received on port 80 to controller
             flowObjectiveService.forward(device.id(), portalToControllerRule.add());
-            installedRules.get(device.id()).add(portalToControllerRule.remove());
+            if(installedRules.get(device.id()) != null) {
+                installedRules.get(device.id()).add(portalToControllerRule.remove());
+            } else{
+                installedRules.put(device.id(), Lists.newArrayList(portalToControllerRule.remove()));
+            }
         }
     }
 
