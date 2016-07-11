@@ -18,8 +18,6 @@
 package org.sardineproject.sbyod.redirect;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.*;
 import org.onosproject.core.ApplicationIdStore;
@@ -36,7 +34,6 @@ import org.onosproject.net.flowobjective.ForwardingObjective;
 import org.onosproject.net.host.HostService;
 import org.onosproject.net.packet.*;
 import org.sardineproject.sbyod.PortalService;
-import org.sardineproject.sbyod.configuration.ByodConfig;
 import org.sardineproject.sbyod.service.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -186,7 +183,7 @@ public class ControllerRedirect implements PacketRedirectService {
     private ForwardingObjective.Builder getPortalToControllerRule(){
 
         //ByodConfig cfg = cfgService.getConfig(applicationIdStore.getAppId(APPLICATION_ID), ByodConfig.class);
-        // TODO: find portal address!
+        // TODO: get address redirecting to!
         Ip4Address portalIp = Ip4Address.valueOf("10.1.0.2");
         if(portalIp != null) {
 
@@ -279,24 +276,32 @@ public class ControllerRedirect implements PacketRedirectService {
                     */
 
                     Service portal = portalManager.getPortalService();
-                    Host portalHost = hostService.getHostsByIp(portal.ipAddress()).iterator().next();
-                    // only redirect if portal is defined
-                    if (portal != null) {
+                    Set<Host> portalHosts = hostService.getHostsByIp(portal.ipAddress());
+                    if(portalHosts.size() == 1) {
+                        Host portalHost = portalHosts.iterator().next();
+                        // only redirect if portal is defined
+                        if (portal != null) {
 
-                        // if packet destination was changed and source is the portal on port 80
-                        if (ipv4Packet.getSourceAddress() == portal.ipAddress().toInt() &&
-                                tcpPacket.getSourcePort() == 80) {
-                            // restore old src and destination
-                            restoreSource(context, portalHost);
-                        } else if (tcpPacket.getDestinationPort() == 80 &&
-                                portalManager.getPortalIp().toInt() != (ipv4Packet.getDestinationAddress())) {
-                            // if the packet destination differs from the portal address -> redirect packet to portal
-                            redirectToPortal(context, portalHost);
-                        } else if (tcpPacket.getDestinationPort() == 80){
-                            log.warn("ControllerRedirect: Packet with portal destination was not forwarded. {}", ipv4Packet);
+                            // if packet destination was changed and source is the portal on port 80
+                            if (ipv4Packet.getSourceAddress() == portal.ipAddress().toInt() &&
+                                    tcpPacket.getSourcePort() == 80) {
+                                // restore old src and destination
+                                restoreSource(context, portalHost);
+                            } else if (tcpPacket.getDestinationPort() == 80 &&
+                                    portalManager.getPortalIp().toInt() != (ipv4Packet.getDestinationAddress())) {
+                                // if the packet destination differs from the portal address -> redirect packet to portal
+                                redirectToPortal(context, portalHost);
+                            } else if (tcpPacket.getDestinationPort() == 80) {
+                                log.warn("ControllerRedirect: Packet with portal destination was not forwarded. {}", ipv4Packet);
+                            }
+                        } else {
+                            log.warn("ControllerRedirect: No portal defined.");
                         }
-                    } else {
-                        log.warn("ControllerRedirect: No portal defined.");
+                    } else if(portalHosts.isEmpty()){
+                        log.warn("ControllerRedirect: No portal host defined for ip={}. No redirect.",
+                                portal.ipAddress());
+                    } else{
+                        log.warn("ControllerRedirect: No unique host found for ip={}", portal.ipAddress());
                     }
                 }
             }

@@ -18,12 +18,10 @@
 package org.sardineproject.sbyod.configuration;
 
 import org.onlab.packet.Ip4Address;
-import org.onlab.packet.TpPort;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.net.config.Config;
 import org.onosproject.net.config.basics.BasicElementConfig;
 
-import static org.onosproject.net.config.Config.FieldPresence.MANDATORY;
 import static org.onosproject.net.config.Config.FieldPresence.OPTIONAL;
 
 /**
@@ -37,12 +35,13 @@ public class ByodConfig extends Config<ApplicationId> {
     public static final String CONSUL_IP = "consulIp";
     public static final String CONSUL_PORT = "consulPort";
     public static final String MATCH_ETH_DST = "matchEthDst";
+    public static final String SUBNET_MASK = "subnet";
 
 
     // TODO: check if config is valid
     @Override
     public boolean isValid(){
-        return hasOnlyFields(PORTAL_IP, PORTAL_PORT, DEFAULT_GATEWAY, CONSUL_IP, CONSUL_PORT, MATCH_ETH_DST) &&
+        return hasOnlyFields(PORTAL_IP, PORTAL_PORT, DEFAULT_GATEWAY, CONSUL_IP, CONSUL_PORT, MATCH_ETH_DST, SUBNET_MASK) &&
                 isIpAddress(PORTAL_IP, OPTIONAL) &&
                 isNumber(PORTAL_PORT, OPTIONAL, 1, 10000) &&
                 isIpAddress(DEFAULT_GATEWAY, OPTIONAL) &&
@@ -166,6 +165,26 @@ public class ByodConfig extends Config<ApplicationId> {
      */
     public BasicElementConfig matchEthDst(boolean match){
         return (BasicElementConfig) setOrClear(MATCH_ETH_DST, match);
+    }
+
+    /**
+     * Returns the subnet mask.
+     *
+     * @return subnet mask or null if not set
+     */
+    public Ip4Address subnetMask() {
+        String ip = get(SUBNET_MASK, null);
+        return ip != null ? Ip4Address.valueOf(ip) : null;
+    }
+
+    /**
+     * Sets the subnet mask.
+     *
+     * @param subnet new subnet mask; null to clear
+     * @return self
+     */
+    public BasicElementConfig subnetMask(String subnet) {
+        return (BasicElementConfig) setOrClear(SUBNET_MASK, subnet);
     }
 
 }
