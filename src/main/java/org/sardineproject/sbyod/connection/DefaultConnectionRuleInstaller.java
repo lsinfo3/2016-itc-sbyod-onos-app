@@ -18,11 +18,12 @@
 package org.sardineproject.sbyod.connection;
 
 import com.google.common.collect.Lists;
-import org.apache.felix.scr.annotations.*;
-import org.onlab.packet.EthType;
-import org.onlab.packet.IPv4;
-import org.onlab.packet.IpAddress;
-import org.onlab.packet.MacAddress;
+import org.apache.felix.scr.annotations.Component;
+import org.apache.felix.scr.annotations.Reference;
+import org.apache.felix.scr.annotations.ReferenceCardinality;
+import org.apache.felix.scr.annotations.Activate;
+import org.apache.felix.scr.annotations.Deactivate;
+import org.onlab.packet.*;
 import org.onosproject.core.ApplicationIdStore;
 import org.onosproject.net.*;
 import org.onosproject.net.config.NetworkConfigRegistry;
@@ -35,6 +36,7 @@ import org.onosproject.net.topology.TopologyService;
 import org.sardineproject.sbyod.PortalManager;
 import org.sardineproject.sbyod.PortalService;
 import org.sardineproject.sbyod.configuration.ByodConfig;
+import org.sardineproject.sbyod.service.Service;
 import org.slf4j.Logger;
 
 import java.util.*;
@@ -46,7 +48,7 @@ import static org.slf4j.LoggerFactory.getLogger;
  * Created by lorry on 01.03.16.
  */
 @Component(immediate = true)
-@Service
+@org.apache.felix.scr.annotations.Service
 public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
 
     private static final String APPLICATION_ID = PortalService.APP_ID;
@@ -90,7 +92,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
     @Override
     public void addConnection(Connection connection) {
 
-        if(connection == null){
+        if (connection == null) {
             log.warn("ConnectionRuleInstaller: DefaultConnection not added -> invalid parameter!");
             return;
         } else
@@ -107,7 +109,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
         Host serviceHost = getConnectionServiceHost(connection);
 
         // check if a valid service host was found
-        if(serviceHost != null) {
+        if (serviceHost != null) {
 
             // if user and service is connected to the same network device
             if (userLocation.deviceId().equals(serviceHost.location().deviceId())) {
@@ -171,29 +173,40 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
      * @param connection A connection between a user and a service
      * @return Service host location, default gateway host location or null
      */
-    private Host getConnectionServiceHost(Connection connection){
+    private Host getConnectionServiceHost(Connection connection) {
+        // service of the connection
+        Service service = connection.getService();
 
-        // get the host of the service ip if possible
-        Set<Host> serviceHosts = hostService.getHostsByIp(connection.getService().ipAddress());
-        if(!serviceHosts.isEmpty()) {
-            // found a host connected inside the local network, try routing to him
-            if (serviceHosts.size() > 1) {
-                log.info("ConnectionRuleInstaller: Found {} service hosts={} with ip={}, choosing first one = {}.",
+        // get the byod config
+        ByodConfig cfg = cfgService.getConfig(applicationIdStore.getAppId(APPLICATION_ID), ByodConfig.class);
+        // get the ip prefix of the network
+        IpPrefix ipPrefix = Ip4Prefix.valueOf(cfg.defaultGateway(), cfg.prefixLength());
+
+        // check if ip address is in local network
+        if (ipPrefix.contains(service.ipAddress())) {
+            // get the host of the service ip if possible
+            Set<Host> serviceHosts = hostService.getHostsByIp(service.ipAddress());
+            if (serviceHosts.size() == 1) {
+                // found a host connected inside the local network, try routing to him
+                Host serviceHost = serviceHosts.iterator().next();
+                return serviceHost;
+            } else if (serviceHosts.isEmpty()) {
+                log.warn("ConnectionRuleInstaller: getConnectionServiceHost() - no host found for local ip={}.",
+                        service.ipAddress());
+            } else {
+                log.warn("ConnectionRuleInstaller: Found {} service hosts={} with ip={}. Choose unique IP address.",
                         Lists.newArrayList(
                                 serviceHosts.size(),
                                 serviceHosts.stream().map(Host::id).collect(Collectors.toSet()),
-                                connection.getService().ipAddress(),
-                                serviceHosts.iterator().next().id())
+                                service.ipAddress())
                                 .toArray());
             }
-            Host serviceHost = serviceHosts.iterator().next();
-            return serviceHost;
-        } else{
-            // no host found in local network -> send traffic to default gateway if possible
-            // get the ip address of the default gateway
-            ByodConfig cfg = cfgService.getConfig(applicationIdStore.getAppId(APPLICATION_ID), ByodConfig.class);
+            // no host found
+            return null;
+        } else {
+            // ip address not in local network -> send traffic to default gateway if possible
             // check if a default gateway is defined in the config
-            if(cfg.defaultGateway() != null) {
+            if (cfg.defaultGateway() != null) {
                 // get the default gateway host
                 Set<Host> defaultGatewayHosts = hostService.getHostsByIp(cfg.defaultGateway());
 
@@ -219,7 +232,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                             cfg.defaultGateway(), connection.getService().ipAddress());
                     return null;
                 }
-            } else{
+            } else {
                 // no service host and no default gateway found -> can not install connection!
                 log.warn("ConnectionRuleInstaller: No host in local network and no default gateway defined! " +
                         "No connection installed for service with ip={}.", connection.getService().ipAddress());

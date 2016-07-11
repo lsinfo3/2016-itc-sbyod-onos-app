@@ -22,6 +22,7 @@ import org.onosproject.core.ApplicationId;
 import org.onosproject.net.config.Config;
 import org.onosproject.net.config.basics.BasicElementConfig;
 
+import static org.onosproject.net.config.Config.FieldPresence.MANDATORY;
 import static org.onosproject.net.config.Config.FieldPresence.OPTIONAL;
 
 /**
@@ -35,19 +36,20 @@ public class ByodConfig extends Config<ApplicationId> {
     public static final String CONSUL_IP = "consulIp";
     public static final String CONSUL_PORT = "consulPort";
     public static final String MATCH_ETH_DST = "matchEthDst";
-    public static final String SUBNET_MASK = "subnet";
+    public static final String PREFIX_LENGTH = "prefixLength";
 
 
     // TODO: check if config is valid
     @Override
     public boolean isValid(){
-        return hasOnlyFields(PORTAL_IP, PORTAL_PORT, DEFAULT_GATEWAY, CONSUL_IP, CONSUL_PORT, MATCH_ETH_DST, SUBNET_MASK) &&
+        return hasOnlyFields(PORTAL_IP, PORTAL_PORT, DEFAULT_GATEWAY, CONSUL_IP, CONSUL_PORT, MATCH_ETH_DST, PREFIX_LENGTH) &&
                 isIpAddress(PORTAL_IP, OPTIONAL) &&
                 isNumber(PORTAL_PORT, OPTIONAL, 1, 10000) &&
-                isIpAddress(DEFAULT_GATEWAY, OPTIONAL) &&
+                isIpAddress(DEFAULT_GATEWAY, MANDATORY) &&
                 isIpAddress(CONSUL_IP, OPTIONAL) &&
                 isNumber(CONSUL_PORT, OPTIONAL, 1, 10000) &&
-                isBoolean(MATCH_ETH_DST, OPTIONAL);
+                isBoolean(MATCH_ETH_DST, OPTIONAL) &&
+                isNumber(PREFIX_LENGTH, FieldPresence.MANDATORY, 0, 32);
     }
 
     /**
@@ -141,7 +143,7 @@ public class ByodConfig extends Config<ApplicationId> {
     /**
      * Sets the consul port.
      *
-     * @param consulPort portalPort new transport protocol port; null to clear
+     * @param consulPort portalPort new transport protocol port; -1 to clear
      * @return self
      */
     public BasicElementConfig consulPort(String consulPort){
@@ -168,23 +170,20 @@ public class ByodConfig extends Config<ApplicationId> {
     }
 
     /**
-     * Returns the subnet mask.
+     * Returns the IP prefix length.
      *
-     * @return subnet mask or null if not set
+     * @return prefix length or -1 if not set
      */
-    public Ip4Address subnetMask() {
-        String ip = get(SUBNET_MASK, null);
-        return ip != null ? Ip4Address.valueOf(ip) : null;
-    }
+    public int prefixLength() { return get(PREFIX_LENGTH, -1); }
 
     /**
-     * Sets the subnet mask.
+     * Sets the IP prefix length.
      *
-     * @param subnet new subnet mask; null to clear
+     * @param prefixLength new prefix length; -1 to clear
      * @return self
      */
-    public BasicElementConfig subnetMask(String subnet) {
-        return (BasicElementConfig) setOrClear(SUBNET_MASK, subnet);
+    public BasicElementConfig prefixLength(String prefixLength) {
+        return (BasicElementConfig) setOrClear(PREFIX_LENGTH, prefixLength);
     }
 
 }
