@@ -310,7 +310,11 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                         .makePermanent();
                 if(connection.getService().name().equals("PortalService")){
                     forwardingObjective.withPriority(FLOW_PRIORITY + 10);
-                } else{
+                } else if(connection.getService().name().equals("Internet") ||
+                        connection.getService().name().equals("Internet SSL verschluesselt")){
+                    // Todo: store internet as special service
+                    forwardingObjective.withPriority(FLOW_PRIORITY - 10);
+                } else {
                     forwardingObjective.withPriority(FLOW_PRIORITY);
                 }
 
@@ -378,7 +382,10 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                         .makePermanent();
                 if(connection.getService().name().equals("PortalService")){
                     forwardingObjective.withPriority(FLOW_PRIORITY + 10);
-                } else{
+                } else if(connection.getService().name().equals("Internet") ||
+                        connection.getService().name().equals("Internet SSL verschluesselt")){
+                    forwardingObjective.withPriority(FLOW_PRIORITY - 10);
+                }  else{
                     forwardingObjective.withPriority(FLOW_PRIORITY);
                 }
 

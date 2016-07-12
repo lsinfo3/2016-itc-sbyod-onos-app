@@ -364,17 +364,16 @@ public class ConsulServiceApi implements ConsulService {
 
             if(equalConsulServices.isEmpty()){
                 // service has been deleted
-
                 log.debug("ConsulServiceApi: Service with ServiceId = {} has been deleted.", oldService.id());
                 serviceStore.removeService(oldService);
 
             } else {
+                // service is active, but could be changed
                 if(equalConsulServices.size() > 1) {
                     // take the first service
                     log.info("ConsulServiceApi: More than one service with same ServiceId = {}. Taking first one.", oldService.id());
                 }
-                // service is active, but could be changed
-
+                // take first service in list
                 Service newService = equalConsulServices.iterator().next();
                 // check for updates
                 if (oldService.equals(newService)) {
