@@ -368,14 +368,18 @@ public class ConsulServiceApi implements ConsulService {
                 log.debug("ConsulServiceApi: Service with ServiceId = {} has been deleted.", oldService.id());
                 serviceStore.removeService(oldService);
 
-            } else if(equalConsulServices.size() == 1){
+            } else {
+                if(equalConsulServices.size() > 1) {
+                    // take the first service
+                    log.info("ConsulServiceApi: More than one service with same ServiceId = {}. Taking first one.", oldService.id());
+                }
                 // service is active, but could be changed
 
                 Service newService = equalConsulServices.iterator().next();
                 // check for updates
-                if(oldService.equals(newService)){
+                if (oldService.equals(newService)) {
                     // nothing changed, no update needed
-                } else{
+                } else {
                     // service updated, update all connections
                     Set<Connection> connections = connectionStore.getConnections(oldService);
                     // get the connected hosts of the service
@@ -389,18 +393,13 @@ public class ConsulServiceApi implements ConsulService {
                     serviceStore.addService(newService);
 
                     // add connection for each host
-                    for(Host host : hosts) {
+                    for (Host host : hosts) {
                         connectionStore.addConnection(new DefaultConnection(host, newService));
                     }
 
                     log.info("ConsulServiceApi: Updated old service = {} to new service = {} and connected hosts = {}.",
                             oldService, newService, hosts);
                 }
-
-            } else{
-                // more than one service with same ServiceId
-                log.warn("ConsulServiceApi: More than one service with ServiceId = {}. Removing service from store.", oldService.id());
-                serviceStore.removeService(oldService);
             }
 
             // remove the processed services
