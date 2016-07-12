@@ -20,6 +20,7 @@ package org.sardineproject.sbyod.redirect;
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.Ethernet;
 import org.onlab.packet.IPv4;
+import org.onlab.packet.Ip4Address;
 import org.onlab.packet.IpAddress;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.ApplicationIdStore;
@@ -218,4 +219,21 @@ public class FlowRedirect extends PacketRedirect {
         flowObjectiveService.forward(context.inPacket().receivedFrom().deviceId(), forwardingObjective);
     }
 
+    /**
+     * Activate the redirect to the specified host
+     *
+     * @param ipRedirectingTo the host packets are redirected to
+     */
+    @Override
+    public void activateRedirect(Ip4Address ipRedirectingTo) {
+
+    }
+
+    /**
+     * Stop the redirect of packets
+     */
+    @Override
+    public void stopRedirect() {
+
+    }
 }

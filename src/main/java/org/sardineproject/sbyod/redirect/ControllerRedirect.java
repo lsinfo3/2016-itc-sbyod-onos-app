@@ -22,7 +22,6 @@ import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.*;
 import org.onosproject.core.ApplicationIdStore;
 import org.onosproject.net.*;
-import org.onosproject.net.config.NetworkConfigRegistry;
 import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
@@ -41,8 +40,6 @@ import org.slf4j.LoggerFactory;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.stream.Collectors;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Created by lorry on 11.12.15.
@@ -86,7 +83,6 @@ public class ControllerRedirect implements PacketRedirectService {
 
     @Activate
     protected void activate(){
-        activateRedirect(hostService.getHostsByIp(IpAddress.valueOf("10.1.0.2")).iterator().next());
     }
 
     @Deactivate
@@ -94,42 +90,50 @@ public class ControllerRedirect implements PacketRedirectService {
         stopRedirect();
     }
 
-    public void activateRedirect(Host redirectHost){
-        if(redirectHost != null) {
-            // define the host to redirect the traffic to
-            this.redirectHost = redirectHost;
 
-            // get all ip4 addresses of redirect host
-            Set<Ip4Address> redirectIpSet = redirectHost.ipAddresses().stream()
-                    .filter(ip -> ip.isIp4())
-                    .map(IpAddress::getIp4Address)
-                    .collect(Collectors.toSet());
+    /**
+     * Activate the redirect to the specified host
+     * @param ipRedirectingTo the host packets are redirected to
+     */
+    public void activateRedirect(Ip4Address ipRedirectingTo){
+        if(ipRedirectingTo != null){
+            redirectIp = ipRedirectingTo;
+            // get a host with this ip
+            Set<Host> redirectHosts = hostService.getHostsByIp(redirectIp);
+            if(redirectHosts.size() == 1){
 
-            if(!redirectIpSet.isEmpty()) {
-                // get the ip address redirecting to
-                redirectIp = redirectIpSet.iterator().next();
-                log.info("ControllerRedirect: activateRedirect() - redirecting to IP={}", redirectIp);
+                redirectHost = redirectHosts.iterator().next();
 
                 // initiate empty rules map
                 installedRules = new HashMap<>();
-                // initiate empty port to mac map
-                portToMac = new HashMap<>();
-
                 // install rules sending relevant packets to controller
                 installRedirectRules();
+
+                // initiate empty port to mac map
+                portToMac = new HashMap<>();
                 // add packet processor monitoring packets
                 processor = new ReactivePacketProcessor();
                 packetService.addProcessor(processor, PacketProcessor.director(2));
                 requestIntercepts();
-            } else {
-                log.warn("ControllerRedirect: activateRedirect() - no IP found to redirect to.");
-                this.redirectHost = null;
+
+                log.info("ControllerRedirect: activated!");
+
+            } else if(redirectHosts.isEmpty()) {
+                log.warn("ControllerRedirect: activateRedirect() - no host with IP={} found to redirect to.", redirectIp);
+                redirectIp = null;
+            } else{
+                log.warn("ControllerRedirect: activateRedirect() - {} hosts with IP={} found. Choose unique IP",
+                        redirectHosts.size(), redirectIp);
+                redirectIp = null;
             }
         } else{
-            log.warn("ControllerRedirect: activateRedirect() - redirect host is not defined!");
+            log.warn("ControllerRedirect: activateRedirect() - redirect ip is not defined!");
         }
     }
 
+    /**
+     * Stop the redirect of packets
+     */
     public void stopRedirect(){
 
         // remove packet processor
@@ -152,6 +156,8 @@ public class ControllerRedirect implements PacketRedirectService {
         this.installedRules = null;
         this.redirectHost = null;
         this.redirectHost = null;
+
+        log.info("ControllerRedirect: stopped!");
     }
 
     private void installRedirectRules(){
@@ -315,7 +321,7 @@ public class ControllerRedirect implements PacketRedirectService {
         return type == Ethernet.TYPE_LLDP || type == Ethernet.TYPE_BSN;
     }
 
-    public void redirectToPortal(PacketContext context, Host inPortalHost){
+    private void redirectToPortal(PacketContext context, Host inPortalHost){
         Ethernet packet = context.inPacket().parsed();
         IPv4 ipv4Packet = (IPv4) packet.getPayload();
         TCP tcpPacket = (TCP) ipv4Packet.getPayload();
@@ -372,7 +378,7 @@ public class ControllerRedirect implements PacketRedirectService {
 
     }
 
-    public void restoreSource(PacketContext context, Host portal){
+    private void restoreSource(PacketContext context, Host portal){
         // parsing packet
         Ethernet packet = context.inPacket().parsed();
         IPv4 ipv4Packet = (IPv4) packet.getPayload();
