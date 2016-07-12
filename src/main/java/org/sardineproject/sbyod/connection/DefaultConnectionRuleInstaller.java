@@ -270,52 +270,56 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
 
         byte protocol = connection.getService().protocol();
 
-        // Todo: only install connection for ip addresses inside the network!
+        // get the byod config
+        ByodConfig cfg = cfgService.getConfig(applicationIdStore.getAppId(APPLICATION_ID), ByodConfig.class);
+        // get the ip prefix of the network
+        IpPrefix ipPrefix = Ip4Prefix.valueOf(cfg.defaultGateway(), cfg.prefixLength());
 
         for(IpAddress userIp : connection.getUser().ipAddresses()) {
-                if (userIp.isIp4()) {
-                    TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
-                            .matchEthType(EthType.EtherType.IPV4.ethType().toShort())
-                            .matchInPort(inPort)
-                            .matchIPSrc(userIp.toIpPrefix())
-                            .matchEthSrc(connection.getUser().mac())
-                            .matchIPDst(connection.getService().ipAddress().toIpPrefix())
-                            .matchIPProtocol(protocol);
-                    if (protocol == IPv4.PROTOCOL_TCP) {
-                        trafficSelectorBuilder.matchTcpDst(connection.getService().tpPort());
-                    } else if (protocol == IPv4.PROTOCOL_UDP) {
-                        trafficSelectorBuilder.matchUdpDst(connection.getService().tpPort());
-                    } else {
-                        log.warn("DefaultConnectionRuleInstaller: Defined internet protocol not supported!");
-                        return;
-                    }
-
-                    // check if the match ethernet destination is set true in config
-                    if(MATCH_ETH_DST) {
-                        trafficSelectorBuilder.matchEthDst(serviceMac);
-                    }
-
-                    TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
-                            .setOutput(outPort);
-
-                    DefaultForwardingObjective.Builder forwardingObjective = DefaultForwardingObjective.builder()
-                            .withSelector(trafficSelectorBuilder.build())
-                            .withTreatment(trafficTreatmentBuilder.build())
-                            .withFlag(ForwardingObjective.Flag.VERSATILE)
-                            .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
-                            .makePermanent();
-                    if(connection.getService().name().equals("PortalService")){
-                        forwardingObjective.withPriority(FLOW_PRIORITY + 10);
-                    } else{
-                        forwardingObjective.withPriority(FLOW_PRIORITY);
-                    }
-
-                    log.debug("DefaultConnectionRuleInstaller: Adding flow objective \n{} \n" +
-                            "for device {} in method addFlowUserToService()", forwardingObjective, forDeviceId);
-                    flowObjectiveService.forward(forDeviceId, forwardingObjective.add());
-                    // save forwarding objective in connection
-                    connection.addRemoveObjective(forwardingObjective.remove(), forDeviceId);
+            // only install rules for ip addresses inside the local network
+            if (userIp.isIp4() && ipPrefix.contains(userIp)) {
+                TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
+                        .matchEthType(EthType.EtherType.IPV4.ethType().toShort())
+                        .matchInPort(inPort)
+                        .matchIPSrc(userIp.toIpPrefix())
+                        .matchEthSrc(connection.getUser().mac())
+                        .matchIPDst(connection.getService().ipAddress().toIpPrefix())
+                        .matchIPProtocol(protocol);
+                if (protocol == IPv4.PROTOCOL_TCP) {
+                    trafficSelectorBuilder.matchTcpDst(connection.getService().tpPort());
+                } else if (protocol == IPv4.PROTOCOL_UDP) {
+                    trafficSelectorBuilder.matchUdpDst(connection.getService().tpPort());
+                } else {
+                    log.warn("DefaultConnectionRuleInstaller: Defined internet protocol not supported!");
+                    return;
                 }
+
+                // check if the match ethernet destination is set true in config
+                if(MATCH_ETH_DST) {
+                    trafficSelectorBuilder.matchEthDst(serviceMac);
+                }
+
+                TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
+                        .setOutput(outPort);
+
+                DefaultForwardingObjective.Builder forwardingObjective = DefaultForwardingObjective.builder()
+                        .withSelector(trafficSelectorBuilder.build())
+                        .withTreatment(trafficTreatmentBuilder.build())
+                        .withFlag(ForwardingObjective.Flag.VERSATILE)
+                        .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
+                        .makePermanent();
+                if(connection.getService().name().equals("PortalService")){
+                    forwardingObjective.withPriority(FLOW_PRIORITY + 10);
+                } else{
+                    forwardingObjective.withPriority(FLOW_PRIORITY);
+                }
+
+                log.debug("DefaultConnectionRuleInstaller: Adding flow objective \n{} \n" +
+                        "for device {} in method addFlowUserToService()", forwardingObjective, forDeviceId);
+                flowObjectiveService.forward(forDeviceId, forwardingObjective.add());
+                // save forwarding objective in connection
+                connection.addRemoveObjective(forwardingObjective.remove(), forDeviceId);
+            }
         }
     }
 
@@ -330,56 +334,60 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
     private void addFlowServiceToUser(PortNumber inPort, PortNumber outPort, DeviceId forDeviceId,
                                       MacAddress serviceMac, Connection connection){
 
-        // Todo: only install connection for ip addresses inside the network!
-
         byte protocol = connection.getService().protocol();
 
+        // get the byod config
+        ByodConfig cfg = cfgService.getConfig(applicationIdStore.getAppId(APPLICATION_ID), ByodConfig.class);
+        // get the ip prefix of the network
+        IpPrefix ipPrefix = Ip4Prefix.valueOf(cfg.defaultGateway(), cfg.prefixLength());
+
         for(IpAddress userIp : connection.getUser().ipAddresses()) {
-                if (userIp.isIp4()) {
+            // only install rules for ip addresses inside the local network
+            if (userIp.isIp4() && ipPrefix.contains(userIp)) {
 
-                    TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
-                            .matchEthType(EthType.EtherType.IPV4.ethType().toShort())
-                            .matchInPort(inPort)
-                            .matchIPSrc(connection.getService().ipAddress().toIpPrefix())
-                            .matchEthSrc(serviceMac)
-                            .matchIPDst(userIp.toIpPrefix())
-                            .matchIPProtocol(protocol);
+                TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
+                        .matchEthType(EthType.EtherType.IPV4.ethType().toShort())
+                        .matchInPort(inPort)
+                        .matchIPSrc(connection.getService().ipAddress().toIpPrefix())
+                        .matchEthSrc(serviceMac)
+                        .matchIPDst(userIp.toIpPrefix())
+                        .matchIPProtocol(protocol);
 
-                    if (protocol == IPv4.PROTOCOL_TCP) {
-                        trafficSelectorBuilder.matchTcpSrc(connection.getService().tpPort());
-                    } else if (protocol == IPv4.PROTOCOL_UDP) {
-                        trafficSelectorBuilder.matchUdpSrc(connection.getService().tpPort());
-                    } else {
-                        log.warn("DefaultConnectionRuleInstaller: Defined internet protocol not supported!");
-                        return;
-                    }
-
-                    // check if the match ethernet destination is set true in config
-                    if (MATCH_ETH_DST) {
-                        trafficSelectorBuilder.matchEthDst(connection.getUser().mac());
-                    }
-
-                    TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
-                            .setOutput(outPort);
-
-                    DefaultForwardingObjective.Builder forwardingObjective = DefaultForwardingObjective.builder()
-                            .withSelector(trafficSelectorBuilder.build())
-                            .withTreatment(trafficTreatmentBuilder.build())
-                            .withFlag(ForwardingObjective.Flag.VERSATILE)
-                            .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
-                            .makePermanent();
-                    if(connection.getService().name().equals("PortalService")){
-                        forwardingObjective.withPriority(FLOW_PRIORITY + 10);
-                    } else{
-                        forwardingObjective.withPriority(FLOW_PRIORITY);
-                    }
-
-                    log.debug("DefaultConnectionRuleInstaller: Adding flow objective \n{} \n" +
-                            "for device {} in method addFlowServiceToUser()", forwardingObjective.add(), forDeviceId);
-                    flowObjectiveService.forward(forDeviceId, forwardingObjective.add());
-                    // save forwarding objective in connection
-                    connection.addRemoveObjective(forwardingObjective.remove(), forDeviceId);
+                if (protocol == IPv4.PROTOCOL_TCP) {
+                    trafficSelectorBuilder.matchTcpSrc(connection.getService().tpPort());
+                } else if (protocol == IPv4.PROTOCOL_UDP) {
+                    trafficSelectorBuilder.matchUdpSrc(connection.getService().tpPort());
+                } else {
+                    log.warn("DefaultConnectionRuleInstaller: Defined internet protocol not supported!");
+                    return;
                 }
+
+                // check if the match ethernet destination is set true in config
+                if (MATCH_ETH_DST) {
+                    trafficSelectorBuilder.matchEthDst(connection.getUser().mac());
+                }
+
+                TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
+                        .setOutput(outPort);
+
+                DefaultForwardingObjective.Builder forwardingObjective = DefaultForwardingObjective.builder()
+                        .withSelector(trafficSelectorBuilder.build())
+                        .withTreatment(trafficTreatmentBuilder.build())
+                        .withFlag(ForwardingObjective.Flag.VERSATILE)
+                        .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
+                        .makePermanent();
+                if(connection.getService().name().equals("PortalService")){
+                    forwardingObjective.withPriority(FLOW_PRIORITY + 10);
+                } else{
+                    forwardingObjective.withPriority(FLOW_PRIORITY);
+                }
+
+                log.debug("DefaultConnectionRuleInstaller: Adding flow objective \n{} \n" +
+                        "for device {} in method addFlowServiceToUser()", forwardingObjective.add(), forDeviceId);
+                flowObjectiveService.forward(forDeviceId, forwardingObjective.add());
+                // save forwarding objective in connection
+                connection.addRemoveObjective(forwardingObjective.remove(), forDeviceId);
+            }
         }
     }
 }
