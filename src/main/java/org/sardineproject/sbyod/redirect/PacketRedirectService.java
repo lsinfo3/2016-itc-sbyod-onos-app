@@ -17,6 +17,8 @@
  */
 package org.sardineproject.sbyod.redirect;
 
+import org.onlab.packet.Ip4Address;
+import org.onlab.packet.IpAddress;
 import org.onosproject.net.Host;
 import org.onosproject.net.packet.PacketContext;
 
@@ -25,20 +27,15 @@ import org.onosproject.net.packet.PacketContext;
  */
 public interface PacketRedirectService {
 
-    // TODO: change interface? no need for portal host!
+    /**
+     * Activate the redirect to the specified host
+     * @param ipRedirectingTo the host packets are redirected to
+     */
+    void activateRedirect(Ip4Address ipRedirectingTo);
 
     /**
-     * Change the destination to match with portal
-     * @param context of the packet
-     * @param portal portal redirecting to
+     * Stop the redirect of packets
      */
-    void redirectToPortal(PacketContext context, Host portal);
-
-    /**
-     * Restore the actual source of the packet
-     * @param context of the packet
-     * @param portal portal redirecting from
-     */
-    void restoreSource(PacketContext context, Host portal);
+    void stopRedirect();
 
 }

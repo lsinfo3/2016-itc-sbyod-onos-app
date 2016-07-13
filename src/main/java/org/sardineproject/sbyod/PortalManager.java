@@ -18,19 +18,15 @@
 package org.sardineproject.sbyod;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
 
 import com.google.common.collect.Lists;
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.*;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
-import org.onosproject.net.DeviceId;
 import org.onosproject.net.config.NetworkConfigRegistry;
-import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.*;
 import org.onosproject.net.host.*;
-import org.onosproject.net.packet.*;
 import org.onosproject.net.Host;
 import org.sardineproject.sbyod.configuration.ByodConfig;
 import org.sardineproject.sbyod.service.ServiceId;
@@ -43,7 +39,6 @@ import org.sardineproject.sbyod.redirect.PacketRedirectService;
 import org.sardineproject.sbyod.service.DefaultService;
 import org.sardineproject.sbyod.service.ServiceStore;
 import org.sardineproject.sbyod.service.Service;
-//import org.osgi.service.component.ComponentContext;
 
 import java.util.*;
 import java.util.concurrent.locks.Lock;
@@ -82,6 +77,9 @@ public class PortalManager implements PortalService{
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected BasicRuleInstaller basicRuleInstaller;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected PacketRedirectService packetRedirectService;
 
 
     private HostListener portalConnectionHostListener;
@@ -158,6 +156,10 @@ public class PortalManager implements PortalService{
                 // establish new connections to portal for every host in network
                 portalId = portalService.id();
                 connectHostsToPortal();
+
+                // update redirect service
+                packetRedirectService.stopRedirect();
+                packetRedirectService.activateRedirect(portalIp);
 
                 log.debug("Portal is up. IP = {}, TpPort = {}, ID = {}",
                         Lists.newArrayList(portalIp.toString(), portalPort.toString(), this.portalId.toString()).toArray());
