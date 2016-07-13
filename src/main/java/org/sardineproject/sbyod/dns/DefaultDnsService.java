@@ -21,11 +21,14 @@ import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.IPv4;
 import org.onlab.packet.TpPort;
 import org.onosproject.core.ApplicationIdStore;
+import org.onosproject.incubator.net.intf.InterfaceService;
 import org.onosproject.net.Host;
 import org.onosproject.net.config.NetworkConfigRegistry;
+import org.onosproject.net.edge.EdgePortService;
 import org.onosproject.net.host.HostEvent;
 import org.onosproject.net.host.HostListener;
 import org.onosproject.net.host.HostService;
+import org.onosproject.net.packet.PacketService;
 import org.onosproject.net.provider.ProviderId;
 import org.sardineproject.sbyod.configuration.ByodConfig;
 import org.sardineproject.sbyod.PortalManager;
@@ -34,6 +37,7 @@ import org.sardineproject.sbyod.connection.Connection;
 import org.sardineproject.sbyod.connection.ConnectionStore;
 import org.sardineproject.sbyod.connection.DefaultConnection;
 import org.sardineproject.sbyod.service.DefaultService;
+import org.sardineproject.sbyod.service.HostArp;
 import org.sardineproject.sbyod.service.Service;
 import org.sardineproject.sbyod.service.ServiceStore;
 import org.slf4j.Logger;
@@ -70,6 +74,16 @@ public class DefaultDnsService implements DnsService {
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected PortalService portalService;
 
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected InterfaceService interfaceService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected EdgePortService edgePortService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected PacketService packetService;
+
+
 
     private HostListener dnsHostListener;
 
@@ -79,14 +93,20 @@ public class DefaultDnsService implements DnsService {
     private Service dnsServiceTcp;
     private Service dnsServiceUdp;
 
+    // class to arp host
+    private HostArp hostArp;
+
+
     @Activate
     protected void activate(){
         dnsHostListener = new DnsHostListener();
+        hostArp = new HostArp(packetService, interfaceService, edgePortService);
     }
 
     @Deactivate
     protected void deactivate(){
         hostService.removeListener(dnsHostListener);
+        hostArp = null;
     }
 
     public void activateDns(){
@@ -141,7 +161,10 @@ public class DefaultDnsService implements DnsService {
             hostService.addListener(dnsHostListener);
 
         } else if(routers.isEmpty()){
-            log.warn("DefaultDnsService: No host found with IP={} to use as DNS service", cfg.defaultGateway());
+            log.warn("DefaultDnsService: No host found with IP={} to use as DNS service." +
+                    " Sending ARP/NDP request to discover host.", cfg.defaultGateway());
+            // sending arp/ndp request to default gateway
+            hostArp.sendRequest(cfg.defaultGateway());
         } else{
             log.warn("DefaultDnsService: More than one host found with IP={} to use as DNS service", cfg.defaultGateway());
         }

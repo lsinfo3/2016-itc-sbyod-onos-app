@@ -148,6 +148,8 @@ public class DefaultServiceStore implements ServiceStore {
         } else {
             // check if default gateway is in network
             if(cfg.defaultGateway() != null && hostService.getHostsByIp(cfg.defaultGateway()).isEmpty()){
+                log.warn("ServiceStore: addService()\nNo host found with IP={}. Sending Arp/Ndp request.",
+                        cfg.defaultGateway());
                 // send arp to discover
                 hostArp.sendRequest(cfg.defaultGateway());
             }

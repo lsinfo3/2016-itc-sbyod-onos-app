@@ -184,6 +184,7 @@ public class PortalManager implements PortalService{
             log.warn("PortalManager: Could not set portal. More than one host with IP = {}", portalIp);
         } else{
             log.warn("Could not set portal. No host defined with IP {}!", portalIp.toString());
+
         }
 
         return false;
