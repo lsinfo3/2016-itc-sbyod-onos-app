@@ -326,7 +326,7 @@ public class ControllerRedirect implements PacketRedirectService {
         IPv4 ipv4Packet = (IPv4) packet.getPayload();
         TCP tcpPacket = (TCP) ipv4Packet.getPayload();
 
-        log.debug("ControllerRedirect:\nRedirecting to redirect host\n(source IP={}, destination IP={}) -> destination IP={}",
+        log.debug("ControllerRedirect:\nRedirecting to redirect host\n(source IP={}, destination IP={})\ndestination IP={}",
                 Ip4Address.valueOf(ipv4Packet.getSourceAddress()),
                 Ip4Address.valueOf(ipv4Packet.getDestinationAddress()),
                 redirectIp);
@@ -364,7 +364,7 @@ public class ControllerRedirect implements PacketRedirectService {
                 oldIpMac);
 
         log.info("ControllerRedirect: redirectToPortal()\n(srcIP={}, srcMac={}, dstIP={}, " +
-                        "dstMac={}) -> (srcIP={}, srcMac={}, dstIP={}, dstMac={})",
+                        "dstMac={}) ->\n(srcIP={}, srcMac={}, dstIP={}, dstMac={})",
                 Lists.newArrayList(
                         Ip4Address.valueOf(ipv4Packet.getSourceAddress()),
                         packet.getSourceMAC(),
@@ -396,7 +396,7 @@ public class ControllerRedirect implements PacketRedirectService {
             MacAddress newSrcMac = ipMacPair.getMacAddress();
 
             log.info("ControllerRedirect: restoreSource()\n(srcIp={}, srcMac={}, dstIp={}," +
-                            " dstMac={}) -> (srcIP={}, srcMac={}, dstIP={}, dstMac={})",
+                            " dstMac={}) ->\n(srcIP={}, srcMac={}, dstIP={}, dstMac={})",
                     Lists.newArrayList(
                             Ip4Address.valueOf(ipv4Packet.getSourceAddress()),
                             packet.getSourceMAC(),
