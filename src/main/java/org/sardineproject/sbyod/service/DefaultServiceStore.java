@@ -19,12 +19,20 @@ package org.sardineproject.sbyod.service;
 
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.Ip4Address;
+import org.onlab.packet.Ip4Prefix;
+import org.onlab.packet.IpPrefix;
 import org.onlab.packet.TpPort;
 import org.onosproject.codec.CodecService;
 import org.onosproject.core.ApplicationIdStore;
+import org.onosproject.incubator.net.intf.InterfaceService;
+import org.onosproject.net.config.NetworkConfigRegistry;
+import org.onosproject.net.edge.EdgePortService;
+import org.onosproject.net.host.HostService;
+import org.onosproject.net.packet.PacketService;
 import org.onosproject.store.service.StorageService;
 import org.sardineproject.sbyod.PortalManager;
 import org.sardineproject.sbyod.PortalService;
+import org.sardineproject.sbyod.configuration.ByodConfig;
 import org.slf4j.Logger;
 import org.sardineproject.sbyod.connection.Connection;
 import org.sardineproject.sbyod.connection.ConnectionStore;
@@ -57,55 +65,43 @@ public class DefaultServiceStore implements ServiceStore {
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected CodecService codecService;
 
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected PacketService packetService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected InterfaceService interfaceService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected EdgePortService edgePortService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected HostService hostService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected NetworkConfigRegistry cfgService;
+
+
     // TODO: use distributed set (problem with kryo)
-    //private DistributedSet<Service> services;
+
     private Set<org.sardineproject.sbyod.service.Service> services;
 
-    /*Serializer serializer = Serializer.using(KryoNamespaces.API.newBuilder()
-            .nextId(KryoNamespaces.BEGIN_USER_CUSTOM_ID + 6)
-            .register(DefaultService.class)
-            .register(DefaultAnnotations.class)
-            .register(HashMap.class)
-            .register(DefaultHost.class)
-            .register(HostId.class)
-            .register(VlanId.class)
-            .register(HashSet.class)
-            .register(HostLocation.class)
-            .register(DeviceId.class)
-            .register(URI.class)
-            .register(PortNumber.class)
-            .register(ProviderId.class)
-            .register(ServiceId.class)
-            .register(java.util.Collections.unmodifiableSet(new HashSet<Void>()).getClass())
-            .register(org.onlab.packet.Ip4Address.class)
-            .register(byte[].class)
-            .register(org.onlab.packet.IpAddress.class)
-            .register(org.onlab.packet.IpAddress.Version.class)
-            .register(org.onlab.packet.TpPort.class)
-            .register(org.onlab.packet.MacAddress.class)
-            .build());*/
-
+    private HostArp hostArp;
     // TODO: remove service if host where the service is running on has disconnected!
 
     @Activate
     protected void activate(){
-
-//        services = storageService.<Service>setBuilder()
-//                //.withApplicationId(applicationIdStore.getAppId(APPLICATION_ID))
-//                .withSerializer(serializer)
-//                .withName("services")
-//                .build();
+        // empty service set
         services = new HashSet<>();
 
-        codecService.registerCodec(org.sardineproject.sbyod.service.Service.class, new ServiceCodec());
+        // create class to send arp request to an ip address
+        hostArp = new HostArp(packetService, interfaceService, edgePortService);
 
-        //log.info("Started ServiceStore");
+        codecService.registerCodec(org.sardineproject.sbyod.service.Service.class, new ServiceCodec());
     }
 
     @Deactivate
     protected void deactivate(){
         services.clear();
-        //log.info("Stopped ServiceStore");
     }
 
 
@@ -113,7 +109,7 @@ public class DefaultServiceStore implements ServiceStore {
      * Add a new service to the store
      *
      * @param service service to add
-     * @return true service was adde to collection
+     * @return true service was added to collection
      *          false service is null or already in collection
      */
     @Override
@@ -122,15 +118,40 @@ public class DefaultServiceStore implements ServiceStore {
             log.warn("ServiceStore - addService(service): service can not be null!");
             return false;
         }
-
-        // TODO: check if service host is online, if not -> arp to host! via host monitor?
-
+        // only add service if it is not already in collection
         if(!services.contains(service)) {
+            // check if the service host is known to onos
+            checkServiceHost(service);
             log.debug("ServiceStore: Added service {}", service.toString());
             return services.add(service);
         } else {
             log.debug("ServiceStore: Could not add service {}. Service already active.", service.toString());
             return false;
+        }
+    }
+
+    private void checkServiceHost(Service service){
+        // get the sbyod config
+        ByodConfig cfg = cfgService.getConfig(applicationIdStore.getAppId(APPLICATION_ID), ByodConfig.class);
+        // get the ip prefix of the network
+        IpPrefix ipPrefix = Ip4Prefix.valueOf(cfg.defaultGateway(), cfg.prefixLength());
+
+        // check if ip is in network
+        if(ipPrefix.contains(service.ipAddress())) {
+            // check if service host is already present in network
+            if(hostService.getHostsByIp(service.ipAddress()).isEmpty()) {
+                log.warn("ServiceStore: addService()\nNo host found with IP={}. Sending Arp/Ndp request.",
+                        service.ipAddress());
+                // send arp to discover
+                hostArp.sendRequest(service.ipAddress());
+            }
+        } else {
+            // check if default gateway is in network
+            if(cfg.defaultGateway() != null && hostService.getHostsByIp(cfg.defaultGateway()).isEmpty()){
+                // send arp to discover
+                hostArp.sendRequest(cfg.defaultGateway());
+            }
+
         }
     }
 
@@ -249,4 +270,6 @@ public class DefaultServiceStore implements ServiceStore {
     public Boolean contains(org.sardineproject.sbyod.service.Service service) {
         return services.contains(service);
     }
+
+
 }

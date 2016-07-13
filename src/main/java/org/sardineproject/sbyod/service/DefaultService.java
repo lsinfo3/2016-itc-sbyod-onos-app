@@ -259,7 +259,6 @@ public class DefaultService extends AbstractElement implements Service {
         }
 
         public Service build(){
-            // Todo: use ip address instead of host
             checkNotNull(ip4Address, "Must have an IP address");
             checkNotNull(tpPort, "Must have an TpPort");
             checkNotNull(name, "Must have a name");

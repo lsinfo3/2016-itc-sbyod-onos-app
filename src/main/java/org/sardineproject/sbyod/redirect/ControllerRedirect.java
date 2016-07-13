@@ -110,7 +110,8 @@ public class ControllerRedirect implements PacketRedirectService {
                 installRedirectRules();
 
                 // initiate empty port to mac map
-                portToMac = new HashMap<>();
+                // todo: check if old values are deleted?
+                portToMac = createLRUMap(500);
                 // add packet processor monitoring packets
                 processor = new ReactivePacketProcessor();
                 packetService.addProcessor(processor, PacketProcessor.director(2));
@@ -503,5 +504,14 @@ public class ControllerRedirect implements PacketRedirectService {
         public MacAddress getMacAddress() {
             return macAddress;
         }
+    }
+
+    private static <K, V> Map<K, V> createLRUMap(final int maxEntries) {
+        return new LinkedHashMap<K, V>(maxEntries*10/7, 0.7f, true) {
+            @Override
+            protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
+                return size() > maxEntries;
+            }
+        };
     }
 }
