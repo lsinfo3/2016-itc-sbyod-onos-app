@@ -43,7 +43,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 /**
  * Created by lorry on 13.07.16.
  */
-@Component
+@Component(immediate = true)
 @org.apache.felix.scr.annotations.Service
 public class HostArp implements HostArpService{
 
