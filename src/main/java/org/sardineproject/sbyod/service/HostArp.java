@@ -20,6 +20,8 @@ import com.google.common.collect.Lists;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
+import org.apache.felix.scr.annotations.Activate;
+import org.apache.felix.scr.annotations.Deactivate;
 import org.onlab.packet.*;
 import org.onlab.packet.ndp.NeighborDiscoveryOptions;
 import org.onlab.packet.ndp.NeighborSolicitation;
@@ -58,19 +60,15 @@ public class HostArp implements HostArpService{
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected EdgePortService edgePortService;
 
+
     private static final byte[] ZERO_MAC_ADDRESS = MacAddress.ZERO.toBytes();
 
-    //private PacketService packetService;
-    //private HostManager hostManager;
-    //private InterfaceService interfaceService;
-    //private EdgePortService edgePortService;
 
-    public HostArp(PacketService packetService, InterfaceService interfaceService, EdgePortService edgePortService){
+    @Activate
+    protected void activate(){}
 
-        this.packetService = packetService;
-        this.interfaceService = interfaceService;
-        this.edgePortService = edgePortService;
-    }
+    @Deactivate
+    protected void deactivate(){}
 
     /**
      * Sends an ARP or NDP request for the given IP address on every interface.
