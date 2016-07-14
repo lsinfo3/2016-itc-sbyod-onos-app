@@ -221,7 +221,7 @@ public class ConsulServiceApi implements ConsulService {
     }
 
     /**
-     * Get all services from consul, that are visible in onos cluster
+     * Gather all services from the consul application agent
      * @return Set of services
      */
     private Set<Service> getServices(){
@@ -263,9 +263,13 @@ public class ConsulServiceApi implements ConsulService {
             // add the catalog services to the collection
             for (CatalogService catalogService : serviceDescription) {
 
-                // if the host running the service is known to ONOS,
-                // it is added to the consulServices collection
-                addServiceToCollection(catalogService, consulServices);
+                // do not announce the consul service
+                if(!catalogService.getServiceName().equals("consul") &&
+                        catalogService.getServiceId().equals("consul")) {
+                    // if the host running the service is known to ONOS,
+                    // it is added to the consulServices collection
+                    addServiceToCollection(catalogService, consulServices);
+                }
 
             }
         }
