@@ -264,8 +264,8 @@ public class ConsulServiceApi implements ConsulService {
             for (CatalogService catalogService : serviceDescription) {
 
                 // do not announce the consul service
-                if(!catalogService.getServiceName().equals("consul") &&
-                        catalogService.getServiceId().equals("consul")) {
+                if(!(catalogService.getServiceName().equals("consul") &&
+                        catalogService.getServiceId().equals("consul"))) {
                     // if the host running the service is known to ONOS,
                     // it is added to the consulServices collection
                     addServiceToCollection(catalogService, consulServices);
