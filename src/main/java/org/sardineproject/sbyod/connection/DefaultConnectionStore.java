@@ -36,6 +36,7 @@ import org.onosproject.net.host.HostService;
 import org.onosproject.store.service.StorageService;
 import org.sardineproject.sbyod.PortalManager;
 import org.sardineproject.sbyod.PortalService;
+import org.sardineproject.sbyod.dns.DnsService;
 import org.slf4j.Logger;
 
 import java.util.HashSet;
@@ -67,16 +68,11 @@ public class DefaultConnectionStore implements ConnectionStore {
     protected ConnectionRuleInstaller connectionRuleInstaller;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected StorageService storageService;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected CodecService codecService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected FlowRuleService flowRuleService;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected FlowObjectiveService flowObjectiveService;
+
 
     private HostListener connectionHostListener;
     //private final FlowRuleListener removedFlowRuleListener = new RemovedFlowRuleListener();
@@ -89,24 +85,8 @@ public class DefaultConnectionStore implements ConnectionStore {
     //private DistributedSet<Connection> connections;
     private Set<Connection> connections;
 
-    /*Serializer serializer = Serializer.using(KryoNamespaces.API.newBuilder()
-            .nextId(KryoNamespaces.BEGIN_USER_CUSTOM_ID)
-            .register(DefaultConnection.class)
-            .register(org.onlab.packet.Ip4Address.class)
-            .register(byte[].class)
-            .register(org.onlab.packet.IpAddress.Version.class)
-            .register(org.onlab.packet.TpPort.class)
-            .register(org.onlab.packet.MacAddress.class)
-            .build());*/
-
     @Activate
     protected void activate(){
-        /*connections = storageService.<Connection>setBuilder()
-                .withApplicationId(applicationIdStore.getAppId(APPLICATION_ID))
-                .withSerializer(serializer)
-                .withName("connections")
-                .build();
-        connections.clear();*/
 
         connections = new HashSet<>();
 
@@ -115,8 +95,6 @@ public class DefaultConnectionStore implements ConnectionStore {
         // add listener to detect host moved, updated or removed
         connectionHostListener = new ConnectionHostListener();
         hostService.addListener(connectionHostListener);
-
-        //log.info("Started ConnectionStore");
     }
 
     @Deactivate
@@ -124,9 +102,6 @@ public class DefaultConnectionStore implements ConnectionStore {
         hostService.removeListener(connectionHostListener);
         // remove all connections
         connections.clear();
-        // flow rules are removed in PortalManager class
-
-        //log.info("Stopped ConnectionStore");
     }
 
     /**

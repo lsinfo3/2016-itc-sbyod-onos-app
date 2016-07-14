@@ -123,7 +123,7 @@ public class DefaultDnsService implements DnsService {
                     .build();
             serviceStore.addService(dnsServiceUdp);
 
-            log.info("DefaultDnsService: Added tcp and upd service for dns");
+            log.info("DefaultDnsService: Added DNS for TCP and UDP protocol.");
 
             // connect all valid hosts to the dns service
             for(Host host : hostService.getHosts()){

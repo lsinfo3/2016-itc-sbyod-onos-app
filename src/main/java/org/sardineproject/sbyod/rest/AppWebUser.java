@@ -261,6 +261,55 @@ public class AppWebUser extends AbstractWebResource {
     }
 
     /**
+     * Disconnect a user from all services.
+     * @param userIp_ the IP address of the user
+     * @return INVALID_PARAMETER if some parameter was wrong
+     *          "enabled : false" if user is disconnected
+     *          "enabled : true" if user disconnection went wrong
+     */
+    @DELETE
+    @Path("/{userIp}")
+    public Response resetHostTraffic(@PathParam("userIp") String userIp_){
+        log.debug("AppWebUser: Removing all connections of user with ip = {}.", userIp_);
+
+        if(userIp_ == null)
+            return Response.ok(INVALID_PARAMETER).build();
+
+        Set<Host> srcHosts;
+        try{
+            Ip4Address userIp = Ip4Address.valueOf(userIp_);
+            // get all hosts with given ip
+            srcHosts = get(HostService.class).getHostsByIp(userIp);
+        } catch (Exception e){
+            return Response.ok(INVALID_PARAMETER).build();
+        }
+
+        if(srcHosts.isEmpty()) {
+            log.debug("AppWebUser: No host found with IP = {}", userIp_);
+            return Response.ok(ENABLED_FALSE).build();
+        }
+
+        // remove connection for every host
+        for(Host user : srcHosts) {
+            // get all connections of the host
+            Set<Connection> connections = get(ConnectionStore.class).getConnections(user);
+            // filter out portal and dns services
+            connections = connections.stream()
+                    .filter(c -> !c.getService().equals(get(PortalService.class).getPortalService()))
+                    .filter(c -> !(get(DnsService.class).getDnsServices().contains(c.getService())))
+                    .collect(Collectors.toSet());
+
+            // remove all connections in set
+            for(Connection connection : connections){
+                log.debug("AppWebUser: Removing connection {}", connection.toString());
+                get(ConnectionStore.class).removeConnection(connection);
+            }
+        }
+
+        return Response.ok(ENABLED_FALSE).build();
+    }
+
+    /**
      * This method removes all services from a set that are not intended for the user to manipulate,
      * for example the portal service or the dns service
      * @param services a set of services
