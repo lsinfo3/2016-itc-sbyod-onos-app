@@ -36,10 +36,8 @@ import org.sardineproject.sbyod.PortalService;
 import org.sardineproject.sbyod.connection.Connection;
 import org.sardineproject.sbyod.connection.ConnectionStore;
 import org.sardineproject.sbyod.connection.DefaultConnection;
-import org.sardineproject.sbyod.service.DefaultService;
-import org.sardineproject.sbyod.service.HostArp;
+import org.sardineproject.sbyod.service.*;
 import org.sardineproject.sbyod.service.Service;
-import org.sardineproject.sbyod.service.ServiceStore;
 import org.slf4j.Logger;
 
 import java.util.Set;
@@ -83,6 +81,9 @@ public class DefaultDnsService implements DnsService {
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected PacketService packetService;
 
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected HostArpService hostArpService;
+
 
 
     private HostListener dnsHostListener;
@@ -93,20 +94,15 @@ public class DefaultDnsService implements DnsService {
     private Service dnsServiceTcp;
     private Service dnsServiceUdp;
 
-    // class to arp host
-    private HostArp hostArp;
-
 
     @Activate
     protected void activate(){
         dnsHostListener = new DnsHostListener();
-        hostArp = new HostArp(packetService, interfaceService, edgePortService);
     }
 
     @Deactivate
     protected void deactivate(){
         hostService.removeListener(dnsHostListener);
-        hostArp = null;
     }
 
     public void activateDns(){
@@ -164,7 +160,7 @@ public class DefaultDnsService implements DnsService {
             log.warn("DefaultDnsService: No host found with IP={} to use as DNS service." +
                     " Sending ARP/NDP request to discover host.", cfg.defaultGateway());
             // sending arp/ndp request to default gateway
-            hostArp.sendRequest(cfg.defaultGateway());
+            hostArpService.sendRequest(cfg.defaultGateway());
         } else{
             log.warn("DefaultDnsService: More than one host found with IP={} to use as DNS service", cfg.defaultGateway());
         }

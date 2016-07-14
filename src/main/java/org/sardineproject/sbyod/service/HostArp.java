@@ -16,6 +16,10 @@
 
 package org.sardineproject.sbyod.service;
 
+import com.google.common.collect.Lists;
+import org.apache.felix.scr.annotations.Component;
+import org.apache.felix.scr.annotations.Reference;
+import org.apache.felix.scr.annotations.ReferenceCardinality;
 import org.onlab.packet.*;
 import org.onlab.packet.ndp.NeighborDiscoveryOptions;
 import org.onlab.packet.ndp.NeighborSolicitation;
@@ -29,20 +33,37 @@ import org.onosproject.net.host.InterfaceIpAddress;
 import org.onosproject.net.packet.DefaultOutboundPacket;
 import org.onosproject.net.packet.OutboundPacket;
 import org.onosproject.net.packet.PacketService;
+import org.sardineproject.sbyod.PortalManager;
+import org.slf4j.Logger;
 
 import java.nio.ByteBuffer;
+
+import static org.slf4j.LoggerFactory.getLogger;
 
 /**
  * Created by lorry on 13.07.16.
  */
-public class HostArp {
+@Component
+@org.apache.felix.scr.annotations.Service
+public class HostArp implements HostArpService{
+
+    private static final Logger log = getLogger(PortalManager.class);
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected PacketService packetService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected InterfaceService interfaceService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected EdgePortService edgePortService;
 
     private static final byte[] ZERO_MAC_ADDRESS = MacAddress.ZERO.toBytes();
 
-    private PacketService packetService;
+    //private PacketService packetService;
     //private HostManager hostManager;
-    private InterfaceService interfaceService;
-    private EdgePortService edgePortService;
+    //private InterfaceService interfaceService;
+    //private EdgePortService edgePortService;
 
     public HostArp(PacketService packetService, InterfaceService interfaceService, EdgePortService edgePortService){
 
@@ -52,26 +73,27 @@ public class HostArp {
     }
 
     /**
-     * Sends an ARP or NDP request for the given IP address.
+     * Sends an ARP or NDP request for the given IP address on every interface.
      *
      * @param targetIp IP address to send the request for
      */
     public void sendRequest(IpAddress targetIp) {
-        Interface intf = interfaceService.getMatchingInterface(targetIp);
+        for(Interface intf : interfaceService.getInterfaces()) {
 
-        if (intf == null) {
-            return;
-        }
+            if (intf == null) {
+                return;
+            }
 
-        if (!edgePortService.isEdgePoint(intf.connectPoint())) {
-            // log.warn("Attempt to send probe out non-edge port: {}", intf);
-            return;
-        }
+            if (!edgePortService.isEdgePoint(intf.connectPoint())) {
+                // log.warn("Attempt to send probe out non-edge port: {}", intf);
+                return;
+            }
 
-        for (InterfaceIpAddress ia : intf.ipAddresses()) {
-            if (ia.subnetAddress().contains(targetIp)) {
-                sendProbe(intf.connectPoint(), targetIp, ia.ipAddress(),
-                        intf.mac(), intf.vlan());
+            for (InterfaceIpAddress ia : intf.ipAddresses()) {
+                if (ia.subnetAddress().contains(targetIp)) {
+                    sendProbe(intf.connectPoint(), targetIp, ia.ipAddress(),
+                            intf.mac(), intf.vlan());
+                }
             }
         }
     }
@@ -99,6 +121,13 @@ public class HostArp {
                         ByteBuffer.wrap(probePacket.serialize()));
 
         packetService.emit(outboundPacket);
+        log.info("HostArp: Sent ARP request (ConnectionPoint={}, targetIP={}, sourceIp={}, sourceMac={}, Vlan={}",
+                Lists.newArrayList(
+                        connectPoint.toString(),
+                        targetIp,
+                        sourceIp,
+                        sourceMac,
+                        vlan).toArray());
     }
 
     private Ethernet buildArpRequest(IpAddress targetIp, IpAddress sourceIp,

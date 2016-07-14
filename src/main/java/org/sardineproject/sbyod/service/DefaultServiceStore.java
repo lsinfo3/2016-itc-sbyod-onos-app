@@ -66,13 +66,7 @@ public class DefaultServiceStore implements ServiceStore {
     protected CodecService codecService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected PacketService packetService;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected InterfaceService interfaceService;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected EdgePortService edgePortService;
+    protected HostArpService hostArpService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected HostService hostService;
@@ -85,16 +79,12 @@ public class DefaultServiceStore implements ServiceStore {
 
     private Set<org.sardineproject.sbyod.service.Service> services;
 
-    private HostArp hostArp;
     // TODO: remove service if host where the service is running on has disconnected!
 
     @Activate
     protected void activate(){
         // empty service set
         services = new HashSet<>();
-
-        // create class to send arp request to an ip address
-        hostArp = new HostArp(packetService, interfaceService, edgePortService);
 
         codecService.registerCodec(org.sardineproject.sbyod.service.Service.class, new ServiceCodec());
     }
@@ -143,7 +133,7 @@ public class DefaultServiceStore implements ServiceStore {
                 log.warn("ServiceStore: addService()\nNo host found with IP={}. Sending Arp/Ndp request.",
                         service.ipAddress());
                 // send arp to discover
-                hostArp.sendRequest(service.ipAddress());
+                hostArpService.sendRequest(service.ipAddress());
             }
         } else {
             // check if default gateway is in network
@@ -151,7 +141,7 @@ public class DefaultServiceStore implements ServiceStore {
                 log.warn("ServiceStore: addService()\nNo host found with IP={}. Sending Arp/Ndp request.",
                         cfg.defaultGateway());
                 // send arp to discover
-                hostArp.sendRequest(cfg.defaultGateway());
+                hostArpService.sendRequest(cfg.defaultGateway());
             }
 
         }
