@@ -34,6 +34,7 @@ import org.sardineproject.sbyod.PortalService;
 import org.sardineproject.sbyod.connection.*;
 import org.sardineproject.sbyod.consul.ConsulService;
 import org.sardineproject.sbyod.dns.DnsService;
+import org.sardineproject.sbyod.internet.InternetService;
 import org.sardineproject.sbyod.service.Service;
 import org.slf4j.Logger;
 
@@ -68,6 +69,9 @@ public class DefaultConfigurationManager implements ConfigurationManager{
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected ConnectionStore connectionStore;
 
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected InternetService internetService;
+
 
 
     private static final String APPLICATION_ID = PortalService.APP_ID;
@@ -86,6 +90,8 @@ public class DefaultConfigurationManager implements ConfigurationManager{
             }
     );
 
+
+
     @Activate
     protected void activate(){
         // configuration listener
@@ -100,6 +106,8 @@ public class DefaultConfigurationManager implements ConfigurationManager{
         cfgService.removeListener(cfgListener);
         factories.forEach(cfgService::unregisterConfigFactory);
     }
+
+
 
     private class InternalConfigListener implements NetworkConfigListener {
 
@@ -122,7 +130,8 @@ public class DefaultConfigurationManager implements ConfigurationManager{
 
                     portalService.setPortal(cfg.portalIp(), TpPort.tpPort(cfg.portalPort()));
 
-                    log.info("DefaultConfigurationManager: Set portal ip to {} and port to {} and updated portal", cfg.portalIp(), cfg.portalPort());
+                    log.info("DefaultConfigurationManager: Set portal ip to {} and port to {} and updated portal",
+                            cfg.portalIp(), cfg.portalPort());
                 }
             }
 
@@ -131,7 +140,16 @@ public class DefaultConfigurationManager implements ConfigurationManager{
             if(cfg.defaultGateway() != null){
                 dnsService.deactivateDns();
                 dnsService.activateDns();
-                log.info("DefaultConfigurationManager: Configured dns service for default gateway={}", cfg.defaultGateway());
+                log.info("DefaultConfigurationManager: Configured dns service for default gateway={}",
+                        cfg.defaultGateway());
+                internetService.start();
+                log.info("DefaultConfigurationManager: Enabled internet service for default gateway={}",
+                        cfg.defaultGateway());
+            } else{
+                dnsService.deactivateDns();
+                internetService.stop();
+                log.info("DefaultConfigurationManager: Disabled Internet and DNS service for default gateway={}",
+                        cfg.defaultGateway());
             }
 
 
@@ -142,7 +160,8 @@ public class DefaultConfigurationManager implements ConfigurationManager{
                         !(TpPort.tpPort(cfg.consulPort())).equals(consulService.getConsulTpPort())){
                     // connect to new consul client
                     consulService.connectConsul(cfg.consulIp(), TpPort.tpPort(cfg.consulPort()));
-                    log.info("DefaultConfigurationManager: Configured consul ip={} and tpPort={}", cfg.consulIp(), cfg.consulPort());
+                    log.info("DefaultConfigurationManager: Configured consul ip={} and tpPort={}",
+                            cfg.consulIp(), cfg.consulPort());
                 }
             } else if(cfg.consulIp() != null){
                 // only change and update if consul config has changed

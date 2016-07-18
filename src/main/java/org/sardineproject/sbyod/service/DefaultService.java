@@ -259,10 +259,15 @@ public class DefaultService extends AbstractElement implements Service {
         }
 
         public Service build(){
-            // Todo: use ip address instead of host
             checkNotNull(ip4Address, "Must have an IP address");
-            checkNotNull(tpPort, "Must have an TpPort");
+            //checkNotNull(tpPort, "Must have an TpPort");
             checkNotNull(name, "Must have a name");
+            if(ip4Address == null){
+                log.warn("DefaultService: No IP address defined for service {}.", name);
+            }
+            if(tpPort == null){
+                log.warn("DefaultService: No transport protocol port defined for service {}.", name);
+            }
 
             if(elementId == null){
                 elementId = ServiceId.serviceId(URI.create(name + System.currentTimeMillis()));

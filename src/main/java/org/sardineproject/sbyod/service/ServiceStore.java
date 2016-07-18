@@ -63,13 +63,6 @@ public interface ServiceStore {
     Set<Service> getService(Ip4Address ip4Address);
 
     /**
-     * Get the services with transport protocol port
-     * @param tpPort of the service
-     * @return Set of services
-     */
-    Set<Service> getService(TpPort tpPort);
-
-    /**
      * Get services by name
      * @param name of the service
      * @return set of services

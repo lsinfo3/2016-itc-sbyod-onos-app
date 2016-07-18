@@ -214,19 +214,6 @@ public class DefaultServiceStore implements ServiceStore {
     }
 
     /**
-     * Get the services with transport protocol port
-     *
-     * @param tpPort of the service
-     * @return Set of services
-     */
-    @Override
-    public Set<org.sardineproject.sbyod.service.Service> getService(TpPort tpPort) {
-        return services.stream()
-                .filter(s -> s.tpPort().equals(tpPort))
-                .collect(Collectors.toSet());
-    }
-
-    /**
      * Get services by name
      *
      * @param name of the service

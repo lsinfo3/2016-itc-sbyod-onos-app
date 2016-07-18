@@ -41,7 +41,7 @@ public class ServiceCodec extends JsonCodec<Service> {
         return context.mapper().createObjectNode()
                 .put(name, service.name())
                 .put(id, service.id().toString())
-                .put(tpPort, service.tpPort().toString())
+                .put(tpPort, (service.tpPort() == null ? "" : service.tpPort().toString()))
                 .put(icon, service.icon());
     }
 }

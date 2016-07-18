@@ -101,7 +101,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                     new String[]{connection.getUser().ipAddresses().toString(),
                             connection.getUser().mac().toString(),
                             connection.getService().ipAddress().toString(),
-                            connection.getService().tpPort().toString()});
+                            (connection.getService().tpPort() == null ? "" : connection.getService().tpPort().toString())});
 
 
         HostLocation userLocation = connection.getUser().location();
@@ -285,13 +285,17 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                         .matchEthSrc(connection.getUser().mac())
                         .matchIPDst(connection.getService().ipAddress().toIpPrefix())
                         .matchIPProtocol(protocol);
-                if (protocol == IPv4.PROTOCOL_TCP) {
-                    trafficSelectorBuilder.matchTcpDst(connection.getService().tpPort());
-                } else if (protocol == IPv4.PROTOCOL_UDP) {
-                    trafficSelectorBuilder.matchUdpDst(connection.getService().tpPort());
-                } else {
-                    log.warn("DefaultConnectionRuleInstaller: Defined internet protocol not supported!");
-                    return;
+
+                // only match on port if it is defined
+                if(connection.getService().tpPort() != null) {
+                    if (protocol == IPv4.PROTOCOL_TCP) {
+                        trafficSelectorBuilder.matchTcpDst(connection.getService().tpPort());
+                    } else if (protocol == IPv4.PROTOCOL_UDP) {
+                        trafficSelectorBuilder.matchUdpDst(connection.getService().tpPort());
+                    } else {
+                        log.warn("DefaultConnectionRuleInstaller: Defined internet protocol not supported!");
+                        return;
+                    }
                 }
 
                 // check if the match ethernet destination is set true in config
@@ -357,13 +361,16 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                         .matchIPDst(userIp.toIpPrefix())
                         .matchIPProtocol(protocol);
 
-                if (protocol == IPv4.PROTOCOL_TCP) {
-                    trafficSelectorBuilder.matchTcpSrc(connection.getService().tpPort());
-                } else if (protocol == IPv4.PROTOCOL_UDP) {
-                    trafficSelectorBuilder.matchUdpSrc(connection.getService().tpPort());
-                } else {
-                    log.warn("DefaultConnectionRuleInstaller: Defined internet protocol not supported!");
-                    return;
+                // only match on port if it is defined
+                if(connection.getService().tpPort() != null) {
+                    if (protocol == IPv4.PROTOCOL_TCP) {
+                        trafficSelectorBuilder.matchTcpSrc(connection.getService().tpPort());
+                    } else if (protocol == IPv4.PROTOCOL_UDP) {
+                        trafficSelectorBuilder.matchUdpSrc(connection.getService().tpPort());
+                    } else {
+                        log.warn("DefaultConnectionRuleInstaller: Defined internet protocol not supported!");
+                        return;
+                    }
                 }
 
                 // check if the match ethernet destination is set true in config
