@@ -298,10 +298,16 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                     }
                 }
 
+                // match on destination mac address only for internet service
+                if(connection.getService().name().equals("Internet")){
+                    trafficSelectorBuilder.matchEthDst(serviceMac);
+                }
+
                 // check if the match ethernet destination is set true in config
                 if(MATCH_ETH_DST) {
                     trafficSelectorBuilder.matchEthDst(serviceMac);
                 }
+
 
                 TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
                         .setOutput(outPort);
@@ -314,8 +320,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                         .makePermanent();
                 if(connection.getService().name().equals("PortalService")){
                     forwardingObjective.withPriority(FLOW_PRIORITY + 10);
-                } else if(connection.getService().name().equals("Internet") ||
-                        connection.getService().name().equals("Internet SSL verschluesselt")){
+                } else if(connection.getService().name().equals("Internet")){
                     // Todo: store internet as special service
                     forwardingObjective.withPriority(FLOW_PRIORITY - 10);
                 } else {
@@ -373,10 +378,16 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                     }
                 }
 
+                // match on destination mac address only for internet service
+                if(connection.getService().name().equals("Internet")){
+                    trafficSelectorBuilder.matchEthDst(connection.getUser().mac());
+                }
+
                 // check if the match ethernet destination is set true in config
                 if (MATCH_ETH_DST) {
                     trafficSelectorBuilder.matchEthDst(connection.getUser().mac());
                 }
+
 
                 TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
                         .setOutput(outPort);
@@ -389,8 +400,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                         .makePermanent();
                 if(connection.getService().name().equals("PortalService")){
                     forwardingObjective.withPriority(FLOW_PRIORITY + 10);
-                } else if(connection.getService().name().equals("Internet") ||
-                        connection.getService().name().equals("Internet SSL verschluesselt")){
+                } else if(connection.getService().name().equals("Internet")){
                     forwardingObjective.withPriority(FLOW_PRIORITY - 10);
                 }  else{
                     forwardingObjective.withPriority(FLOW_PRIORITY);
