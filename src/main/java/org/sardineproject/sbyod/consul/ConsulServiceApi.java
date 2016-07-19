@@ -416,9 +416,13 @@ public class ConsulServiceApi implements ConsulService {
         }
 
         // add all remaining services as new service to store
-        consulServices.forEach(cs -> serviceStore.addService(cs));
-        if(!consulServices.isEmpty())
-            log.info("ConsulServiceApi: Added new services = {}", consulServices);
+        for(Service consulService : consulServices){
+            // only add service if no other service with the same name exists
+            if(serviceStore.getService(consulService.name()).isEmpty()) {
+                serviceStore.addService(consulService);
+                log.info("ConsulServiceApi: Added new service = {}", consulService);
+            }
+        }
 
     }
 
