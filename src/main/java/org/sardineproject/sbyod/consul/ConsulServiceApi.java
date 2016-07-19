@@ -377,8 +377,8 @@ public class ConsulServiceApi implements ConsulService {
                     // take the first service
                     log.info("ConsulServiceApi: More than one service with same ServiceId = {}. Taking first one.", oldService.id());
                 }
-                // take first service in list
-                Service newService = equalConsulServices.iterator().next();
+                // take first service in set with lowest ip address
+                Service newService = Collections.min(equalConsulServices, (o1, o2) -> o1.ipAddress().compareTo(o2.ipAddress()));
                 // check for updates
                 if (oldService.equals(newService)) {
                     // nothing changed, no update needed

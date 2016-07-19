@@ -50,7 +50,11 @@ public class DefaultInternetService implements InternetService {
     @Override
     public void start() {
         // create internet service
-        this.internetService = DefaultService.builder().withName("Internet").withIp(Ip4Address.valueOf("0.0.0.0")).build();
+        this.internetService = DefaultService.builder()
+                .withName("Internet")
+                .withIp(Ip4Address.valueOf("0.0.0.0"))
+                .withIcon("globe")
+                .build();
         if(serviceStore != null) {
             // adding service to store
             serviceStore.addService(internetService);
