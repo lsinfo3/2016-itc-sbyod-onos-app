@@ -277,7 +277,7 @@ public class ConsulServiceApi implements ConsulService {
         return consulServices;
     }
 
-    private void addServiceToCollection(CatalogService catalogService, Collection consulServices) {
+    private void addServiceToCollection(CatalogService catalogService, Collection<Service> consulServices) {
 
         Ip4Address serviceIpAddress = null;
         try {
@@ -307,8 +307,14 @@ public class ConsulServiceApi implements ConsulService {
             service.withIcon(catalogService.getServiceTags().iterator().next());
         }
 
-        consulServices.add(service.build());
-        log.debug("ConsulServiceApi: Added service {} to collection.", service.build());
+        // only add service with same name once
+        Set<Service> equalServices = consulServices.stream()
+                .filter(cs -> cs.name().equals(catalogService.getServiceName()))
+                .collect(Collectors.toSet());
+        if(equalServices.isEmpty()) {
+            consulServices.add(service.build());
+            log.debug("ConsulServiceApi: Added service {} to collection.", service.build());
+        }
 
     }
 
