@@ -298,11 +298,6 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                     }
                 }
 
-                // match on destination mac address only for internet service
-                if(connection.getService().name().equals("Internet")){
-                    trafficSelectorBuilder.matchEthDst(serviceMac);
-                }
-
                 // check if the match ethernet destination is set true in config
                 if(MATCH_ETH_DST) {
                     trafficSelectorBuilder.matchEthDst(serviceMac);
@@ -376,11 +371,6 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                         log.warn("DefaultConnectionRuleInstaller: Defined internet protocol not supported!");
                         return;
                     }
-                }
-
-                // match on destination mac address only for internet service
-                if(connection.getService().name().equals("Internet")){
-                    trafficSelectorBuilder.matchEthDst(connection.getUser().mac());
                 }
 
                 // check if the match ethernet destination is set true in config
