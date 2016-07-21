@@ -45,14 +45,6 @@ public interface ConnectionStore {
     void removeConnection(Connection connection);
 
     /**
-     * Get the set of connection for source IP address
-     *
-     * @param srcIp IPv4 address of the user
-     * @return set of connections
-     */
-    Set<Connection> getUserConnections(Ip4Address srcIp);
-
-    /**
      * Get the connection between the user and the service
      *
      * @param user user

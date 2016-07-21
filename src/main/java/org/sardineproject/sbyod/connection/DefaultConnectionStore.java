@@ -161,19 +161,6 @@ public class DefaultConnectionStore implements ConnectionStore {
     }
 
     /**
-     * Get the set of connection for user with IP address
-     *
-     * @param userIp IPv4 address of the user
-     * @return set of connections
-     */
-    @Override
-    public Set<Connection> getUserConnections(Ip4Address userIp) {
-        return connections.stream()
-                .filter(c -> c.getUser().ipAddresses().contains(userIp))
-                .collect(Collectors.toSet());
-    }
-
-    /**
      * Get the connection between the user and the service
      *
      * @param user user

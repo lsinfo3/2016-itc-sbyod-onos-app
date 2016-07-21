@@ -20,6 +20,7 @@ package org.sardineproject.sbyod.rest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.collect.Sets;
 import org.onlab.packet.Ip4Address;
 import org.onosproject.net.Host;
 import org.onosproject.net.host.HostService;
@@ -75,22 +76,24 @@ public class AppWebUser extends AbstractWebResource {
         if(userIp_ == null)
             return Response.ok(INVALID_PARAMETER).build();
 
-        Ip4Address userIp;
+        Set<Host> users;
         try{
-            userIp = Ip4Address.valueOf(userIp_);
+            users = get(HostService.class).getHostsByIp(Ip4Address.valueOf(userIp_));
         } catch (Exception e){
             return Response.ok(INVALID_PARAMETER).build();
         }
 
         // return invalid, if no user with this ip address is connected
-        if(get(HostService.class).getHostsByIp(userIp).isEmpty())
+        if(users.isEmpty())
             return Response.ok(INVALID_PARAMETER).build();
 
         // get the services the user is allowed to use without the portal service
         Iterable<Service> services = removeConfigurationServices(get(ServiceStore.class).getServices());
-        Set<Service> userServices = get(ConnectionStore.class).getUserConnections(userIp).stream()
-                .map(c -> c.getService())
-                .collect(Collectors.toSet());
+        // get all services a user has connected to
+        Set<Service> userServices = Sets.newHashSet();
+        for(Host host : users){
+            get(ConnectionStore.class).getConnections(host).forEach(c -> userServices.add(c.getService()));
+        }
 
         ArrayNode arrayNode = mapper().createArrayNode();
 
@@ -131,19 +134,25 @@ public class AppWebUser extends AbstractWebResource {
         if(userIp_ == null || serviceId_ == null)
             return Response.ok(INVALID_PARAMETER).build();
 
-        Ip4Address userIp;
+        Set<Host> users;
         ServiceId serviceId;
         try{
-            userIp = Ip4Address.valueOf(userIp_);
+            users = get(HostService.class).getHostsByIp(Ip4Address.valueOf(userIp_));
             serviceId = ServiceId.serviceId(serviceId_);
         } catch (Exception e){
             return Response.ok(INVALID_PARAMETER).build();
         }
 
-        Set<Connection> result = get(ConnectionStore.class).getUserConnections(userIp);
-        if(result.stream()
-                .filter(c -> c.getService().id().equals(serviceId))
-                .count() != 0){
+        // get all connections a user has activated
+        Set<Connection> connections = Sets.newHashSet();
+        users.forEach(u -> connections.addAll(get(ConnectionStore.class).getConnections(u)));
+
+        // check if the connections contain a service with given service id
+        if(connections.stream()
+                .map(Connection::getService)
+                .map(Service::id)
+                .collect(Collectors.toSet())
+                .contains(serviceId)){
             return Response.ok(ENABLED_TRUE).build();
         }
         return Response.ok(ENABLED_FALSE).build();
