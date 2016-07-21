@@ -53,15 +53,6 @@ public interface ConnectionStore {
     Set<Connection> getUserConnections(Ip4Address srcIp);
 
     /**
-     * Get the set of connections for source IP and source MAC
-     *
-     * @param srcIp source IP
-     * @param srcMac source Mac
-     * @return set of connections
-     */
-    Set<Connection> getUserConnections(Ip4Address srcIp, MacAddress srcMac);
-
-    /**
      * Get the connection between the user and the service
      *
      * @param user user

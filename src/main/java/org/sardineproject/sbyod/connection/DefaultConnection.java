@@ -74,7 +74,7 @@ public class DefaultConnection implements Connection{
      * @param deviceId the device id the objective is running on
      */
     @Override
-    public void addRemoveObjective(ForwardingObjective forwardingObjective, DeviceId deviceId) {
+    public void addForwardingObjective(ForwardingObjective forwardingObjective, DeviceId deviceId) {
         if(forwardingObjective == null)
             return;
         forwardingObjectives.put(forwardingObjective, deviceId);
@@ -86,7 +86,7 @@ public class DefaultConnection implements Connection{
      * @return forwarding objective
      */
     @Override
-    public Map<ForwardingObjective, DeviceId> getObjectives() {
+    public Map<ForwardingObjective, DeviceId> getForwardingObjectives() {
         return Maps.newHashMap(forwardingObjectives);
     }
 

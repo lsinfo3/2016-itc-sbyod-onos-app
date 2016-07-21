@@ -46,17 +46,17 @@ public interface Connection{
     Host getUser();
 
     /**
-     * Add an objective to remove the installed flow rules
+     * Add a forwarding objective to remove the installed flow rules
      *
      * @param forwardingObjective forwarding objective to remove the installed flow rules
      */
-    void addRemoveObjective(ForwardingObjective forwardingObjective, DeviceId deviceId);
+    void addForwardingObjective(ForwardingObjective forwardingObjective, DeviceId deviceId);
 
     /**
      * Returns all forwarding objectives removing the installed objectives
      *
      * @return forwarding objective
      */
-    Map<ForwardingObjective, DeviceId> getObjectives();
+    Map<ForwardingObjective, DeviceId> getForwardingObjectives();
 
 }

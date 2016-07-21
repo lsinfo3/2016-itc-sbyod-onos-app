@@ -59,9 +59,6 @@ public class DefaultConnectionStore implements ConnectionStore {
     protected HostService hostService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected ApplicationIdStore applicationIdStore;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected ConnectionRuleInstaller connectionRuleInstaller;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
@@ -133,7 +130,7 @@ public class DefaultConnectionStore implements ConnectionStore {
         // todo: also reset flow objectives of the connection if it is not completely deleted?
 
         // remove the flow objectives on the network devices
-        Map<ForwardingObjective, DeviceId> forwardingObjectives = connection.getObjectives();
+        Map<ForwardingObjective, DeviceId> forwardingObjectives = connection.getForwardingObjectives();
 
         for(ForwardingObjective fo : forwardingObjectives.keySet()){
 
@@ -173,20 +170,6 @@ public class DefaultConnectionStore implements ConnectionStore {
     public Set<Connection> getUserConnections(Ip4Address userIp) {
         return connections.stream()
                 .filter(c -> c.getUser().ipAddresses().contains(userIp))
-                .collect(Collectors.toSet());
-    }
-
-    /**
-     * Get the set of connections for source IP and source MAC
-     *
-     * @param userIp user IP
-     * @param userMac user Mac
-     * @return set of connections
-     */
-    @Override
-    public Set<Connection> getUserConnections(Ip4Address userIp, MacAddress userMac) {
-        return connections.stream()
-                .filter(c -> (c.getUser().ipAddresses().contains(userIp) && c.getUser().mac().equals(userMac)))
                 .collect(Collectors.toSet());
     }
 

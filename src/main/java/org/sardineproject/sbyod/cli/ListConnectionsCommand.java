@@ -40,7 +40,7 @@ public class ListConnectionsCommand extends AbstractShellCommand {
         while(connectionIterator.hasNext()){
             Connection connection = connectionIterator.next();
             print("Connection:\n\nuser = " + connection.getUser() + "\nservice = " + connection.getService()
-            + "\nFlowObjective count: " + connection.getObjectives().size());
+            + "\nFlowObjective count: " + connection.getForwardingObjectives().size());
         }
     }
 }

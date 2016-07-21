@@ -326,7 +326,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                         "for device {} in method addFlowUserToService()", forwardingObjective, forDeviceId);
                 flowObjectiveService.forward(forDeviceId, forwardingObjective.add());
                 // save forwarding objective in connection
-                connection.addRemoveObjective(forwardingObjective.remove(), forDeviceId);
+                connection.addForwardingObjective(forwardingObjective.remove(), forDeviceId);
             }
         }
     }
@@ -400,7 +400,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                         "for device {} in method addFlowServiceToUser()", forwardingObjective.add(), forDeviceId);
                 flowObjectiveService.forward(forDeviceId, forwardingObjective.add());
                 // save forwarding objective in connection
-                connection.addRemoveObjective(forwardingObjective.remove(), forDeviceId);
+                connection.addForwardingObjective(forwardingObjective.remove(), forDeviceId);
             }
         }
     }
