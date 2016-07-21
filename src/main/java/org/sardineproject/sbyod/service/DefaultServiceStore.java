@@ -19,12 +19,11 @@ package org.sardineproject.sbyod.service;
 
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.Ip4Address;
-import org.onlab.packet.TpPort;
 import org.onosproject.codec.CodecService;
 import org.onosproject.core.ApplicationIdStore;
 import org.onosproject.store.service.StorageService;
-import org.sardineproject.sbyod.PortalManager;
-import org.sardineproject.sbyod.PortalService;
+import org.sardineproject.sbyod.portal.PortalManager;
+import org.sardineproject.sbyod.portal.PortalService;
 import org.slf4j.Logger;
 import org.sardineproject.sbyod.connection.Connection;
 import org.sardineproject.sbyod.connection.ConnectionStore;

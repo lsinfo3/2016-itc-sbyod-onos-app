@@ -31,7 +31,7 @@ import org.onosproject.net.flowobjective.FlowObjectiveService;
 import org.onosproject.net.flowobjective.ForwardingObjective;
 import org.onosproject.net.packet.InboundPacket;
 import org.onosproject.net.packet.PacketContext;
-import org.sardineproject.sbyod.PortalService;
+import org.sardineproject.sbyod.portal.PortalService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

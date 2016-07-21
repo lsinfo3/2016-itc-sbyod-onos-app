@@ -25,8 +25,8 @@ import org.onosproject.net.Host;
 import org.onosproject.net.host.HostService;
 import org.onosproject.rest.AbstractWebResource;
 
-import org.sardineproject.sbyod.PortalManager;
-import org.sardineproject.sbyod.PortalService;
+import org.sardineproject.sbyod.portal.PortalManager;
+import org.sardineproject.sbyod.portal.PortalService;
 import org.sardineproject.sbyod.dns.DnsService;
 import org.sardineproject.sbyod.service.ServiceId;
 import org.slf4j.Logger;

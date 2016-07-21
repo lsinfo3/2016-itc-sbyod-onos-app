@@ -22,7 +22,7 @@ import org.apache.karaf.shell.commands.Command;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.TpPort;
 import org.onosproject.cli.AbstractShellCommand;
-import org.sardineproject.sbyod.PortalService;
+import org.sardineproject.sbyod.portal.PortalService;
 
 /**
  * Created by lorry on 13.11.15.

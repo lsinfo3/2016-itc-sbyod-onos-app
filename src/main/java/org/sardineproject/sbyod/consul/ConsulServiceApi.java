@@ -22,14 +22,13 @@ import com.ecwid.consul.v1.ConsulClient;
 import com.ecwid.consul.v1.QueryParams;
 import com.ecwid.consul.v1.Response;
 import com.ecwid.consul.v1.catalog.model.CatalogService;
-import com.google.common.collect.Sets;
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.IpAddress;
 import org.onlab.packet.TpPort;
 import org.onosproject.net.Host;
 import org.onosproject.net.host.HostService;
-import org.sardineproject.sbyod.PortalManager;
+import org.sardineproject.sbyod.portal.PortalManager;
 import org.sardineproject.sbyod.connection.DefaultConnection;
 import org.sardineproject.sbyod.service.DefaultService;
 import org.sardineproject.sbyod.service.ServiceId;
@@ -381,7 +380,8 @@ public class ConsulServiceApi implements ConsulService {
                 // service is active, but could be changed
                 if(equalConsulServices.size() > 1) {
                     // take the first service
-                    log.info("ConsulServiceApi: More than one service with same ServiceId = {}. Taking first one.", oldService.id());
+                    log.info("ConsulServiceApi: More than one service with same ServiceId = {}. " +
+                            "Taking the one with lowest IP address.", oldService.id());
                 }
                 // take first service in set with lowest ip address
                 Service newService = Collections.min(equalConsulServices, (o1, o2) -> o1.ipAddress().compareTo(o2.ipAddress()));

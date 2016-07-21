@@ -32,14 +32,12 @@ import org.onosproject.net.flowobjective.FlowObjectiveService;
 import org.onosproject.net.flowobjective.ForwardingObjective;
 import org.onosproject.net.host.HostService;
 import org.onosproject.net.packet.*;
-import org.sardineproject.sbyod.PortalService;
-import org.sardineproject.sbyod.service.Service;
+import org.sardineproject.sbyod.portal.PortalService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Created by lorry on 11.12.15.
@@ -79,6 +77,7 @@ public class ControllerRedirect implements PacketRedirectService {
     // a map with all src ip and src port pairs and dst ip and dst mac pairs
     private Map<IpPortPair, IpMacPair> portToMac;
 
+    // mapping the installed flow rules to the device ID for removal at deactivation
     Map<DeviceId, List<ForwardingObjective>> installedRules;
 
     @Activate
@@ -160,6 +159,11 @@ public class ControllerRedirect implements PacketRedirectService {
         log.info("ControllerRedirect: stopped!");
     }
 
+    /**
+     * Install flow rules on network switches sending traffic with TCP destination port 80 and
+     * traffic with source TCP port 80 and source IP address of the host redirecting to,
+     * to the controller.
+     */
     private void installRedirectRules(){
 
         ForwardingObjective.Builder port80ToControllerRule = getPort80ToControllerRule();
@@ -227,27 +231,21 @@ public class ControllerRedirect implements PacketRedirectService {
     }
 
     /**
-     * Request packet in via packet service.
+     * Request packet in of IPv4 packets via packet service.
      */
     private void requestIntercepts() {
         TrafficSelector.Builder selector = DefaultTrafficSelector.builder();
         selector.matchEthType(Ethernet.TYPE_IPV4);
         packetService.requestPackets(selector.build(), PacketPriority.REACTIVE,
                 applicationIdStore.getAppId(APPLICATION_ID), Optional.<DeviceId>empty());
-        selector.matchEthType(Ethernet.TYPE_ARP);
-        packetService.requestPackets(selector.build(), PacketPriority.REACTIVE,
-                applicationIdStore.getAppId(APPLICATION_ID), Optional.<DeviceId>empty());
     }
 
     /**
-     * Cancel request for packet in via packet service.
+     * Cancel request for IPv4 packet in via packet service.
      */
     private void withdrawIntercepts() {
         TrafficSelector.Builder selector = DefaultTrafficSelector.builder();
         selector.matchEthType(Ethernet.TYPE_IPV4);
-        packetService.cancelPackets(selector.build(), PacketPriority.REACTIVE,
-                applicationIdStore.getAppId(APPLICATION_ID), Optional.<DeviceId>empty());
-        selector.matchEthType(Ethernet.TYPE_ARP);
         packetService.cancelPackets(selector.build(), PacketPriority.REACTIVE,
                 applicationIdStore.getAppId(APPLICATION_ID), Optional.<DeviceId>empty());
     }

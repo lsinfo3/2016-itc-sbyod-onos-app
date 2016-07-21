@@ -21,9 +21,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.TpPort;
 import org.onosproject.rest.AbstractWebResource;
-import org.sardineproject.sbyod.PortalManager;
+import org.sardineproject.sbyod.portal.PortalManager;
 import org.slf4j.Logger;
-import org.sardineproject.sbyod.PortalService;
+import org.sardineproject.sbyod.portal.PortalService;
 
 import javax.ws.rs.Path;
 import javax.ws.rs.POST;

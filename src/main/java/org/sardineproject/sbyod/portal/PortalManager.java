@@ -15,7 +15,7 @@
  *
  *
  */
-package org.sardineproject.sbyod;
+package org.sardineproject.sbyod.portal;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -50,7 +50,7 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 @Component(immediate = true)
 @org.apache.felix.scr.annotations.Service
-public class PortalManager implements PortalService{
+public class PortalManager implements PortalService {
 
     private final Logger log = LoggerFactory.getLogger(getClass());
     public ApplicationId appId;
@@ -74,9 +74,6 @@ public class PortalManager implements PortalService{
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected ServiceStore serviceStore;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected BasicRuleInstaller basicRuleInstaller;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected PacketRedirectService packetRedirectService;

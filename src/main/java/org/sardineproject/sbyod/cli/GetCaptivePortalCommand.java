@@ -19,7 +19,7 @@ package org.sardineproject.sbyod.cli;
 
 import org.apache.karaf.shell.commands.Command;
 import org.onosproject.cli.AbstractShellCommand;
-import org.sardineproject.sbyod.PortalService;
+import org.sardineproject.sbyod.portal.PortalService;
 import org.sardineproject.sbyod.service.Service;
 
 /**

@@ -22,6 +22,7 @@ import org.onosproject.TestApplicationId;
 import org.onosproject.core.IdGenerator;
 import org.onosproject.net.intent.Intent;
 import org.onosproject.net.intent.MockIdGenerator;
+import org.sardineproject.sbyod.portal.PortalManager;
 
 /**
  * Set of tests of the ONOS application manager.

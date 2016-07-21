@@ -22,9 +22,8 @@ import org.onlab.packet.Ip4Address;
 import org.onlab.packet.TpPort;
 import org.onosproject.net.AbstractElement;
 import org.onosproject.net.ElementId;
-import org.onosproject.net.Host;
 import org.onosproject.net.provider.ProviderId;
-import org.sardineproject.sbyod.PortalManager;
+import org.sardineproject.sbyod.portal.PortalManager;
 import org.slf4j.Logger;
 
 import java.net.URI;

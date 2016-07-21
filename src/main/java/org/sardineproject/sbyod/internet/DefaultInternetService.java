@@ -20,7 +20,7 @@ import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
 import org.onlab.packet.Ip4Address;
-import org.sardineproject.sbyod.PortalManager;
+import org.sardineproject.sbyod.portal.PortalManager;
 import org.sardineproject.sbyod.service.DefaultService;
 import org.sardineproject.sbyod.service.Service;
 import org.sardineproject.sbyod.service.ServiceStore;

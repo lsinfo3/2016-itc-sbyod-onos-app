@@ -21,7 +21,7 @@ import com.google.common.collect.Maps;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.Host;
 import org.onosproject.net.flowobjective.ForwardingObjective;
-import org.sardineproject.sbyod.PortalManager;
+import org.sardineproject.sbyod.portal.PortalManager;
 import org.slf4j.Logger;
 import org.sardineproject.sbyod.service.Service;
 
