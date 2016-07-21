@@ -47,8 +47,7 @@ import static org.slf4j.LoggerFactory.getLogger;
  * Created by lorry on 17.06.16.
  */
 @Component(immediate = true)
-@org.apache.felix.scr.annotations.Service
-public class DefaultConfigurationManager implements ConfigurationManager{
+public class DefaultConfigurationManager{
 
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
