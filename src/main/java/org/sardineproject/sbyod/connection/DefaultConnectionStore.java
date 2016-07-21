@@ -17,8 +17,11 @@
  */
 package org.sardineproject.sbyod.connection;
 
-import org.apache.felix.scr.annotations.*;
-import org.apache.felix.scr.annotations.Service;
+import org.apache.felix.scr.annotations.Activate;
+import org.apache.felix.scr.annotations.Component;
+import org.apache.felix.scr.annotations.Reference;
+import org.apache.felix.scr.annotations.ReferenceCardinality;
+import org.apache.felix.scr.annotations.Deactivate;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.MacAddress;
 import org.onosproject.codec.CodecService;
@@ -34,6 +37,7 @@ import org.onosproject.net.host.HostListener;
 import org.onosproject.net.host.HostService;
 import org.sardineproject.sbyod.portal.PortalManager;
 import org.sardineproject.sbyod.portal.PortalService;
+import org.sardineproject.sbyod.service.Service;
 import org.slf4j.Logger;
 
 import java.util.HashSet;
@@ -49,7 +53,7 @@ import static org.slf4j.LoggerFactory.getLogger;
  * Created by lorry on 06.03.16.
  */
 @Component(immediate = true)
-@Service
+@org.apache.felix.scr.annotations.Service
 public class DefaultConnectionStore implements ConnectionStore {
 
     private static final Logger log = getLogger(PortalManager.class);
@@ -168,7 +172,7 @@ public class DefaultConnectionStore implements ConnectionStore {
      * @return connection between user and service
      */
     @Override
-    public Connection getConnection(Host user, org.sardineproject.sbyod.service.Service service) {
+    public Connection getConnection(Host user, Service service) {
         Set<Connection> result = connections.stream()
                 .filter(c -> c.getUser().equals(user) && c.getService().equals(service))
                 .collect(Collectors.toSet());
@@ -185,7 +189,7 @@ public class DefaultConnectionStore implements ConnectionStore {
      * @return Set of connections
      */
     @Override
-    public Set<Connection> getConnections(org.sardineproject.sbyod.service.Service service) {
+    public Set<Connection> getConnections(Service service) {
         return connections.stream()
                 .filter(c -> c.getService().equals(service))
                 .collect(Collectors.toSet());
@@ -247,8 +251,7 @@ public class DefaultConnectionStore implements ConnectionStore {
             }
         }
 
-        // TODO: Do not remove the connection object, just the flows here, if the host only moved and was not removed?
-        // remove all connections of the host
+        // remove and reset all connections of the host
         private void removeHostConnections(HostEvent event){
             Host eventSubject = event.subject();
             Set<Connection> subjectConnections = getConnections(eventSubject);
