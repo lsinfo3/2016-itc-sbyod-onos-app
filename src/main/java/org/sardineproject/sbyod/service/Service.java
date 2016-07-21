@@ -46,6 +46,19 @@ public interface Service extends Element{
     ServiceId id();
 
     /**
+     * Get the ip address of the service
+     *
+     * @return a Ip4Address
+     */
+    Ip4Address ipAddress();
+
+    /**
+     * Return the transport protocol of the service
+     * @return transport protocol
+     */
+    byte protocol();
+
+    /**
      * Get the transport protocol port of the service
      * @return TpPort
      */
@@ -63,19 +76,6 @@ public interface Service extends Element{
      * @return symbol string
      */
     String icon();
-
-    /**
-     * Return the transport protocol of the service
-     * @return transport protocol
-     */
-    byte protocol();
-
-    /**
-     * Get the ip address of the service
-     *
-     * @return a Ip4Address
-     */
-    Ip4Address ipAddress();
 
     /**
      * A service builder

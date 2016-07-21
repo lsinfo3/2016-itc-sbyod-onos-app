@@ -191,7 +191,7 @@ public class DefaultService extends AbstractElement implements Service {
         return new Builder(this);
     }
 
-    public static final class Builder {
+    public static final class Builder implements Service.Builder {
 
         private Ip4Address ip4Address = null;
         private TpPort tpPort;

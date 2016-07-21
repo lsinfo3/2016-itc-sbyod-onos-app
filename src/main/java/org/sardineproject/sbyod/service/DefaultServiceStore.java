@@ -20,7 +20,6 @@ package org.sardineproject.sbyod.service;
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.Ip4Address;
 import org.onosproject.codec.CodecService;
-import org.onosproject.core.ApplicationIdStore;
 import org.onosproject.store.service.StorageService;
 import org.sardineproject.sbyod.portal.PortalManager;
 import org.sardineproject.sbyod.portal.PortalService;
@@ -44,8 +43,6 @@ public class DefaultServiceStore implements ServiceStore {
     private static final Logger log = getLogger(PortalManager.class);
     private static String APPLICATION_ID = PortalService.APP_ID;
 
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected ApplicationIdStore applicationIdStore;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected ConnectionStore connectionStore;
@@ -57,54 +54,20 @@ public class DefaultServiceStore implements ServiceStore {
     protected CodecService codecService;
 
     // TODO: use distributed set (problem with kryo)
-    //private DistributedSet<Service> services;
     private Set<org.sardineproject.sbyod.service.Service> services;
 
-    /*Serializer serializer = Serializer.using(KryoNamespaces.API.newBuilder()
-            .nextId(KryoNamespaces.BEGIN_USER_CUSTOM_ID + 6)
-            .register(DefaultService.class)
-            .register(DefaultAnnotations.class)
-            .register(HashMap.class)
-            .register(DefaultHost.class)
-            .register(HostId.class)
-            .register(VlanId.class)
-            .register(HashSet.class)
-            .register(HostLocation.class)
-            .register(DeviceId.class)
-            .register(URI.class)
-            .register(PortNumber.class)
-            .register(ProviderId.class)
-            .register(ServiceId.class)
-            .register(java.util.Collections.unmodifiableSet(new HashSet<Void>()).getClass())
-            .register(org.onlab.packet.Ip4Address.class)
-            .register(byte[].class)
-            .register(org.onlab.packet.IpAddress.class)
-            .register(org.onlab.packet.IpAddress.Version.class)
-            .register(org.onlab.packet.TpPort.class)
-            .register(org.onlab.packet.MacAddress.class)
-            .build());*/
-
-    // TODO: remove service if host where the service is running on has disconnected!
 
     @Activate
     protected void activate(){
 
-//        services = storageService.<Service>setBuilder()
-//                //.withApplicationId(applicationIdStore.getAppId(APPLICATION_ID))
-//                .withSerializer(serializer)
-//                .withName("services")
-//                .build();
         services = new HashSet<>();
 
         codecService.registerCodec(org.sardineproject.sbyod.service.Service.class, new ServiceCodec());
-
-        //log.info("Started ServiceStore");
     }
 
     @Deactivate
     protected void deactivate(){
         services.clear();
-        //log.info("Stopped ServiceStore");
     }
 
 
