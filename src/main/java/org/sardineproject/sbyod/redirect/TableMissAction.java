@@ -15,7 +15,7 @@
  *
  *
  */
-package org.sardineproject.sbyod;
+package org.sardineproject.sbyod.redirect;
 
 import com.google.common.collect.Maps;
 import org.apache.felix.scr.annotations.*;
