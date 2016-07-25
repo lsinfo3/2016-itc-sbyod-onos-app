@@ -134,7 +134,7 @@ public class DefaultConfigurationManager{
                 }
             }
 
-
+            // todo: update connections routing to default gateway!
             // activate the dns service if a default gateway is defined
             if(cfg.defaultGateway() != null){
                 dnsService.deactivateDns();

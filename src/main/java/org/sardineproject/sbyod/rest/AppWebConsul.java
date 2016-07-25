@@ -116,7 +116,7 @@ public class AppWebConsul extends AbstractWebResource{
      * Disconnecting from Consul as service discovery client.
      */
     @DELETE
-    @Path("/deactivate")
+    @Path("")
     public Response deactivateConsul(){
         log.debug("AppWebConsul: Deactivating consul service discovery");
 
