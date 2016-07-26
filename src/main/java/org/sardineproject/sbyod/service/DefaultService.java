@@ -27,7 +27,9 @@ import org.sardineproject.sbyod.portal.PortalManager;
 import org.slf4j.Logger;
 
 import java.net.URI;
+import java.util.Set;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static org.slf4j.LoggerFactory.getLogger;
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -38,7 +40,7 @@ public class DefaultService extends AbstractElement implements Service {
 
     private static final Logger log = getLogger(PortalManager.class);
 
-    private final Ip4Address ip4Address;
+    private final Set<Ip4Address> ip4AddressSet;
     private final TpPort tpPort;
     private final String name;
     private final Discovery discovery;
@@ -52,13 +54,13 @@ public class DefaultService extends AbstractElement implements Service {
     private DefaultService(){
         this.tpPort = null;
         this.name = null;
-        this.ip4Address = null;
+        this.ip4AddressSet = null;
         this.discovery = null;
     }
 
     private DefaultService(Builder builder){
         super(builder.providerId, builder.elementId);
-        this.ip4Address = builder.ip4Address;
+        this.ip4AddressSet = builder.ip4AddressSet;
         this.tpPort = builder.tpPort;
         this.name = builder.name;
         this.discovery = builder.discovery;
@@ -112,8 +114,8 @@ public class DefaultService extends AbstractElement implements Service {
      * @return a Ip4Address
      */
     @Override
-    public Ip4Address ipAddress() {
-        return ip4Address;
+    public Set<Ip4Address> ipAddressSet() {
+        return ip4AddressSet;
     }
 
     /**
@@ -144,7 +146,7 @@ public class DefaultService extends AbstractElement implements Service {
         DefaultService that = (DefaultService) o;
 
         if (protocol != that.protocol) return false;
-        if (ip4Address != null ? !ip4Address.equals(that.ip4Address) : that.ip4Address != null) return false;
+        if (ip4AddressSet != null ? !ip4AddressSet.equals(that.ip4AddressSet) : that.ip4AddressSet != null) return false;
         if (tpPort != null ? !tpPort.equals(that.tpPort) : that.tpPort != null) return false;
         if (name != null ? !name.equals(that.name) : that.name != null) return false;
         return !(icon != null ? !icon.equals(that.icon) : that.icon != null);
@@ -153,7 +155,7 @@ public class DefaultService extends AbstractElement implements Service {
 
     @Override
     public int hashCode() {
-        int result = ip4Address != null ? ip4Address.hashCode() : 0;
+        int result = ip4AddressSet != null ? ip4AddressSet.hashCode() : 0;
         result = 31 * result + (tpPort != null ? tpPort.hashCode() : 0);
         result = 31 * result + (name != null ? name.hashCode() : 0);
         result = 31 * result + (icon != null ? icon.hashCode() : 0);
@@ -164,7 +166,7 @@ public class DefaultService extends AbstractElement implements Service {
     @Override
     public String toString() {
         return "DefaultService{" +
-                "ip4Address=" + ip4Address +
+                "ip4AddressSet=" + ip4AddressSet +
                 ", tpPort=" + tpPort +
                 ", name='" + name + '\'' +
                 ", discovery=" + discovery +
@@ -193,7 +195,7 @@ public class DefaultService extends AbstractElement implements Service {
 
     public static final class Builder implements Service.Builder {
 
-        private Ip4Address ip4Address = null;
+        private Set<Ip4Address> ip4AddressSet = null;
         private TpPort tpPort;
         private String name;
         private Discovery discovery = Discovery.NONE;
@@ -207,7 +209,7 @@ public class DefaultService extends AbstractElement implements Service {
 
         // creates a builder set to create a copy of the specified service.
         private Builder(Service service){
-            this.ip4Address = service.ipAddress();
+            this.ip4AddressSet = service.ipAddressSet();
             this.tpPort = service.tpPort();
             this.name = service.name();
             this.discovery = service.serviceDiscovery();
@@ -217,8 +219,8 @@ public class DefaultService extends AbstractElement implements Service {
             this.elementId = service.id();
         }
 
-        public Builder withIp(Ip4Address ip4Address){
-            this.ip4Address = ip4Address;
+        public Builder withIp(Set<Ip4Address> ip4AddressSet){
+            this.ip4AddressSet = ip4AddressSet;
             return this;
         }
 
@@ -258,12 +260,10 @@ public class DefaultService extends AbstractElement implements Service {
         }
 
         public Service build(){
-            checkNotNull(ip4Address, "Must have an IP address");
-            //checkNotNull(tpPort, "Must have an TpPort");
+            checkNotNull(ip4AddressSet, "Must have an IP address set");
+            checkArgument(!ip4AddressSet.isEmpty(), "Must have at least one IP address!");
             checkNotNull(name, "Must have a name");
-            if(ip4Address == null){
-                log.warn("DefaultService: No IP address defined for service {}.", name);
-            }
+
             if(tpPort == null){
                 log.warn("DefaultService: No transport protocol port defined for service {}.", name);
             }

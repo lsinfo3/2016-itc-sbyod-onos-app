@@ -22,6 +22,7 @@ import com.ecwid.consul.v1.ConsulClient;
 import com.ecwid.consul.v1.QueryParams;
 import com.ecwid.consul.v1.Response;
 import com.ecwid.consul.v1.catalog.model.CatalogService;
+import com.google.common.collect.Sets;
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.IpAddress;
@@ -251,6 +252,7 @@ public class ConsulServiceApi implements ConsulService {
                     serviceNameEncoded = serviceNameEncoded.substring(1, serviceNameEncoded.length()-1);
 
                     // query consul for the service description
+                    // todo: check which services are bundled and join them to one service?
                     serviceDescription.addAll(consulClient.getCatalogService(serviceNameEncoded, queryParams).getValue());
                 } catch (URISyntaxException e) {
                     e.printStackTrace();
@@ -295,7 +297,7 @@ public class ConsulServiceApi implements ConsulService {
 
         // create a new byod service corresponding to the CatalogService
         DefaultService.Builder service = DefaultService.builder()
-                .withIp(serviceIpAddress)
+                .withIp(Sets.newHashSet(serviceIpAddress))
                 .withPort(TpPort.tpPort(catalogService.getServicePort()))
                 .withName(catalogService.getServiceName())
                 .withElementId(ServiceId.serviceId(URI.create(catalogService.getServiceId())))
@@ -384,7 +386,9 @@ public class ConsulServiceApi implements ConsulService {
                             "Taking the one with lowest IP address.", oldService.id());
                 }
                 // take first service in set with lowest ip address
-                Service newService = Collections.min(equalConsulServices, (o1, o2) -> o1.ipAddress().compareTo(o2.ipAddress()));
+                Service newService = Collections.min(equalConsulServices,
+                        (o1, o2) -> o1.ipAddressSet().iterator().next()
+                                .compareTo(o2.ipAddressSet().iterator().next()));
                 // check for updates
                 if (oldService.equals(newService)) {
                     // nothing changed, no update needed

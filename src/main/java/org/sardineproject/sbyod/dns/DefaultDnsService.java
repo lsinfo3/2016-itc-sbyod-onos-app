@@ -19,6 +19,7 @@ package org.sardineproject.sbyod.dns;
 import com.google.common.collect.Sets;
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.IPv4;
+import org.onlab.packet.IpAddress;
 import org.onlab.packet.TpPort;
 import org.onosproject.core.ApplicationIdStore;
 import org.onosproject.net.Host;
@@ -107,7 +108,7 @@ public class DefaultDnsService implements DnsService {
 
             // dns running on both tcp and udp protocol
             dnsServiceTcp = DefaultService.builder()
-                    .withIp(cfg.defaultGateway())
+                    .withIp(Sets.newHashSet(cfg.defaultGateway()))
                     .withPort(TpPort.tpPort(53))
                     .withName("DnsServiceTcp")
                     .withProtocol(IPv4.PROTOCOL_TCP)
@@ -115,7 +116,7 @@ public class DefaultDnsService implements DnsService {
             serviceStore.addService(dnsServiceTcp);
 
             dnsServiceUdp = DefaultService.builder()
-                    .withIp(cfg.defaultGateway())
+                    .withIp(Sets.newHashSet(cfg.defaultGateway()))
                     .withPort(TpPort.tpPort(53))
                     .withName("DnsServiceUdp")
                     .withProtocol(IPv4.PROTOCOL_UDP)
@@ -126,8 +127,10 @@ public class DefaultDnsService implements DnsService {
 
             // connect all valid hosts to the dns service
             for(Host host : hostService.getHosts()){
+                Set<IpAddress> intersection = Sets.newHashSet(host.ipAddresses());
+                intersection.retainAll(portalService.getPortalIp());
                 // do not install the service for the router itself and the portal
-                if(!host.equals(router) && !host.ipAddresses().contains(portalService.getPortalIp())){
+                if(!host.equals(router) && intersection.isEmpty()){
                     // install the connection for both services
                     connectionStore.addConnection(new DefaultConnection(host, dnsServiceTcp));
                     connectionStore.addConnection(new DefaultConnection(host, dnsServiceUdp));

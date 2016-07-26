@@ -20,6 +20,7 @@ package org.sardineproject.sbyod.portal;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.*;
 import org.onosproject.core.ApplicationId;
@@ -134,7 +135,7 @@ public class PortalManager implements PortalService {
 
             // create service for existing configuration
             Service portalService = DefaultService.builder()
-                    .withIp(portalIp)
+                    .withIp(Sets.newHashSet(portalIp))
                     .withPort(portalPort)
                     .withName("PortalService")
                     .build();
@@ -192,10 +193,10 @@ public class PortalManager implements PortalService {
      * @return IpAddress
      */
     @Override
-    public Ip4Address getPortalIp() {
+    public Set<Ip4Address> getPortalIp() {
         if(portalId != null) {
             Service portalService = serviceStore.getService(portalId);
-            return portalService.ipAddress();
+            return portalService.ipAddressSet();
         } else{
             return null;
         }
@@ -235,8 +236,11 @@ public class PortalManager implements PortalService {
             Iterable<Host> hosts = hostService.getHosts();
             for (Host host : hosts) {
 
+                // check if the host holds any of the service IP addresses
+                Set<IpAddress> intersection = Sets.newHashSet(host.ipAddresses());
+                intersection.retainAll(portalService.ipAddressSet());
                 // no connection for the portal itself and the default gateway
-                if(!host.ipAddresses().contains(portalService.ipAddress()) &&
+                if(intersection.isEmpty() &&
                         ((defaultGw == null) || !defaultGw.equals(host))) {
                     Connection connection = new DefaultConnection(host, portalService);
                     connectionStore.addConnection(connection);
@@ -283,8 +287,11 @@ public class PortalManager implements PortalService {
 
                 Host eventSubject = event.subject();
 
+                // check if the host holds any of the service IP addresses
+                Set<IpAddress> intersection = Sets.newHashSet(eventSubject.ipAddresses());
+                intersection.retainAll(portalService.ipAddressSet());
                 // only install if host is not the portal or the default gateway
-                if(!eventSubject.ipAddresses().contains(portalService.ipAddress()) &&
+                if(intersection.isEmpty() &&
                         ((defaultGw == null) || !defaultGw.equals(eventSubject))) {
 
                     // create a new connection between the portal and the subject

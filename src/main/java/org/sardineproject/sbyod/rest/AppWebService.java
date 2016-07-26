@@ -127,7 +127,7 @@ public class AppWebService extends AbstractWebResource {
             Service service = DefaultService.builder()
                     .withPort(tpPort)
                     .withName(name)
-                    .withIp(ip)
+                    .withIp(Sets.newHashSet(ip))
                     .build();
 
             // check if service is already active

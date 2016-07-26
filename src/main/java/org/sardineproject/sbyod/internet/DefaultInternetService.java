@@ -16,6 +16,7 @@
 
 package org.sardineproject.sbyod.internet;
 
+import com.google.common.collect.Sets;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
@@ -52,7 +53,7 @@ public class DefaultInternetService implements InternetService {
         // create internet service
         this.internetService = DefaultService.builder()
                 .withName("Internet")
-                .withIp(Ip4Address.valueOf("0.0.0.0"))
+                .withIp(Sets.newHashSet(Ip4Address.valueOf("0.0.0.0")))
                 .withIcon("globe")
                 .build();
         if(serviceStore != null) {

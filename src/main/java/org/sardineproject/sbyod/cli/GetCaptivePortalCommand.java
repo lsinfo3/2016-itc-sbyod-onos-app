@@ -32,8 +32,8 @@ public class GetCaptivePortalCommand extends AbstractShellCommand {
         PortalService portalService = get(PortalService.class);
         Service portal = portalService.getPortalService();
         if(portal != null) {
-            System.out.println(String.format("Portal:\nIP = %s\nTpPort = %s\nServiceId = %s",
-                    portal.ipAddress(), portal.tpPort(), portal.id() ));
+            System.out.println(String.format("Portal:\nIPs = %s\nTpPort = %s\nServiceId = %s",
+                    portal.ipAddressSet(), portal.tpPort(), portal.id() ));
         } else{
             System.out.println("No portal defined.");
         }

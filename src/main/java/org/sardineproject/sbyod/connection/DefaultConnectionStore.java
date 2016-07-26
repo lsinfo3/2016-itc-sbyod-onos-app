@@ -22,10 +22,7 @@ import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
 import org.apache.felix.scr.annotations.Deactivate;
-import org.onlab.packet.Ip4Address;
-import org.onlab.packet.MacAddress;
 import org.onosproject.codec.CodecService;
-import org.onosproject.core.ApplicationIdStore;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.Host;
 import org.onosproject.net.flow.criteria.Criterion;
@@ -141,26 +138,10 @@ public class DefaultConnectionStore implements ConnectionStore {
             // get the device id where the objective is installed on
             DeviceId deviceId = forwardingObjectives.get(fo);
 
-            // get the selector source ip criterion of the flow objective
-            IPCriterion ip4srcCriterion = (IPCriterion)fo.selector().getCriterion(Criterion.Type.IPV4_SRC);
-            // check if the flow objective is an objective for the direction service to user
-            if(connection.getService().ipAddress().equals(ip4srcCriterion.ip().address())){
-                // check if the user has another connection to the same service host
-                Set<Connection> userConnectionsToSameHost = getConnections(connection.getUser()).stream()
-                        .filter(c -> c.getService().ipAddress().equals(connection.getService().ipAddress()))
-                        .collect(Collectors.toSet());
-                // fixme: no check for duplicate connections needed any more, as tpSource port is included in flow rules
-                //if(userConnectionsToSameHost.isEmpty()){
-                    // no other connection to same host found -> remove service to host flow objective
-                    log.debug("DefaultConnectionStore: Removing flow objective \n{} \n" +
-                            "for device {} in method removeConnection()", fo, deviceId);
-                    flowObjectiveService.forward(forwardingObjectives.get(fo), fo);
-                //}
-            } else{
-                log.debug("DefaultConnectionStore: Removing flow objective \n{} \n" +
-                        "for device {} in method removeConnection()", fo, deviceId);
-                flowObjectiveService.forward(forwardingObjectives.get(fo), fo);
-            }
+            log.debug("DefaultConnectionStore: Removing flow objective \n{} \n" +
+                    "for device {} in method removeConnection()", fo, deviceId);
+            // removing objective
+            flowObjectiveService.forward(forwardingObjectives.get(fo), fo);
         }
     }
 

@@ -100,13 +100,17 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                             "and service with IP={} Port={}",
                     new String[]{connection.getUser().ipAddresses().toString(),
                             connection.getUser().mac().toString(),
-                            connection.getService().ipAddress().toString(),
+                            connection.getService().ipAddressSet().toString(),
                             (connection.getService().tpPort() == null ? "" : connection.getService().tpPort().toString())});
 
 
         HostLocation userLocation = connection.getUser().location();
+
+        // connect the user to every IP address of the service
+        for(Ip4Address serviceIp : connection.getService().ipAddressSet()){
+
         // the device/host the service is connected to
-        Host serviceHost = getConnectionServiceHost(connection);
+        Host serviceHost = getConnectionServiceHost(serviceIp);
 
         // check if a valid service host was found
         if (serviceHost != null) {
@@ -118,12 +122,12 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
 
                 // add one rule directing the traffic from user port to service port on device and vice versa
                 if (userLocation.port().equals(serviceHost.location().port())) {
-                    log.warn("ConnectionRuleInstaller: User {} and service with IP={} are on the same port! " +
-                                    "No connection installed.",
-                            connection.getUser().id(), connection.getService().ipAddress());
+                    log.warn("ConnectionRuleInstaller: User {} and service with IP={} are connected to same switch" +
+                                    " port! No connection installed.",
+                            connection.getUser().id(), connection.getService().ipAddressSet());
                 } else {
                     addFlows(userLocation.port(), serviceHost.location().port(), userLocation.deviceId(),
-                            serviceHost.mac(), connection);
+                            serviceHost.mac(), serviceIp, connection);
                 }
 
             } else {
@@ -144,7 +148,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                     Iterator<Link> currentLinkIter = path.links().iterator();
                     Link currentLink = currentLinkIter.next();
                     addFlows(userLocation.port(), currentLink.src().port(), userLocation.deviceId(),
-                            serviceHost.mac(), connection);
+                            serviceHost.mac(), serviceIp, connection);
 
                     // rule for every pair of links
                     Iterator<Link> previousLinkIter = path.links().iterator();
@@ -153,13 +157,14 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                         currentLink = currentLinkIter.next();
 
                         addFlows(previousLink.dst().port(), currentLink.src().port(),
-                                currentLink.src().deviceId(), serviceHost.mac(), connection);
+                                currentLink.src().deviceId(), serviceHost.mac(), serviceIp, connection);
                     }
 
                     // rule for last device
                     addFlows(currentLink.dst().port(), serviceHost.location().port(), serviceHost.location().deviceId(),
-                            serviceHost.mac(), connection);
+                            serviceHost.mac(), serviceIp, connection);
                 }
+            }
             }
         }
     }
@@ -170,12 +175,10 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
      * location is returned if present.
      * Otherwise null is returned.
      *
-     * @param connection A connection between a user and a service
+     * @param ip4Address the ip address to search a host for
      * @return Service host location, default gateway host location or null
      */
-    private Host getConnectionServiceHost(Connection connection) {
-        // service of the connection
-        Service service = connection.getService();
+    private Host getConnectionServiceHost(Ip4Address ip4Address) {
 
         // get the byod config
         ByodConfig cfg = cfgService.getConfig(applicationIdStore.getAppId(APPLICATION_ID), ByodConfig.class);
@@ -183,22 +186,22 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
         IpPrefix ipPrefix = Ip4Prefix.valueOf(cfg.defaultGateway(), cfg.prefixLength());
 
         // check if ip address is in local network
-        if (ipPrefix.contains(service.ipAddress())) {
+        if (ipPrefix.contains(ip4Address)) {
             // get the host of the service ip if possible
-            Set<Host> serviceHosts = hostService.getHostsByIp(service.ipAddress());
+            Set<Host> serviceHosts = hostService.getHostsByIp(ip4Address);
             if (serviceHosts.size() == 1) {
                 // found a host connected inside the local network, try routing to him
                 Host serviceHost = serviceHosts.iterator().next();
                 return serviceHost;
             } else if (serviceHosts.isEmpty()) {
                 log.warn("ConnectionRuleInstaller: getConnectionServiceHost() - no host found for local ip={}.",
-                        service.ipAddress());
+                        ip4Address);
             } else {
                 log.warn("ConnectionRuleInstaller: Found {} service hosts={} with ip={}. Choose unique IP address.",
                         Lists.newArrayList(
                                 serviceHosts.size(),
                                 serviceHosts.stream().map(Host::id).collect(Collectors.toSet()),
-                                service.ipAddress())
+                                ip4Address)
                                 .toArray());
             }
             // no host found
@@ -211,8 +214,8 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                 Set<Host> defaultGatewayHosts = hostService.getHostsByIp(cfg.defaultGateway());
 
                 if (!defaultGatewayHosts.isEmpty()) {
-                    log.info("ConnectionRuleInstaller: Using default gateway with ip={} as route for service {}",
-                            cfg.defaultGateway(), connection.getService().name());
+                    log.info("ConnectionRuleInstaller: Using default gateway with ip={} as route for service IP={}",
+                            cfg.defaultGateway(), ip4Address);
                     if (defaultGatewayHosts.size() > 1) {
                         log.info("ConnectionRuleInstaller: Found {} default gateway hosts={} with ip={}, choosing first one = {}.",
                                 Lists.newArrayList(
@@ -229,13 +232,13 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                     // no service host and no default gateway found -> can not install connection!
                     log.warn("ConnectionRuleInstaller: No host in local network and no default gateway at {} found! " +
                                     "No connection installed for service with ip={}.",
-                            cfg.defaultGateway(), connection.getService().ipAddress());
+                            cfg.defaultGateway(), ip4Address);
                     return null;
                 }
             } else {
                 // no service host and no default gateway found -> can not install connection!
                 log.warn("ConnectionRuleInstaller: No host in local network and no default gateway defined! " +
-                        "No connection installed for service with ip={}.", connection.getService().ipAddress());
+                        "No connection installed for service with ip={}.", ip4Address);
                 return null;
             }
         }
@@ -249,12 +252,14 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
      * @param userSidePort port directing towards the user
      * @param serviceSidePort port directing towards the service
      * @param forDeviceId device flow rule should be added to
+     * @param serviceMac MAC address of the service host
+     * @param serviceIp IP address of the service
      * @param connection between user and service
      */
     private void addFlows(PortNumber userSidePort, PortNumber serviceSidePort, DeviceId forDeviceId,
-                          MacAddress serviceMac, Connection connection){
-        addFlowUserToService(userSidePort, serviceSidePort, forDeviceId, serviceMac, connection);
-        addFlowServiceToUser(serviceSidePort, userSidePort, forDeviceId, serviceMac, connection);
+                          MacAddress serviceMac, Ip4Address serviceIp, Connection connection){
+        addFlowUserToService(userSidePort, serviceSidePort, forDeviceId, serviceMac, serviceIp, connection);
+        addFlowServiceToUser(serviceSidePort, userSidePort, forDeviceId, serviceMac, serviceIp, connection);
     }
 
     /**
@@ -263,10 +268,12 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
      * @param inPort The in port, where the packets are coming in
      * @param outPort The out port, where the packets are send to
      * @param forDeviceId The device id where the flow is installed
+     * @param serviceMac MAC address of the service host
+     * @param serviceIp IP address of the service
      * @param connection The connection the flows are installed for
      */
     private void addFlowUserToService(PortNumber inPort, PortNumber outPort, DeviceId forDeviceId,
-                                      MacAddress serviceMac, Connection connection){
+                                      MacAddress serviceMac, Ip4Address serviceIp, Connection connection){
 
         byte protocol = connection.getService().protocol();
 
@@ -283,7 +290,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                         .matchInPort(inPort)
                         .matchIPSrc(userIp.toIpPrefix())
                         .matchEthSrc(connection.getUser().mac())
-                        .matchIPDst(connection.getService().ipAddress().toIpPrefix())
+                        .matchIPDst(serviceIp.toIpPrefix())
                         .matchIPProtocol(protocol);
 
                 // only match on port if it is defined
@@ -337,10 +344,12 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
      * @param inPort The in port, where the packets are coming in
      * @param outPort The out port, where the packets are send to
      * @param forDeviceId The device id where the flow is installed
+     * @param serviceMac MAC address of the service host
+     * @param serviceIp IP address of the service
      * @param connection The connection the flows are installed for
      */
     private void addFlowServiceToUser(PortNumber inPort, PortNumber outPort, DeviceId forDeviceId,
-                                      MacAddress serviceMac, Connection connection){
+                                      MacAddress serviceMac, Ip4Address serviceIp, Connection connection){
 
         byte protocol = connection.getService().protocol();
 
@@ -356,7 +365,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                 TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
                         .matchEthType(EthType.EtherType.IPV4.ethType().toShort())
                         .matchInPort(inPort)
-                        .matchIPSrc(connection.getService().ipAddress().toIpPrefix())
+                        .matchIPSrc(serviceIp.toIpPrefix())
                         .matchEthSrc(serviceMac)
                         .matchIPDst(userIp.toIpPrefix())
                         .matchIPProtocol(protocol);

@@ -24,6 +24,8 @@ import org.onosproject.net.Host;
 import org.onosproject.net.Element;
 import org.onosproject.net.provider.ProviderId;
 
+import java.util.Set;
+
 /**
  * Created by lorry on 10.03.16.
  */
@@ -46,11 +48,11 @@ public interface Service extends Element{
     ServiceId id();
 
     /**
-     * Get the ip address of the service
+     * Get the ip addresses of the service
      *
-     * @return a Ip4Address
+     * @return Set of Ip4Addresses
      */
-    Ip4Address ipAddress();
+    Set<Ip4Address> ipAddressSet();
 
     /**
      * Return the transport protocol of the service
@@ -88,7 +90,7 @@ public interface Service extends Element{
          * @param ip4Address an IPv4 address
          * @return a service builder
          */
-        Builder withIp(Ip4Address ip4Address);
+        Builder withIp(Set<Ip4Address> ip4Address);
 
         /**
          * Set the service name

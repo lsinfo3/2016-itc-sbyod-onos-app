@@ -50,7 +50,7 @@ public interface PortalService {
      *
      * @return IpAddress
      */
-    Ip4Address getPortalIp();
+    Set<Ip4Address> getPortalIp();
 
     /**
      * Get the portal service
