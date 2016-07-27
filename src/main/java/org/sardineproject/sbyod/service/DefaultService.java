@@ -146,18 +146,20 @@ public class DefaultService extends AbstractElement implements Service {
         DefaultService that = (DefaultService) o;
 
         if (protocol != that.protocol) return false;
-        if (ip4AddressSet != null ? !ip4AddressSet.equals(that.ip4AddressSet) : that.ip4AddressSet != null) return false;
+        if (!ip4AddressSet.equals(that.ip4AddressSet)) return false;
         if (tpPort != null ? !tpPort.equals(that.tpPort) : that.tpPort != null) return false;
-        if (name != null ? !name.equals(that.name) : that.name != null) return false;
+        if (!name.equals(that.name)) return false;
+        if (discovery != that.discovery) return false;
         return !(icon != null ? !icon.equals(that.icon) : that.icon != null);
 
     }
 
     @Override
     public int hashCode() {
-        int result = ip4AddressSet != null ? ip4AddressSet.hashCode() : 0;
+        int result = ip4AddressSet.hashCode();
         result = 31 * result + (tpPort != null ? tpPort.hashCode() : 0);
-        result = 31 * result + (name != null ? name.hashCode() : 0);
+        result = 31 * result + name.hashCode();
+        result = 31 * result + (discovery != null ? discovery.hashCode() : 0);
         result = 31 * result + (icon != null ? icon.hashCode() : 0);
         result = 31 * result + (int) protocol;
         return result;

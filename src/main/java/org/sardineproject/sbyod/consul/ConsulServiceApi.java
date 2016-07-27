@@ -22,6 +22,7 @@ import com.ecwid.consul.v1.ConsulClient;
 import com.ecwid.consul.v1.QueryParams;
 import com.ecwid.consul.v1.Response;
 import com.ecwid.consul.v1.catalog.model.CatalogService;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.Ip4Address;
@@ -238,84 +239,79 @@ public class ConsulServiceApi implements ConsulService {
             mapOfServices.forEach((s, t) -> log.debug("ConsulServiceApi: Found consul service [" + s + " : " + t + "]."));
 
             // list of services registered in consul
-            List<CatalogService> serviceDescription = new LinkedList<>();
+            List<List<CatalogService>> serviceDescription = new LinkedList<>();
             // get the information of the services stored in consul
             for(Map.Entry<String, List<String>> entry : mapOfServices.entrySet()){
                 // the name to search for
                 String serviceName = entry.getKey();
-                try {
-                    // encode name to url - replacing spaces with '%20' for example
-                    URL url = new URI("http", "example.com", "/" + serviceName + "/", "").toURL();
-                    // get only the path part of the url
-                    String serviceNameEncoded = url.getPath();
-                    // remove the backspaces
-                    serviceNameEncoded = serviceNameEncoded.substring(1, serviceNameEncoded.length()-1);
+                // do not announce the consul service
+                if(!serviceName.equals("consul")) {
 
-                    // query consul for the service description
-                    // todo: check which services are bundled and join them to one service?
-                    serviceDescription.addAll(consulClient.getCatalogService(serviceNameEncoded, queryParams).getValue());
-                } catch (URISyntaxException e) {
-                    e.printStackTrace();
-                } catch (MalformedURLException e) {
-                    e.printStackTrace();
+                    try {
+                        // encode name to url - replacing spaces with '%20' for example
+                        URL url = new URI("http", "example.com", "/" + serviceName + "/", "").toURL();
+                        // get only the path part of the url
+                        String serviceNameEncoded = url.getPath();
+                        // remove the backspaces
+                        serviceNameEncoded = serviceNameEncoded.substring(1, serviceNameEncoded.length() - 1);
+
+                        // query consul for the service description and bundle combined services together
+                        serviceDescription.add(Lists.newLinkedList(consulClient.getCatalogService(serviceNameEncoded, queryParams).getValue()));
+                    } catch (URISyntaxException e) {
+                        e.printStackTrace();
+                    } catch (MalformedURLException e) {
+                        e.printStackTrace();
+                    }
+
                 }
             }
 
             // add the catalog services to the collection
-            for (CatalogService catalogService : serviceDescription) {
-
-                // do not announce the consul service
-                if(!(catalogService.getServiceName().equals("consul") &&
-                        catalogService.getServiceId().equals("consul"))) {
-                    // if the host running the service is known to ONOS,
-                    // it is added to the consulServices collection
-                    addServiceToCollection(catalogService, consulServices);
-                }
-
+            for (List<CatalogService> catalogServiceList : serviceDescription) {
+                    // create services and add them to the service store
+                    addServiceToCollection(catalogServiceList, consulServices);
             }
         }
 
         return consulServices;
     }
 
-    private void addServiceToCollection(CatalogService catalogService, Collection<Service> consulServices) {
+    private void addServiceToCollection(List<CatalogService> catalogServiceList, Collection<Service> consulServices) {
 
-        Ip4Address serviceIpAddress = null;
-        try {
-            if (catalogService.getServiceAddress().isEmpty()) {
-                // use the default ip address of the consul cluster
-                serviceIpAddress = Ip4Address.valueOf(catalogService.getAddress());
-            } else {
-                // get the ip address of the service
-                serviceIpAddress = Ip4Address.valueOf(catalogService.getServiceAddress());
+        // get the set of service IP addresses
+        Set<Ip4Address> ip4AddressSet = Sets.newHashSet();
+        for(CatalogService catalogService : catalogServiceList) {
+            Ip4Address serviceIpAddress = null;
+            try {
+                if (catalogService.getServiceAddress().isEmpty()) {
+                    // use the default ip address of the consul cluster
+                    ip4AddressSet.add(Ip4Address.valueOf(catalogService.getAddress()));
+                } else {
+                    // get the ip address of the service
+                    ip4AddressSet.add(Ip4Address.valueOf(catalogService.getServiceAddress()));
+                }
+            } catch (IllegalArgumentException e) {
+                log.warn("ConsulServiceApi: No correct ip address format = {}, Error: {}",
+                        catalogService.getServiceAddress(), e);
+                return;
             }
-        } catch (IllegalArgumentException e) {
-            log.warn("ConsulServiceApi: No correct ip address format = {}, Error: {}",
-                    catalogService.getServiceAddress(), e);
-            return;
         }
 
         // create a new byod service corresponding to the CatalogService
         DefaultService.Builder service = DefaultService.builder()
-                .withIp(Sets.newHashSet(serviceIpAddress))
-                .withPort(TpPort.tpPort(catalogService.getServicePort()))
-                .withName(catalogService.getServiceName())
-                .withElementId(ServiceId.serviceId(URI.create(catalogService.getServiceId())))
+                .withIp(ip4AddressSet)
+                .withPort(TpPort.tpPort(catalogServiceList.iterator().next().getServicePort()))
+                .withName(catalogServiceList.iterator().next().getServiceName())
+                .withElementId(ServiceId.serviceId(URI.create(catalogServiceList.iterator().next().getServiceId())))
                 .withDiscovery(Service.Discovery.CONSUL);
 
         // add an icon to the service, defined as the first tag in description
-        if (!catalogService.getServiceTags().isEmpty()) {
-            service.withIcon(catalogService.getServiceTags().iterator().next());
+        if (!catalogServiceList.iterator().next().getServiceTags().isEmpty()) {
+            service.withIcon(catalogServiceList.iterator().next().getServiceTags().iterator().next());
         }
 
-        // only add service with same name once
-        Set<Service> equalServices = consulServices.stream()
-                .filter(cs -> cs.name().equals(catalogService.getServiceName()))
-                .collect(Collectors.toSet());
-        if(equalServices.isEmpty()) {
-            consulServices.add(service.build());
-            log.debug("ConsulServiceApi: Added service {} to collection.", service.build());
-        }
+        consulServices.add(service.build());
+        log.debug("ConsulServiceApi: Added service {} to collection.", service.build());
 
     }
 
