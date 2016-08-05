@@ -315,18 +315,23 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                         .setOutput(outPort);
 
                 DefaultForwardingObjective.Builder forwardingObjective = DefaultForwardingObjective.builder()
-                        .withSelector(trafficSelectorBuilder.build())
                         .withTreatment(trafficTreatmentBuilder.build())
                         .withFlag(ForwardingObjective.Flag.VERSATILE)
                         .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
                         .makePermanent();
                 if(connection.getService().name().equals("PortalService")){
-                    forwardingObjective.withPriority(FLOW_PRIORITY + 10);
+                    // portal service has higher priority as all other services
+                    forwardingObjective.withPriority(FLOW_PRIORITY + 10)
+                            .withSelector(trafficSelectorBuilder.build());
                 } else if(connection.getService().name().equals("Internet")){
-                    // Todo: store internet as special service
-                    forwardingObjective.withPriority(FLOW_PRIORITY - 10);
+                    // internet service has lower priority and matches on the destination mac (default gateway mac)
+                    // as the flow rule matching is realized in the software table
+                    forwardingObjective.withPriority(FLOW_PRIORITY - 10)
+                            .withSelector(trafficSelectorBuilder
+                                    .matchEthDst(serviceMac).build());
                 } else {
-                    forwardingObjective.withPriority(FLOW_PRIORITY);
+                    forwardingObjective.withPriority(FLOW_PRIORITY)
+                            .withSelector(trafficSelectorBuilder.build());
                 }
 
                 log.debug("DefaultConnectionRuleInstaller: Adding flow objective \n{} \n" +
@@ -392,17 +397,24 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                         .setOutput(outPort);
 
                 DefaultForwardingObjective.Builder forwardingObjective = DefaultForwardingObjective.builder()
-                        .withSelector(trafficSelectorBuilder.build())
                         .withTreatment(trafficTreatmentBuilder.build())
                         .withFlag(ForwardingObjective.Flag.VERSATILE)
                         .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
                         .makePermanent();
                 if(connection.getService().name().equals("PortalService")){
-                    forwardingObjective.withPriority(FLOW_PRIORITY + 10);
+                    // portal service has higher priority as all other services enabling portal communication
+                    // even if another service
+                    forwardingObjective.withPriority(FLOW_PRIORITY + 10)
+                            .withSelector(trafficSelectorBuilder.build());
                 } else if(connection.getService().name().equals("Internet")){
-                    forwardingObjective.withPriority(FLOW_PRIORITY - 10);
+                    // internet service has lower priority and matches on the destination mac (default gateway mac)
+                    // as the flow rule matching is realized in the software table
+                    forwardingObjective.withPriority(FLOW_PRIORITY - 10)
+                            .withSelector(trafficSelectorBuilder
+                                    .matchEthDst(connection.getUser().mac()).build());
                 }  else{
-                    forwardingObjective.withPriority(FLOW_PRIORITY);
+                    forwardingObjective.withPriority(FLOW_PRIORITY)
+                            .withSelector(trafficSelectorBuilder.build());
                 }
 
                 log.debug("DefaultConnectionRuleInstaller: Adding flow objective \n{} \n" +
