@@ -288,7 +288,8 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                 TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
                         .matchEthType(EthType.EtherType.IPV4.ethType().toShort())
                         .matchInPort(inPort)
-                        .matchIPSrc(IpPrefix.valueOf(userIp, 32))
+                        .matchIPSrc(userIp.toIpPrefix())
+                        .matchEthSrc(connection.getUser().mac())
                         .matchIPProtocol(protocol);
 
                 // only match on port if it is defined
@@ -305,8 +306,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
 
                 // no ethernet source match for testing
                 if(!connection.getService().name().equals("Internet")){
-                    trafficSelectorBuilder.matchEthSrc(connection.getUser().mac())
-                            .matchIPDst(IpPrefix.valueOf(serviceIp, 32));
+                    trafficSelectorBuilder.matchIPDst(serviceIp.toIpPrefix());
                 }
 
                 // check if the match ethernet destination is set true in config
@@ -371,7 +371,8 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                 TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
                         .matchEthType(EthType.EtherType.IPV4.ethType().toShort())
                         .matchInPort(inPort)
-                        .matchIPDst(IpPrefix.valueOf(userIp, 32))
+                        .matchEthSrc(serviceMac)
+                        .matchIPDst(userIp.toIpPrefix())
                         .matchIPProtocol(protocol);
 
                 // only match on port if it is defined
@@ -388,8 +389,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
 
                 // no ethernet source match for testing
                 if(!connection.getService().name().equals("Internet")){
-                    trafficSelectorBuilder.matchEthSrc(serviceMac)
-                            .matchIPSrc(IpPrefix.valueOf(serviceIp, 32));
+                    trafficSelectorBuilder.matchIPSrc(serviceIp.toIpPrefix());
                 }
 
                 // check if the match ethernet destination is set true in config
