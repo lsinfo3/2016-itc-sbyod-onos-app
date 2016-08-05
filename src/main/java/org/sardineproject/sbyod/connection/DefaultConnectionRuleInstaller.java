@@ -288,9 +288,16 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                 TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
                         .matchEthType(EthType.EtherType.IPV4.ethType().toShort())
                         .matchInPort(inPort)
-                        .matchIPSrc(userIp.toIpPrefix())
                         .matchEthSrc(connection.getUser().mac())
                         .matchIPProtocol(protocol);
+
+                // do not match on IP address if it is defined as wildcard
+                if(!userIp.equals(Ip4Address.valueOf("0.0.0.0"))){
+                    trafficSelectorBuilder.matchIPSrc(userIp.toIpPrefix());
+                }
+                if(!serviceIp.equals(Ip4Address.valueOf("0.0.0.0"))){
+                    trafficSelectorBuilder.matchIPDst(serviceIp.toIpPrefix());
+                }
 
                 // only match on port if it is defined
                 if(connection.getService().tpPort() != null) {
@@ -304,13 +311,9 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                     }
                 }
 
-                // no ethernet source match for testing
-                if(!connection.getService().name().equals("Internet")){
-                    trafficSelectorBuilder.matchIPDst(serviceIp.toIpPrefix());
-                }
-
                 // check if the match ethernet destination is set true in config
-                if(MATCH_ETH_DST) {
+                // also match the ethernet destination for the internet service
+                if(MATCH_ETH_DST || connection.getService().name().equals("Internet")) {
                     trafficSelectorBuilder.matchEthDst(serviceMac);
                 }
 
@@ -318,18 +321,20 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                 TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
                         .setOutput(outPort);
 
+
                 DefaultForwardingObjective.Builder forwardingObjective = DefaultForwardingObjective.builder()
                         .withSelector(trafficSelectorBuilder.build())
                         .withTreatment(trafficTreatmentBuilder.build())
                         .withFlag(ForwardingObjective.Flag.VERSATILE)
                         .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
                         .makePermanent();
+
                 if(connection.getService().name().equals("PortalService")){
                     // portal service has higher priority as all other services
+                    // enabling portal communication even if another service is defined with the same values
                     forwardingObjective.withPriority(FLOW_PRIORITY + 10);
                 } else if(connection.getService().name().equals("Internet")){
-                    // internet service has lower priority and matches on the destination mac (default gateway mac)
-                    // as the flow rule matching is realized in the software table
+                    // internet service has lower priority
                     forwardingObjective.withPriority(FLOW_PRIORITY - 10);
                 } else {
                     forwardingObjective.withPriority(FLOW_PRIORITY);
@@ -372,8 +377,15 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                         .matchEthType(EthType.EtherType.IPV4.ethType().toShort())
                         .matchInPort(inPort)
                         .matchEthSrc(serviceMac)
-                        .matchIPDst(userIp.toIpPrefix())
                         .matchIPProtocol(protocol);
+
+                // no ethernet source match for testing
+                if(!serviceIp.equals(Ip4Address.valueOf("0.0.0.0"))){
+                    trafficSelectorBuilder.matchIPSrc(serviceIp.toIpPrefix());
+                }
+                if(!userIp.equals(Ip4Address.valueOf("0.0.0.0"))){
+                    trafficSelectorBuilder.matchIPDst(userIp.toIpPrefix());
+                }
 
                 // only match on port if it is defined
                 if(connection.getService().tpPort() != null) {
@@ -387,13 +399,9 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                     }
                 }
 
-                // no ethernet source match for testing
-                if(!connection.getService().name().equals("Internet")){
-                    trafficSelectorBuilder.matchIPSrc(serviceIp.toIpPrefix());
-                }
-
                 // check if the match ethernet destination is set true in config
-                if (MATCH_ETH_DST) {
+                // also match the ethernet destination for the internet service
+                if (MATCH_ETH_DST || connection.getService().name().equals("Internet")) {
                     trafficSelectorBuilder.matchEthDst(connection.getUser().mac());
                 }
 
@@ -401,19 +409,20 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                 TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
                         .setOutput(outPort);
 
+
                 DefaultForwardingObjective.Builder forwardingObjective = DefaultForwardingObjective.builder()
                         .withSelector(trafficSelectorBuilder.build())
                         .withTreatment(trafficTreatmentBuilder.build())
                         .withFlag(ForwardingObjective.Flag.VERSATILE)
                         .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
                         .makePermanent();
+
                 if(connection.getService().name().equals("PortalService")){
-                    // portal service has higher priority as all other services enabling portal communication
-                    // even if another service
+                    // portal service has higher priority as all other services
+                    // enabling portal communication even if another service is defined with the same values
                     forwardingObjective.withPriority(FLOW_PRIORITY + 10);
                 } else if(connection.getService().name().equals("Internet")){
-                    // internet service has lower priority and matches on the destination mac (default gateway mac)
-                    // as the flow rule matching is realized in the software table
+                    // internet service has lower priority
                     forwardingObjective.withPriority(FLOW_PRIORITY - 10);
                 }  else {
                     forwardingObjective.withPriority(FLOW_PRIORITY);
