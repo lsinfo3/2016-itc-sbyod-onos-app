@@ -288,8 +288,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                 TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
                         .matchEthType(EthType.EtherType.IPV4.ethType().toShort())
                         .matchInPort(inPort)
-                        .matchIPSrc(userIp.toIpPrefix())
-                        .matchIPDst(serviceIp.toIpPrefix())
+                        .matchIPSrc(IpPrefix.valueOf(userIp, cfg.prefixLength()))
                         .matchIPProtocol(protocol);
 
                 // only match on port if it is defined
@@ -306,7 +305,8 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
 
                 // no ethernet source match for testing
                 if(!connection.getService().name().equals("Internet")){
-                    trafficSelectorBuilder.matchEthSrc(connection.getUser().mac());
+                    trafficSelectorBuilder.matchEthSrc(connection.getUser().mac())
+                            .matchIPDst(IpPrefix.valueOf(serviceIp, cfg.prefixLength()));
                 }
 
                 // check if the match ethernet destination is set true in config
@@ -371,8 +371,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                 TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
                         .matchEthType(EthType.EtherType.IPV4.ethType().toShort())
                         .matchInPort(inPort)
-                        .matchIPSrc(serviceIp.toIpPrefix())
-                        .matchIPDst(userIp.toIpPrefix())
+                        .matchIPSrc(IpPrefix.valueOf(serviceIp, cfg.prefixLength()))
                         .matchIPProtocol(protocol);
 
                 // only match on port if it is defined
@@ -389,7 +388,8 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
 
                 // no ethernet source match for testing
                 if(!connection.getService().name().equals("Internet")){
-                    trafficSelectorBuilder.matchEthSrc(serviceMac);
+                    trafficSelectorBuilder.matchEthSrc(serviceMac)
+                            .matchIPDst(IpPrefix.valueOf(userIp, cfg.prefixLength()));
                 }
 
                 // check if the match ethernet destination is set true in config
@@ -415,7 +415,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                     // internet service has lower priority and matches on the destination mac (default gateway mac)
                     // as the flow rule matching is realized in the software table
                     forwardingObjective.withPriority(FLOW_PRIORITY - 10);
-                }  else{
+                }  else {
                     forwardingObjective.withPriority(FLOW_PRIORITY);
                 }
 
