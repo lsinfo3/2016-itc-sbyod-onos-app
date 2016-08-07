@@ -57,7 +57,7 @@ public class AppWebPortal extends AbstractWebResource {
         log.debug("AppWebPortal: Adding portal with IP = {} and port = {}", ip, port);
 
         if (ip == null || port == null)
-            return Response.ok(INVALID_PARAMETER).build();
+            return Response.status(Response.Status.PRECONDITION_FAILED).build();
 
         Ip4Address ip4Address;
         TpPort tpPort;
@@ -65,7 +65,7 @@ public class AppWebPortal extends AbstractWebResource {
             ip4Address = Ip4Address.valueOf(ip);
             tpPort = TpPort.tpPort(Integer.valueOf(port));
         } catch (Exception e){
-            return Response.ok(INVALID_PARAMETER).build();
+            return Response.status(Response.Status.PRECONDITION_FAILED).build();
         }
 
         if(get(PortalService.class).setPortal(ip4Address, tpPort))

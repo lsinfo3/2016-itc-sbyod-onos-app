@@ -58,7 +58,7 @@ public class AppWebConsul extends AbstractWebResource{
         log.debug("AppWebConsul: Connecting to consul on {}", ""+ip_+":"+tpPort_);
 
         if(ip_ == null || tpPort_ == null){
-            return Response.ok(INVALID_PARAMETER).build();
+            return Response.status(Response.Status.PRECONDITION_FAILED).build();
         }
 
         Ip4Address ip4Address;
@@ -67,7 +67,7 @@ public class AppWebConsul extends AbstractWebResource{
             ip4Address = Ip4Address.valueOf(ip_);
             tpPort = TpPort.tpPort(Integer.valueOf(tpPort_));
         } catch(Exception e){
-            return Response.ok(INVALID_PARAMETER).build();
+            return Response.status(Response.Status.PRECONDITION_FAILED).build();
         }
 
         try {
@@ -90,14 +90,14 @@ public class AppWebConsul extends AbstractWebResource{
         log.debug("AppWebConsul: Connecting to consul on {}, port 8500", ip_);
 
         if(ip_ == null){
-            return Response.ok(INVALID_PARAMETER).build();
+            return Response.status(Response.Status.PRECONDITION_FAILED).build();
         }
 
         Ip4Address ip4Address;
         try{
             ip4Address = Ip4Address.valueOf(ip_);
         } catch(Exception e){
-            return Response.ok(INVALID_PARAMETER).build();
+            return Response.status(Response.Status.PRECONDITION_FAILED).build();
         }
 
         try {

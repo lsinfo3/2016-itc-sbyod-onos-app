@@ -65,7 +65,7 @@ public class AppWebUser extends AbstractWebResource {
      * Get the services the user with userIp is connected to.
      *
      * @param userIp_ the IP address of the user
-     * @return INVALID_PARAMETER if some parameter was wrong
+     * @return PRECONDITION_FAILED if some parameter was wrong
      *          array of services
      */
     @GET
@@ -74,18 +74,18 @@ public class AppWebUser extends AbstractWebResource {
         log.debug("AppWebUser: Getting services for userIp = {}", userIp_);
 
         if(userIp_ == null)
-            return Response.ok(INVALID_PARAMETER).build();
+            return Response.status(Response.Status.PRECONDITION_FAILED).build();
 
         Set<Host> users;
         try{
             users = get(HostService.class).getHostsByIp(Ip4Address.valueOf(userIp_));
         } catch (Exception e){
-            return Response.ok(INVALID_PARAMETER).build();
+            return Response.status(Response.Status.PRECONDITION_FAILED).build();
         }
 
         // return invalid, if no user with this ip address is connected
         if(users.isEmpty())
-            return Response.ok(INVALID_PARAMETER).build();
+            return Response.status(Response.Status.PRECONDITION_FAILED).build();
 
         // get the services the user is allowed to use without the portal service
         Iterable<Service> services = removeConfigurationServices(get(ServiceStore.class).getServices());
@@ -121,7 +121,7 @@ public class AppWebUser extends AbstractWebResource {
      *
      * @param userIp_ the IP address of the user
      * @param serviceId_ the ID of the service
-     * @return INVALID_PARAMETER if some parameter was wrong
+     * @return PRECONDITION_FAILED if some parameter was wrong
      *          "enabled : false" if service is disabled
      *          "enabled : true" if service is enabled
      */
@@ -132,7 +132,7 @@ public class AppWebUser extends AbstractWebResource {
         log.debug("AppWebUser: Getting rules for userIp = {} and serviceId = {}", userIp_, serviceId_);
 
         if(userIp_ == null || serviceId_ == null)
-            return Response.ok(INVALID_PARAMETER).build();
+            return Response.status(Response.Status.PRECONDITION_FAILED).build();
 
         Set<Host> users;
         ServiceId serviceId;
@@ -140,7 +140,7 @@ public class AppWebUser extends AbstractWebResource {
             users = get(HostService.class).getHostsByIp(Ip4Address.valueOf(userIp_));
             serviceId = ServiceId.serviceId(serviceId_);
         } catch (Exception e){
-            return Response.ok(INVALID_PARAMETER).build();
+            return Response.status(Response.Status.PRECONDITION_FAILED).build();
         }
 
         // get all connections a user has activated
@@ -163,7 +163,7 @@ public class AppWebUser extends AbstractWebResource {
      *
      * @param userIp_ the IP address of the user
      * @param serviceId_ the ID of the service
-     * @return INVALID_PARAMETER if some parameter was wrong
+     * @return PRECONDITION_FAILED if some parameter was wrong
      *          "enabled : false" if service connection went wrong
      *          "enabled : true" if service is enabled
      */
@@ -175,7 +175,7 @@ public class AppWebUser extends AbstractWebResource {
                 new String[]{userIp_, serviceId_});
 
         if(userIp_ == null || serviceId_ == null)
-            return Response.ok(INVALID_PARAMETER).build();
+            return Response.status(Response.Status.PRECONDITION_FAILED).build();
 
         Service service;
         Set<Host> srcHosts;
@@ -184,7 +184,7 @@ public class AppWebUser extends AbstractWebResource {
             srcHosts = get(HostService.class).getHostsByIp(userIp);
             service = get(ServiceStore.class).getService(ServiceId.serviceId(serviceId_));
         } catch (Exception e){
-            return Response.ok(INVALID_PARAMETER).build();
+            return Response.status(Response.Status.PRECONDITION_FAILED).build();
         }
 
         if(srcHosts.isEmpty()) {
@@ -219,7 +219,7 @@ public class AppWebUser extends AbstractWebResource {
      * Disconnect a user from a service.
      * @param userIp_ the IP address of the user
      * @param serviceId_ the ID of the service
-     * @return INVALID_PARAMETER if some parameter was wrong
+     * @return PRECONDITION_FAILED if some parameter was wrong
      *          "enabled : false" if user is disconnected
      *          "enabled : true" if user disconnection went wrong
      */
@@ -231,7 +231,7 @@ public class AppWebUser extends AbstractWebResource {
                 new String[]{userIp_, serviceId_});
 
         if(userIp_ == null || serviceId_ == null)
-            return Response.ok(INVALID_PARAMETER).build();
+            return Response.status(Response.Status.PRECONDITION_FAILED).build();
 
         Service service;
         Set<Host> srcHosts;
@@ -240,7 +240,7 @@ public class AppWebUser extends AbstractWebResource {
             srcHosts = get(HostService.class).getHostsByIp(userIp);
             service = get(ServiceStore.class).getService(ServiceId.serviceId(serviceId_));
         } catch (Exception e){
-            return Response.ok(INVALID_PARAMETER).build();
+            return Response.status(Response.Status.PRECONDITION_FAILED).build();
         }
 
         Service portalService = get(PortalService.class).getPortalService();
@@ -272,7 +272,7 @@ public class AppWebUser extends AbstractWebResource {
     /**
      * Disconnect a user from all services.
      * @param userIp_ the IP address of the user
-     * @return INVALID_PARAMETER if some parameter was wrong
+     * @return PRECONDITION_FAILED if some parameter was wrong
      *          "enabled : false" if user is disconnected
      *          "enabled : true" if user disconnection went wrong
      */
@@ -282,7 +282,7 @@ public class AppWebUser extends AbstractWebResource {
         log.debug("AppWebUser: Removing all connections of user with ip = {}.", userIp_);
 
         if(userIp_ == null)
-            return Response.ok(INVALID_PARAMETER).build();
+            return Response.status(Response.Status.PRECONDITION_FAILED).build();
 
         Set<Host> srcHosts;
         try{
@@ -290,7 +290,7 @@ public class AppWebUser extends AbstractWebResource {
             // get all hosts with given ip
             srcHosts = get(HostService.class).getHostsByIp(userIp);
         } catch (Exception e){
-            return Response.ok(INVALID_PARAMETER).build();
+            return Response.status(Response.Status.PRECONDITION_FAILED).build();
         }
 
         if(srcHosts.isEmpty()) {

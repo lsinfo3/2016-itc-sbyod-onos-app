@@ -75,7 +75,7 @@ public class AppWebService extends AbstractWebResource {
      * Get the service with serviceId.
      *
      * @param serviceId_ the ID of the service
-     * @return INVALID_PARAMETER if some parameter was wrong
+     * @return PRECONDITION_FAILED if some parameter was wrong
      *          service
      */
     @GET
@@ -84,7 +84,7 @@ public class AppWebService extends AbstractWebResource {
         log.debug("AppWebUser: Getting service with name = {}", serviceId_);
 
         if(serviceId_ == null)
-            return Response.ok(INVALID_PARAMETER).build();
+            return Response.status(Response.Status.PRECONDITION_FAILED).build();
 
         Service service = get(ServiceStore.class).getService(ServiceId.serviceId(serviceId_));
         Set<Service> result = (service == null) ? Sets.newHashSet() : Sets.newHashSet(service);
@@ -98,7 +98,7 @@ public class AppWebService extends AbstractWebResource {
      * @param ip_ Ip address of the host of the service
      * @param tpPort_ The transport protocol port of the service
      * @param name_ The name of the service
-     * @return INVALID_PARAMETER if some parameter was wrong
+     * @return PRECONDITION_FAILED if some parameter was wrong
      */
     @POST
     @Path("/ip/{ip}/tpPort/{tpPort}/name/{name}")
@@ -109,7 +109,7 @@ public class AppWebService extends AbstractWebResource {
                 Lists.newArrayList(ip_,tpPort_,name_).toArray());
 
         if(ip_ == null || tpPort_ == null || name_ == null){
-            return Response.ok(INVALID_PARAMETER).build();
+            return Response.status(Response.Status.PRECONDITION_FAILED).build();
         }
 
         Ip4Address ip;
@@ -120,7 +120,7 @@ public class AppWebService extends AbstractWebResource {
             tpPort = TpPort.tpPort(Integer.valueOf(tpPort_));
             name = name_;
         } catch (Exception e){
-            return Response.ok(INVALID_PARAMETER).build();
+            return Response.status(Response.Status.PRECONDITION_FAILED).build();
         }
 
         // define the service
@@ -146,7 +146,7 @@ public class AppWebService extends AbstractWebResource {
     /**
      * Delete a service.
      * @param id_ the service ID
-     * @return INVALID_PARAMETER if some parameter was wrong
+     * @return PRECONDITION_FAILED if some parameter was wrong
      */
     @DELETE
     @Path("/{serviceId}")
@@ -155,14 +155,14 @@ public class AppWebService extends AbstractWebResource {
         log.debug("AppWebService: Deleting service with id={}.", id_);
 
         if(id_ == null){
-            return Response.ok(INVALID_PARAMETER).build();
+            return Response.status(Response.Status.PRECONDITION_FAILED).build();
         }
 
         ServiceId id;
         try{
             id = ServiceId.serviceId(id_);
         } catch (Exception e){
-            return Response.ok(INVALID_PARAMETER).build();
+            return Response.status(Response.Status.PRECONDITION_FAILED).build();
         }
 
         Service service = get(ServiceStore.class).getService(id);
