@@ -68,14 +68,18 @@ if [ -d $HOME/2016-itc-sbyod-onos-app ]
     mvn clean install -DskipTests
 
     mkdir $HOME/Applications/config
-    cp $HOME/2016-itc-sbyod-onos-app/examples/sbyodMininet/network-cfg.json $HOME/Applications/config/
+    cp $HOME/2016-itc-sbyod-onos-app/examples/sbyodMininet/network-cfg.json $HOME/Applications/config/network-cfg.json
   else
     echo "S-BYOD folder not found. S-BYOD application not installed."
 fi
 
 echo "----------Installing Mininet----------------"
 cd $HOME
-sudo apt-get install mininet -y
+git clone git://github.com/mininet/mininet
+cd ./mininet
+git checkout -b 2.2.1 2.2.1
+cd ..
+./mininet/util/install.sh -a
 cp $HOME/2016-itc-sbyod-onos-app/examples/sbyodMininet/mininetSBYOD.py $HOME/
 
 

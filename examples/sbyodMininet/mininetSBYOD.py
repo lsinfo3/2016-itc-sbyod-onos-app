@@ -1,4 +1,4 @@
-##!/usr/bin/python
+#!/usr/bin/python
 
 """
 BYOD example topology
@@ -20,14 +20,14 @@ def sbyodTestingNetwork():
     net = Mininet( controller=RemoteController, autoSetMacs=True )
 
     info( '*** Adding controller\n' )
-    net.addController( 'c0', controller=RemoteController, ip="172.16.37.11", port=6633 )
+    net.addController( 'c0', controller=RemoteController, ip="0.0.0.0", port=6633 )
 
     info( '*** Adding hosts\n' )
     h1 = net.addHost( 'h1' )
     h2 = net.addHost( 'h2' )
     portalHost = net.addHost( 'h3', ip='10.1.0.2' )
     #gatewayHost = net.addHost( 'h4' ip='10.1.0.1')
-    HostList = (h1,h2,portalHost,gatewayHost)
+    HostList = (h1,h2,portalHost)
 
     info( '*** Adding switches\n' )
     s1 = net.addSwitch( 's1' )
@@ -49,8 +49,8 @@ def sbyodTestingNetwork():
     #net.addLink('h4', 's1')
 
 
-    info( '*** Adding hardware interface to switch s1 (gateway)\n' )
-    physicalIntf = Intf( 'eth1', node=s1 )
+    # info( '*** Adding hardware interface to switch s1 (gateway)\n' )
+    # physicalIntf = Intf( 'eth1', node=s1 )
 
     info( '*** Starting network\n')
     net.start()

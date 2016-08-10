@@ -14,8 +14,8 @@
         "rebind": 31500,
         "delay": 2,
         "timeout": 150,
-        "startip": "10.1.0.100",
-        "endip": "10.1.0.200"
+        "startip": "10.0.0.1",
+        "endip": "10.0.0.2"
       }
     },
     "org.sardineproject.sbyod": {
