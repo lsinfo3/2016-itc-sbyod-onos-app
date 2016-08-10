@@ -68,10 +68,16 @@ if [ -d $HOME/2016-itc-sbyod-onos-app ]
     mvn clean install -DskipTests
 
     mkdir $HOME/Applications/config
-    cp $HOME/2016-itc-sbyod-onos-app/examples/exampleConfiguration/network-cfg.json $HOME/Applications/config/
+    cp $HOME/2016-itc-sbyod-onos-app/examples/sbyodMininet/network-cfg.json $HOME/Applications/config/
   else
     echo "S-BYOD folder not found. S-BYOD application not installed."
 fi
+
+echo "----------Installing Mininet----------------"
+cd $HOME
+sudo apt-get install mininet -y
+cp $HOME/2016-itc-sbyod-onos-app/examples/sbyodMininet/mininetSBYOD.py $HOME/
+
 
 echo "----------Startup Instructions----------------"
 
@@ -79,8 +85,9 @@ if [ -f $HOME/2016-itc-sbyod-onos-app/target/sbyod-1.0-SNAPSHOT.oar ]
   then
     echo "S-BYOD application created successful."
     echo "Check the 'network-cfg.json' file inside the $HOME/Applications/config/ folder before starting ONOS."
-    echo "Start ONOS by executing 'onos-karaf clean'"
-    echo "Install the S-BYOD application by executing 'onos-app <ONOS-IP> install! $HOME/2016-itc-sbyod-onos-app/target/sbyod-1.0-SNAPSHOT.oar'"
+    echo "1. Start ONOS by executing 'onos-karaf clean'"
+    echo "2. Start the Mininet topology by executing the 'mininetSBYOD.py' python script."
+    echo "3. Install the S-BYOD application by executing 'onos-app <ONOS-IP> install! $HOME/2016-itc-sbyod-onos-app/target/sbyod-1.0-SNAPSHOT.oar'"
 fi
 
 echo "----------End Provisioning--------------------"
