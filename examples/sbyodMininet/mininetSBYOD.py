@@ -26,8 +26,8 @@ def sbyodTestingNetwork():
     h1 = net.addHost( 'h1' )
     h2 = net.addHost( 'h2' )
     portalHost = net.addHost( 'h3', ip='10.1.0.2' )
-    #gatewayHost = net.addHost( 'h4' ip='10.1.0.1')
-    HostList = (h1,h2,portalHost)
+    gatewayHost = net.addHost( 'h4', ip='10.1.0.1')
+    HostList = (h1,h2,portalHost,gatewayHost)
 
     info( '*** Adding switches\n' )
     s1 = net.addSwitch( 's1' )
@@ -46,7 +46,7 @@ def sbyodTestingNetwork():
     #portalHost to switch s2
     net.addLink('h3', 's2')
     #gatewayHost to switch s1
-    #net.addLink('h4', 's1')
+    net.addLink('h4', 's1')
 
 
     # info( '*** Adding hardware interface to switch s1 (gateway)\n' )
@@ -59,6 +59,7 @@ def sbyodTestingNetwork():
     #h1.cmd('dhclient ' + h1.defaultIntf().name)
     h1.cmd('dhclient')
     h2.cmd('dhclient')
+    portalHost.cmd('ping -c 1 10.1.0.1 &')
 
     info( '*** Running CLI\n' )
     CLI( net )
