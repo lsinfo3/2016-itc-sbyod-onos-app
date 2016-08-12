@@ -2,8 +2,8 @@
   "apps": {
     "org.onosproject.dhcp" : {
       "dhcp" : {
-        "ip": "172.16.37.11",
-        "mac": "5c:a1:ab:1e:00:01",
+        "ip": "0.0.0.0",
+        "mac": "00:00:00:00:00:00",
         "subnet": "255.255.0.0",
         "broadcast": "10.1.255.255",
         "router": "10.1.0.1",
@@ -14,8 +14,8 @@
         "rebind": 31500,
         "delay": 2,
         "timeout": 150,
-        "startip": "10.0.0.1",
-        "endip": "10.0.0.2"
+        "startip": "10.1.0.100",
+        "endip": "10.1.0.200"
       }
     },
     "org.sardineproject.sbyod": {

@@ -23,8 +23,8 @@ def sbyodTestingNetwork():
     net.addController( 'c0', controller=RemoteController, ip="0.0.0.0", port=6633 )
 
     info( '*** Adding hosts\n' )
-    h1 = net.addHost( 'h1' )
-    h2 = net.addHost( 'h2' )
+    h1 = net.addHost( 'h1', ip='0.0.0.0' )
+    h2 = net.addHost( 'h2', ip='0.0.0.0' )
     portalHost = net.addHost( 'h3', ip='10.1.0.2' )
     gatewayHost = net.addHost( 'h4', ip='10.1.0.1')
     HostList = (h1,h2,portalHost,gatewayHost)
@@ -60,11 +60,17 @@ def sbyodTestingNetwork():
     h1.cmd('dhclient')
     h2.cmd('dhclient')
     portalHost.cmd('ping -c 1 10.1.0.1 &')
+    gatewayHost.cmd('ping -c 1 10.1.0.2 &')
+
+    info( '*** Starting Simple HTTP Server on Portal\n')
+    portalHost.cmd('python -m SimpleHTTPServer 443 &')
+    portalHost.cmd('python pythonRedirect.py &')
 
     info( '*** Running CLI\n' )
     CLI( net )
 
     info( '*** Stopping network' )
+    portalHost.cmd('kill %python')
     net.stop()
 
 if __name__ == '__main__':
