@@ -50,6 +50,12 @@ public class ControllerRedirect implements PacketRedirectService {
     private static final String APPLICATION_ID = PortalService.APP_ID;
     private final Logger log = LoggerFactory.getLogger(getClass());
 
+    public static final byte TCP_FLAG_MASK_SYN = 0x02;
+    public static final byte TCP_FLAG_MASK_RST = 0x04;
+    public static final byte TCP_FLAG_MASK_ACK = 0x10;
+
+    public static final String HTTP_REDIRECT = "HTTP/1.1 302 Found\n"+
+            "Location: https://portal.s-byod.de";
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected PacketService packetService;
@@ -276,6 +282,7 @@ public class ControllerRedirect implements PacketRedirectService {
             if (isControlPacket(packet)) {
                 return;
             }
+            log.debug("Received Packet");
 
             if(packet.getEtherType() == Ethernet.TYPE_IPV4) {
                 IPv4 ipv4Packet = (IPv4) packet.getPayload();
@@ -292,14 +299,8 @@ public class ControllerRedirect implements PacketRedirectService {
                     // only redirect if host is defined
                     if (redirectHost != null) {
 
-                        // if packet destination was changed and source is the redirect host on port 80
-                        if (ipv4Packet.getSourceAddress() == redirectIp.toInt() &&
-                                tcpPacket.getSourcePort() == 80) {
-                            // restore old src and destination
-                            restoreSource(context, redirectHost);
-                        } else if (tcpPacket.getDestinationPort() == 80) {
-                            // redirect packet on port 80
-                            redirectToPortal(context, redirectHost);
+                        if (tcpPacket.getSourcePort() == 80) {
+                            injectRedirect(context);
                         }
                     } else {
                         log.warn("ControllerRedirect: No redirect host defined.");
@@ -317,6 +318,56 @@ public class ControllerRedirect implements PacketRedirectService {
     private boolean isControlPacket(Ethernet eth) {
         short type = eth.getEtherType();
         return type == Ethernet.TYPE_LLDP || type == Ethernet.TYPE_BSN;
+    }
+
+    private void injectRedirect(PacketContext context) {
+        Ethernet packet = context.inPacket().parsed();
+        IPv4 ipv4Packet = (IPv4) packet.getPayload();
+        TCP tcpPacket = (TCP) ipv4Packet.getPayload();
+
+        Integer clientIP = ipv4Packet.getSourceAddress();
+        MacAddress clientMAC = packet.getSourceMAC();
+
+        // redirect the packet back
+        ipv4Packet.setSourceAddress(ipv4Packet.getDestinationAddress());
+        packet.setSourceMACAddress(packet.getDestinationMAC());
+
+        short tcpFlags = tcpPacket.getFlags();
+
+        if ((tcpFlags & TCP_FLAG_MASK_SYN) == (short)1) {
+            // respond to a SYN with a SYN ACK
+            tcpPacket.setFlags((short) (TCP_FLAG_MASK_ACK & TCP_FLAG_MASK_SYN))
+                    .setAcknowledge(tcpPacket.getSequence() + 1)
+                    .setSequence(0);
+        } else {
+            // respond with HTTP redirect
+            tcpPacket.setFlags((short) (TCP_FLAG_MASK_ACK & TCP_FLAG_MASK_RST))
+                    .setAcknowledge(tcpPacket.getSequence() + 1)
+                    .setSequence(1 + HTTP_REDIRECT.length());
+
+            // payload????
+        }
+
+        // reset packet checksum
+        ipv4Packet.resetChecksum();
+        packet.resetChecksum();
+        tcpPacket.resetChecksum();
+
+        ByteBuffer buf = ByteBuffer.wrap(packet.serialize());
+
+        TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
+                .setIpDst(Ip4Address.valueOf(ipv4Packet.getDestinationAddress()))
+                .setEthDst(packet.getDestinationMAC())
+                .setOutput(context.inPacket().receivedFrom().port());
+
+        // emit the packet at the device the host is connected to
+        packetService.emit(new DefaultOutboundPacket(
+                context.inPacket().receivedFrom().deviceId(),
+                trafficTreatmentBuilder.build(),
+                buf)
+        );
+        // block the old context
+        context.block();
     }
 
     private void redirectToPortal(PacketContext context, Host inPortalHost){
