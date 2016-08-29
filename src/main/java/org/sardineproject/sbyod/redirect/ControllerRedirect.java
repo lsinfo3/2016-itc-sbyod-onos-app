@@ -52,7 +52,8 @@ public class ControllerRedirect implements PacketRedirectService {
 
     public static final byte TCP_FLAG_MASK_SYN = 0x02;
     public static final byte TCP_FLAG_MASK_RST = 0x04;
-    public static final byte TCP_FLAG_MASK_ACK = 0x10;
+    public static final byte TCP_FLAG_MASK_PSH = 0x08;
+    public static final byte TCP_FLAG_MASK_ACK = 0x16;
 
     public static final String HTTP_REDIRECT = "HTTP/1.1 302 Found\n"+
             "Location: https://portal.s-byod.de";
@@ -296,9 +297,7 @@ public class ControllerRedirect implements PacketRedirectService {
                     ### Therefore the connection to the portal is checked for the source host
                     ### and a redirect is done to the portal.
                     */
-                    if (tcpPacket.getSourcePort() == 80) {
-                        injectRedirect(context);
-                    }
+                    injectRedirect(context);
                 }
             }
         }
@@ -334,18 +333,22 @@ public class ControllerRedirect implements PacketRedirectService {
 
         short tcpFlags = tcpPacket.getFlags();
 
-        if ((tcpFlags & TCP_FLAG_MASK_SYN) == (short)1) {
+        // Todo: only answer syn requests
+        if ((tcpFlags & TCP_FLAG_MASK_SYN) == (short)2) {
             // respond to a SYN with a SYN ACK
-            tcpPacket.setFlags((short) (TCP_FLAG_MASK_ACK & TCP_FLAG_MASK_SYN))
+            tcpPacket.setFlags((short) (18))
                     .setAcknowledge(tcpPacket.getSequence() + 1)
                     .setSequence(0);
-        } else {
+        } else if((tcpFlags & TCP_FLAG_MASK_PSH) == (short)8){
             // respond with HTTP redirect
             tcpPacket.setFlags((short) (TCP_FLAG_MASK_ACK & TCP_FLAG_MASK_RST))
-                    .setAcknowledge(tcpPacket.getSequence() + 1)
-                    .setSequence(1 + HTTP_REDIRECT.length());
+                    .setAcknowledge(tcpPacket.getWindowSize() + 1)
+                    .setSequence(1);
 
-            // TODO: payload????
+            // Todo: acknowledge received data first, set window size?
+            Data packetData = new Data();
+            packetData.setData(HTTP_REDIRECT.getBytes());
+            tcpPacket.setPayload(packetData);
         }
 
         // reset packet checksum
