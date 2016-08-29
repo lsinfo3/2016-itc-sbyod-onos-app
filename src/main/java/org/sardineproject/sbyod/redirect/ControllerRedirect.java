@@ -296,14 +296,8 @@ public class ControllerRedirect implements PacketRedirectService {
                     ### Therefore the connection to the portal is checked for the source host
                     ### and a redirect is done to the portal.
                     */
-                    // only redirect if host is defined
-                    if (redirectHost != null) {
-
-                        if (tcpPacket.getSourcePort() == 80) {
-                            injectRedirect(context);
-                        }
-                    } else {
-                        log.warn("ControllerRedirect: No redirect host defined.");
+                    if (tcpPacket.getSourcePort() == 80) {
+                        injectRedirect(context);
                     }
                 }
             }
@@ -327,10 +321,16 @@ public class ControllerRedirect implements PacketRedirectService {
 
         Integer clientIP = ipv4Packet.getSourceAddress();
         MacAddress clientMAC = packet.getSourceMAC();
+        Integer clientPort = tcpPacket.getSourcePort();
 
         // redirect the packet back
         ipv4Packet.setSourceAddress(ipv4Packet.getDestinationAddress());
         packet.setSourceMACAddress(packet.getDestinationMAC());
+        tcpPacket.setSourcePort(tcpPacket.getDestinationPort());
+
+        ipv4Packet.setDestinationAddress(clientIP);
+        packet.setDestinationMACAddress(clientMAC);
+        tcpPacket.setDestinationPort(clientPort);
 
         short tcpFlags = tcpPacket.getFlags();
 
@@ -345,7 +345,7 @@ public class ControllerRedirect implements PacketRedirectService {
                     .setAcknowledge(tcpPacket.getSequence() + 1)
                     .setSequence(1 + HTTP_REDIRECT.length());
 
-            // payload????
+            // TODO: payload????
         }
 
         // reset packet checksum
