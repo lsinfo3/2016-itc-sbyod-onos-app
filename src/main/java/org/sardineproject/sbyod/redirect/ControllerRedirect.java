@@ -36,6 +36,7 @@ import org.sardineproject.sbyod.portal.PortalService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.*;
 
@@ -289,20 +290,31 @@ public class ControllerRedirect implements PacketRedirectService {
                     ### Therefore the connection to the portal is checked for the source host
                     ### and a redirect is done to the portal.
                     */
-                    // only redirect if host is defined
-                    if (redirectHost != null) {
 
-                        // if packet destination was changed and source is the redirect host on port 80
-                        if (ipv4Packet.getSourceAddress() == redirectIp.toInt() &&
-                                tcpPacket.getSourcePort() == 80) {
-                            // restore old src and destination
-                            restoreSource(context, redirectHost);
-                        } else if (tcpPacket.getDestinationPort() == 80) {
-                            // redirect packet on port 80
-                            redirectToPortal(context, redirectHost);
-                        }
-                    } else {
-                        log.warn("ControllerRedirect: No redirect host defined.");
+                    if(tcpPacket.getFlags() == ((short) 2)){
+                        // received packet is SYN packet (only second bit of flags byte is set)
+                        log.debug("ControllerRedirect: Received SYN packet from {} to {}",
+                                ipv4Packet.getSourceAddress(), ipv4Packet.getDestinationAddress());
+
+                        TCP synAck = new TCP();
+                        // setting source and destination ports
+                        synAck.setSourcePort(tcpPacket.getDestinationPort());
+                        synAck.setDestinationPort(tcpPacket.getSourcePort());
+                        // setting sequence and acknowledgement number
+                        synAck.setSequence(0);
+                        synAck.setAcknowledge(1);
+                        // tcp answer is syn-ack -> second and fifth bit is set
+                        synAck.setFlags((short) 18);
+
+                        IPv4 outIPv4Packet = new IPv4();
+                        outIPv4Packet.setPayload(synAck);
+                        Ethernet outPacket = new Ethernet();
+                        outPacket.setPayload(outIPv4Packet);
+
+                    } else if(tcpPacket.getFlags() == ((short) 16)){
+                        // received packet is ACK packet as only fifth bit is set
+                        log.debug("ControllerRedirect: Received SYN-ACK packet from {} to {}",
+                                ipv4Packet.getSourceAddress(), ipv4Packet.getDestinationAddress());
                     }
                 }
             }
