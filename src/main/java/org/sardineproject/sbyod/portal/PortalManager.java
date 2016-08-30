@@ -157,7 +157,7 @@ public class PortalManager implements PortalService {
 
                 // update redirect service
                 packetRedirectService.stopRedirect();
-                packetRedirectService.activateRedirect(portalIp);
+                packetRedirectService.activateRedirect();
 
                 log.debug("Portal is up. IP = {}, TpPort = {}, ID = {}",
                         Lists.newArrayList(portalIp.toString(), portalPort.toString(), this.portalId.toString()).toArray());
