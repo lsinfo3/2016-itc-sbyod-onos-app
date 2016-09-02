@@ -30,7 +30,6 @@ import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flowobjective.DefaultForwardingObjective;
 import org.onosproject.net.flowobjective.FlowObjectiveService;
 import org.onosproject.net.flowobjective.ForwardingObjective;
-import org.onosproject.net.host.HostService;
 import org.onosproject.net.packet.*;
 import org.sardineproject.sbyod.portal.PortalService;
 import org.slf4j.Logger;
@@ -50,6 +49,15 @@ public class ControllerRedirect implements PacketRedirectService {
     private static final String APPLICATION_ID = PortalService.APP_ID;
     private final Logger log = LoggerFactory.getLogger(getClass());
 
+    public static final byte TCP_FLAG_MASK_SYN = 0x02;
+    public static final byte TCP_FLAG_MASK_RST = 0x04;
+    public static final byte TCP_FLAG_MASK_PSH = 0x08;
+    public static final byte TCP_FLAG_MASK_ACK = 0x10;
+
+    public static final String HTTP_REDIRECT = "HTTP/1.1 302 Found\r\n"+
+            "Location: https://portal.s-byod.de/\r\n\r\n";
+
+    private static int SEQUENCE_NUMBER = 0;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected PacketService packetService;
@@ -63,19 +71,8 @@ public class ControllerRedirect implements PacketRedirectService {
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected FlowObjectiveService flowObjectiveService;
 
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected HostService hostService;
-
 
     private ReactivePacketProcessor processor;
-
-    // the host the traffic is redirected to
-    private Host redirectHost;
-    // the ip of the redirect host
-    private Ip4Address redirectIp;
-
-    // a map with all src ip and src port pairs and dst ip and dst mac pairs
-    private Map<IpPortPair, IpMacPair> portToMac;
 
     // mapping the installed flow rules to the device ID for removal at deactivation
     Map<DeviceId, List<ForwardingObjective>> installedRules;
@@ -92,42 +89,19 @@ public class ControllerRedirect implements PacketRedirectService {
 
     /**
      * Activate the redirect to the specified host
-     * @param ipRedirectingTo the host packets are redirected to
      */
-    public void activateRedirect(Ip4Address ipRedirectingTo){
-        if(ipRedirectingTo != null){
-            redirectIp = ipRedirectingTo;
-            // get a host with this ip
-            Set<Host> redirectHosts = hostService.getHostsByIp(redirectIp);
-            if(redirectHosts.size() == 1){
-
-                redirectHost = redirectHosts.iterator().next();
-
+    public void activateRedirect(){
                 // initiate empty rules map
                 installedRules = new HashMap<>();
                 // install rules sending relevant packets to controller
                 installRedirectRules();
 
-                // initiate empty port to mac map
-                portToMac = new HashMap<>();
                 // add packet processor monitoring packets
                 processor = new ReactivePacketProcessor();
                 packetService.addProcessor(processor, PacketProcessor.director(2));
                 requestIntercepts();
 
                 log.info("ControllerRedirect: activated!");
-
-            } else if(redirectHosts.isEmpty()) {
-                log.warn("ControllerRedirect: activateRedirect() - no host with IP={} found to redirect to.", redirectIp);
-                redirectIp = null;
-            } else{
-                log.warn("ControllerRedirect: activateRedirect() - {} hosts with IP={} found. Choose unique IP",
-                        redirectHosts.size(), redirectIp);
-                redirectIp = null;
-            }
-        } else{
-            log.warn("ControllerRedirect: activateRedirect() - redirect ip is not defined!");
-        }
     }
 
     /**
@@ -151,10 +125,7 @@ public class ControllerRedirect implements PacketRedirectService {
             installedRules = null;
         }
 
-        this.portToMac = null;
         this.installedRules = null;
-        this.redirectHost = null;
-        this.redirectHost = null;
 
         log.info("ControllerRedirect: stopped!");
     }
@@ -167,7 +138,6 @@ public class ControllerRedirect implements PacketRedirectService {
     private void installRedirectRules(){
 
         ForwardingObjective.Builder port80ToControllerRule = getPort80ToControllerRule();
-        ForwardingObjective.Builder portalToControllerRule = getPortalToControllerRule();
 
             for (Device device : deviceService.getDevices()) {
                 // install rule sending every unhandled traffic on port 80 to controller
@@ -178,16 +148,6 @@ public class ControllerRedirect implements PacketRedirectService {
                     installedRules.get(device.id()).add(port80ToControllerRule.remove());
                 } else {
                     installedRules.put(device.id(), Lists.newArrayList(port80ToControllerRule.remove()));
-                }
-
-                // install rule sending every answer from portal received on port 80 to controller
-                flowObjectiveService.forward(device.id(), portalToControllerRule.add());
-
-                // save installed rules in map
-                if (installedRules.get(device.id()) != null) {
-                    installedRules.get(device.id()).add(portalToControllerRule.remove());
-                } else {
-                    installedRules.put(device.id(), Lists.newArrayList(portalToControllerRule.remove()));
                 }
             }
     }
@@ -208,26 +168,6 @@ public class ControllerRedirect implements PacketRedirectService {
                 .withFlag(ForwardingObjective.Flag.VERSATILE)
                 .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
                 .makePermanent();
-    }
-
-    private ForwardingObjective.Builder getPortalToControllerRule(){
-
-            TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
-                    .matchEthType(Ethernet.TYPE_IPV4)
-                    .matchIPProtocol(IPv4.PROTOCOL_TCP)
-                    .matchTcpSrc(TpPort.tpPort(80))
-                    .matchIPSrc(redirectIp.toIpPrefix());
-
-            TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
-                    .setOutput(PortNumber.CONTROLLER);
-
-            return DefaultForwardingObjective.builder()
-                    .withSelector(trafficSelectorBuilder.build())
-                    .withTreatment(trafficTreatmentBuilder.build())
-                    .withPriority(REDIRECT_PRIORITY)
-                    .withFlag(ForwardingObjective.Flag.VERSATILE)
-                    .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
-                    .makePermanent();
     }
 
     /**
@@ -281,29 +221,13 @@ public class ControllerRedirect implements PacketRedirectService {
                 IPv4 ipv4Packet = (IPv4) packet.getPayload();
 
                 if (ipv4Packet.getProtocol() == IPv4.PROTOCOL_TCP) {
-                    TCP tcpPacket = (TCP) ipv4Packet.getPayload();
 
                     /*
                     ### The packet is of ipv4 ethernet type, no rules have been added for it yet,
                     ### otherwise it would have been handled by these rules.
-                    ### Therefore the connection to the portal is checked for the source host
-                    ### and a redirect is done to the portal.
+                    ### Therefore a redirect is done to the portal.
                     */
-                    // only redirect if host is defined
-                    if (redirectHost != null) {
-
-                        // if packet destination was changed and source is the redirect host on port 80
-                        if (ipv4Packet.getSourceAddress() == redirectIp.toInt() &&
-                                tcpPacket.getSourcePort() == 80) {
-                            // restore old src and destination
-                            restoreSource(context, redirectHost);
-                        } else if (tcpPacket.getDestinationPort() == 80) {
-                            // redirect packet on port 80
-                            redirectToPortal(context, redirectHost);
-                        }
-                    } else {
-                        log.warn("ControllerRedirect: No redirect host defined.");
-                    }
+                    injectRedirect(context);
                 }
             }
         }
@@ -319,187 +243,119 @@ public class ControllerRedirect implements PacketRedirectService {
         return type == Ethernet.TYPE_LLDP || type == Ethernet.TYPE_BSN;
     }
 
-    private void redirectToPortal(PacketContext context, Host inPortalHost){
+    private void injectRedirect(PacketContext context) {
+
+        // parse packets
         Ethernet packet = context.inPacket().parsed();
         IPv4 ipv4Packet = (IPv4) packet.getPayload();
         TCP tcpPacket = (TCP) ipv4Packet.getPayload();
 
-        log.debug("ControllerRedirect:\nRedirecting to redirect host\n(source IP={}, destination IP={})\ndestination IP={}",
-                Ip4Address.valueOf(ipv4Packet.getSourceAddress()),
-                Ip4Address.valueOf(ipv4Packet.getDestinationAddress()),
-                redirectIp);
+        log.debug("ControllerRedirect: Redirect called. SrcIp: {} -> DstIp: {}",
+                IpAddress.valueOf(ipv4Packet.getSourceAddress()), IpAddress.valueOf(ipv4Packet.getDestinationAddress()));
 
-        // old values
-        IpMacPair oldIpMac = new IpMacPair(Ip4Address.valueOf(ipv4Packet.getDestinationAddress()), packet.getDestinationMAC());
+        // save source info
+        Integer clientIP = ipv4Packet.getSourceAddress();
+        MacAddress clientMAC = packet.getSourceMAC();
+        Integer clientPort = tcpPacket.getSourcePort();
 
-        // set the ip the packet is redirected to
-        ipv4Packet.setDestinationAddress(redirectIp.toInt());
-        // set the mac address of the new destination
-        packet.setDestinationMACAddress(redirectHost.mac());
+        // redirect the packet back
+        ipv4Packet.setSourceAddress(ipv4Packet.getDestinationAddress());
+        packet.setSourceMACAddress(packet.getDestinationMAC());
+        tcpPacket.setSourcePort(tcpPacket.getDestinationPort());
+
+        // set new destination address
+        ipv4Packet.setDestinationAddress(clientIP);
+        packet.setDestinationMACAddress(clientMAC);
+        tcpPacket.setDestinationPort(clientPort);
+
+        // the tcp flags of the packet as short
+        short tcpFlags = tcpPacket.getFlags();
+
+
+        if (tcpFlags == (short)TCP_FLAG_MASK_SYN) {
+            // packet has only SYN flag set
+            log.debug("ControllerRedirect: Sending SYN-ACK packet.");
+
+            // ### respond with a SYN ACK ###
+            SEQUENCE_NUMBER = 0;
+            tcpPacket.setFlags((short) (TCP_FLAG_MASK_SYN | TCP_FLAG_MASK_ACK))
+                    .setAcknowledge(tcpPacket.getSequence() + 1)
+                    .setSequence(SEQUENCE_NUMBER++);
+
+            sendPacket(context);
+        } else if((tcpFlags & TCP_FLAG_MASK_PSH) == (short)TCP_FLAG_MASK_PSH) {
+            // packet has PSH flag set (probably GET request)
+            log.debug("ControllerRedirect: Sending ACK packet for received push request. " +
+                    "Then sending HTTP 302 redirect and resetting connection.");
+
+            // calculate the sequence number to acknowledge
+            Data dataPayload = (Data) tcpPacket.getPayload();
+            Integer acknowledgmentNumber = tcpPacket.getSequence() + dataPayload.getData().length;
+
+
+            // ### acknowledge the received packet ###
+            tcpPacket.setFlags((short) TCP_FLAG_MASK_ACK)
+                    .setAcknowledge(acknowledgmentNumber)
+                    .setSequence(SEQUENCE_NUMBER);
+            // no payload
+            tcpPacket.setPayload(new Data());
+            sendPacket(context);
+
+
+            // ### send HTTP redirect ###
+            tcpPacket.setFlags((short) TCP_FLAG_MASK_ACK)
+                    .setAcknowledge(acknowledgmentNumber)
+                    .setSequence(SEQUENCE_NUMBER);
+            // http 302 redirect as payload
+            Data packetData = new Data();
+            packetData.setData(HTTP_REDIRECT.getBytes());
+            tcpPacket.setPayload(packetData);
+            // calculate new sequence number
+            SEQUENCE_NUMBER += packetData.getData().length;
+            sendPacket(context);
+
+
+            // ### send RST ###
+            tcpPacket.setFlags((short) TCP_FLAG_MASK_RST)
+                    .setAcknowledge(acknowledgmentNumber)
+                    .setSequence(SEQUENCE_NUMBER);
+            // no payload
+            tcpPacket.setPayload(new Data());
+            sendPacket(context);
+
+        } else{
+            return;
+        }
+        // block the old context
+        context.block();
+    }
+
+    private void sendPacket(PacketContext context){
+
+        // parse packets
+        Ethernet packet = context.inPacket().parsed();
+        IPv4 ipv4Packet = (IPv4) packet.getPayload();
+        TCP tcpPacket = (TCP) ipv4Packet.getPayload();
 
         // reset packet checksum
         ipv4Packet.resetChecksum();
         packet.resetChecksum();
         tcpPacket.resetChecksum();
 
-        // create a buffer for the serialized packet
         ByteBuffer buf = ByteBuffer.wrap(packet.serialize());
 
-        // set up the traffic management
-        TrafficTreatment.Builder builder = DefaultTrafficTreatment.builder()
-                .setIpDst(redirectIp)
-                .setEthDst(redirectHost.mac())
-                .setOutput(redirectHost.location().port());
+        // send the packet back to the client
+        TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
+                .setIpDst(Ip4Address.valueOf(ipv4Packet.getDestinationAddress()))
+                .setEthDst(packet.getDestinationMAC())
+                .setOutput(context.inPacket().receivedFrom().port());
 
-        //send new packet to the device where the portal is connected to
-        packetService.emit(new DefaultOutboundPacket(redirectHost.location().deviceId(),
-                builder.build(), buf));
-        context.block();
-
-        // save (dst ip, dst mac) for the (src ip, src port) of this packet
-        portToMac.put(new IpPortPair(Ip4Address.valueOf(ipv4Packet.getSourceAddress()),
-                        TpPort.tpPort(tcpPacket.getSourcePort())),
-                oldIpMac);
-
-        log.info("ControllerRedirect: redirectToPortal()\n(srcIP={}, srcMac={}, dstIP={}, " +
-                        "dstMac={}) ->\n(srcIP={}, srcMac={}, dstIP={}, dstMac={})",
-                Lists.newArrayList(
-                        Ip4Address.valueOf(ipv4Packet.getSourceAddress()),
-                        packet.getSourceMAC(),
-                        oldIpMac.ip4Address,
-                        oldIpMac.getMacAddress(),
-                        Ip4Address.valueOf(ipv4Packet.getSourceAddress()),
-                        packet.getSourceMAC(),
-                        redirectIp,
-                        redirectHost.mac())
-                        .toArray());
-
-    }
-
-    private void restoreSource(PacketContext context, Host portal){
-        // parsing packet
-        Ethernet packet = context.inPacket().parsed();
-        IPv4 ipv4Packet = (IPv4) packet.getPayload();
-        TCP tcpPacket = (TCP) ipv4Packet.getPayload();
-
-        // creating the ip-port pair to search for
-        IpPortPair ipPortPair = new IpPortPair(Ip4Address.valueOf(ipv4Packet.getDestinationAddress()),
-                TpPort.tpPort(tcpPacket.getDestinationPort()));
-        // check if the ipPort pair is contained in the portToMac map
-        if(portToMac.keySet().contains(ipPortPair)){
-
-            // get the src ip and mac address to restore
-            IpMacPair ipMacPair = portToMac.get(ipPortPair);
-            Ip4Address newSrcIp = ipMacPair.getIp4Address();
-            MacAddress newSrcMac = ipMacPair.getMacAddress();
-
-            log.info("ControllerRedirect: restoreSource()\n(srcIp={}, srcMac={}, dstIp={}," +
-                            " dstMac={}) ->\n(srcIP={}, srcMac={}, dstIP={}, dstMac={})",
-                    Lists.newArrayList(
-                            Ip4Address.valueOf(ipv4Packet.getSourceAddress()),
-                            packet.getSourceMAC(),
-                            Ip4Address.valueOf(ipv4Packet.getDestinationAddress()),
-                            packet.getDestinationMAC(),
-                            newSrcIp,
-                            newSrcMac,
-                            Ip4Address.valueOf(ipv4Packet.getDestinationAddress()),
-                            packet.getDestinationMAC())
-                            .toArray());
-
-                // set the new source ip address
-                ipv4Packet.setSourceAddress(newSrcIp.toInt());
-                // set the new source mac address
-                packet.setSourceMACAddress(newSrcMac);
-
-                // reset the packet checksum
-                ipv4Packet.resetChecksum();
-                packet.resetChecksum();
-                tcpPacket.resetChecksum();
-
-                ByteBuffer buf = ByteBuffer.wrap(packet.serialize());
-
-            // get the destination host
-            Host destinationHost = hostService.getHost(HostId.hostId(packet.getDestinationMAC(),
-                    VlanId.vlanId(packet.getVlanID())));
-
-            if(destinationHost != null){
-                // create the traffic treatment for the restored packet
-                TrafficTreatment.Builder trafficTreatmentBuilder = DefaultTrafficTreatment.builder()
-                        .setIpDst(Ip4Address.valueOf(ipv4Packet.getDestinationAddress()))
-                        .setEthDst(packet.getDestinationMAC())
-                        .setOutput(destinationHost.location().port());
-
-                // emit the packet at the device the host is connected to
-                packetService.emit(new DefaultOutboundPacket(destinationHost.location().deviceId(),
+        // emit the packet at the device the host is connected to
+        packetService.emit(new DefaultOutboundPacket(
+                        context.inPacket().receivedFrom().deviceId(),
                         trafficTreatmentBuilder.build(),
-                        buf));
-                // block the old context
-                context.block();
-
-            } else{
-                log.warn("ControllerRedirect: restoreSource()\nNo destination Host found for ip={} while restoring source",
-                        Ip4Address.valueOf(ipv4Packet.getSourceAddress()));
-            }
-        } else{
-            log.warn("ControllerRedirect: restoreSource()\nNo src IP and src Mac to restore for dst ip={} and dst port={} while restoring source",
-                    ipPortPair.getIp4Address(), ipPortPair.getTpPort());
-        }
+                        buf)
+        );
     }
 
-    private class IpPortPair{
-
-        private Ip4Address ip4Address;
-        private TpPort tpPort;
-
-        public IpPortPair(Ip4Address ip4Address, TpPort tpPort){
-            this.ip4Address = ip4Address;
-            this.tpPort = tpPort;
-        }
-
-        public Ip4Address getIp4Address() {
-            return ip4Address;
-        }
-
-        public TpPort getTpPort() {
-            return tpPort;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-
-            IpPortPair that = (IpPortPair) o;
-
-            if (ip4Address != null ? !ip4Address.equals(that.ip4Address) : that.ip4Address != null) return false;
-            return !(tpPort != null ? !tpPort.equals(that.tpPort) : that.tpPort != null);
-
-        }
-
-        @Override
-        public int hashCode() {
-            int result = ip4Address != null ? ip4Address.hashCode() : 0;
-            result = 31 * result + (tpPort != null ? tpPort.hashCode() : 0);
-            return result;
-        }
-    }
-
-    private class IpMacPair{
-
-        private Ip4Address ip4Address;
-        private MacAddress macAddress;
-
-        public IpMacPair(Ip4Address ip4Address, MacAddress macAddress){
-            this.ip4Address = ip4Address;
-            this.macAddress = macAddress;
-        }
-
-        public Ip4Address getIp4Address() {
-            return ip4Address;
-        }
-
-        public MacAddress getMacAddress() {
-            return macAddress;
-        }
-    }
 }
