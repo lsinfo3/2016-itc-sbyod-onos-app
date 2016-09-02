@@ -250,7 +250,7 @@ public class ControllerRedirect implements PacketRedirectService {
         IPv4 ipv4Packet = (IPv4) packet.getPayload();
         TCP tcpPacket = (TCP) ipv4Packet.getPayload();
 
-        log.info("ControllerRedirect: Redirect called. SrcIp: {} -> DstIp: {}",
+        log.debug("ControllerRedirect: Redirect called. SrcIp: {} -> DstIp: {}",
                 IpAddress.valueOf(ipv4Packet.getSourceAddress()), IpAddress.valueOf(ipv4Packet.getDestinationAddress()));
 
         // save source info
@@ -274,7 +274,7 @@ public class ControllerRedirect implements PacketRedirectService {
 
         if (tcpFlags == (short)TCP_FLAG_MASK_SYN) {
             // packet has only SYN flag set
-
+            log.debug("ControllerRedirect: Sending SYN-ACK packet.");
 
             // ### respond with a SYN ACK ###
             SEQUENCE_NUMBER = 0;
@@ -285,6 +285,8 @@ public class ControllerRedirect implements PacketRedirectService {
             sendPacket(context);
         } else if((tcpFlags & TCP_FLAG_MASK_PSH) == (short)TCP_FLAG_MASK_PSH) {
             // packet has PSH flag set (probably GET request)
+            log.debug("ControllerRedirect: Sending ACK packet for received push request. " +
+                    "Then sending HTTP 302 redirect and resetting connection.");
 
             // calculate the sequence number to acknowledge
             Data dataPayload = (Data) tcpPacket.getPayload();
