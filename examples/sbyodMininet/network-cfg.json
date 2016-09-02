@@ -1,0 +1,32 @@
+{
+  "apps": {
+    "org.onosproject.dhcp" : {
+      "dhcp" : {
+        "ip": "0.0.0.0",
+        "mac": "00:00:00:00:00:00",
+        "subnet": "255.255.0.0",
+        "broadcast": "10.1.255.255",
+        "router": "10.1.0.1",
+        "domain": "10.1.0.1",
+        "ttl": 63,
+        "lease": 36000,
+        "renew": 18000,
+        "rebind": 31500,
+        "delay": 2,
+        "timeout": 150,
+        "startip": "10.1.0.100",
+        "endip": "10.1.0.200"
+      }
+    },
+    "org.sardineproject.sbyod": {
+      "sbyod" : {
+        "portalIp": "10.1.0.2",
+        "portalPort": 443,
+        "defaultGateway": "10.1.0.1",
+        "consulPort": 8500,
+        "matchEthDst": false,
+        "prefixLength": 16
+      }
+    }
+  }
+}
