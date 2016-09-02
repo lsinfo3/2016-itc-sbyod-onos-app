@@ -250,6 +250,9 @@ public class ControllerRedirect implements PacketRedirectService {
         IPv4 ipv4Packet = (IPv4) packet.getPayload();
         TCP tcpPacket = (TCP) ipv4Packet.getPayload();
 
+        log.info("ControllerRedirect: Redirect called. SrcIp: {} -> DstIp: {}",
+                IpAddress.valueOf(ipv4Packet.getSourceAddress()), IpAddress.valueOf(ipv4Packet.getDestinationAddress()));
+
         // save source info
         Integer clientIP = ipv4Packet.getSourceAddress();
         MacAddress clientMAC = packet.getSourceMAC();
