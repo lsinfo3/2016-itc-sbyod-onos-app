@@ -293,9 +293,11 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
 
                 // do not match on IP address if it is defined as wildcard
                 if(!userIp.equals(Ip4Address.valueOf("0.0.0.0"))){
+                    log.info("DefaultConnectionRuleInstaller: UserIP wildcard set -> do not match on userIp.");
                     trafficSelectorBuilder.matchIPSrc(userIp.toIpPrefix());
                 }
                 if(!serviceIp.equals(Ip4Address.valueOf("0.0.0.0"))){
+                    log.info("DefaultConnectionRuleInstaller: ServiceIP wildcard set -> do not match on serviceIp.");
                     trafficSelectorBuilder.matchIPDst(serviceIp.toIpPrefix());
                 }
 
@@ -381,9 +383,11 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
 
                 // no ethernet source match for testing
                 if(!serviceIp.equals(Ip4Address.valueOf("0.0.0.0"))){
+                    log.info("DefaultConnectionRuleInstaller: ServiceIP wildcard set -> do not match on serviceIp.");
                     trafficSelectorBuilder.matchIPSrc(serviceIp.toIpPrefix());
                 }
                 if(!userIp.equals(Ip4Address.valueOf("0.0.0.0"))){
+                    log.info("DefaultConnectionRuleInstaller: UserIP wildcard set -> do not match on userIp.");
                     trafficSelectorBuilder.matchIPDst(userIp.toIpPrefix());
                 }
 
