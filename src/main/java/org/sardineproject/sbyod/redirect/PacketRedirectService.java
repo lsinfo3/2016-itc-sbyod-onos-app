@@ -29,8 +29,9 @@ public interface PacketRedirectService {
 
     /**
      * Activate the redirect to the specified host
+     * @param ipRedirectingTo the host packets are redirected to
      */
-    void activateRedirect();
+    void activateRedirect(Ip4Address ipRedirectingTo);
 
     /**
      * Stop the redirect of packets
