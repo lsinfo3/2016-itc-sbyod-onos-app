@@ -18,6 +18,7 @@
 package org.sardineproject.sbyod.connection;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
@@ -107,64 +108,63 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
         HostLocation userLocation = connection.getUser().location();
 
         // connect the user to every IP address of the service
-        for(Ip4Address serviceIp : connection.getService().ipAddressSet()){
+        for (Ip4Address serviceIp : connection.getService().ipAddressSet()) {
 
-        // the device/host the service is connected to
-        Host serviceHost = getConnectionServiceHost(serviceIp);
+            // the device/host the service is connected to
+            Set<Host> serviceHosts = getConnectionServiceHost(serviceIp);
+            // install connection for each host with specified service IP address
+            for (Host serviceHost : serviceHosts) {
 
-        // check if a valid service host was found
-        if (serviceHost != null) {
+                // if user and service is connected to the same network device
+                if (userLocation.deviceId().equals(serviceHost.location().deviceId())) {
+                    log.debug("ConnectionRuleInstaller: Installing flow rule only on device {}",
+                            userLocation.deviceId().toString());
 
-            // if user and service is connected to the same network device
-            if (userLocation.deviceId().equals(serviceHost.location().deviceId())) {
-                log.debug("ConnectionRuleInstaller: Installing flow rule only on device {}",
-                        userLocation.deviceId().toString());
-
-                // add one rule directing the traffic from user port to service port on device and vice versa
-                if (userLocation.port().equals(serviceHost.location().port())) {
-                    log.warn("ConnectionRuleInstaller: User {} and service with IP={} are connected to same switch" +
-                                    " port! No connection installed.",
-                            connection.getUser().id(), connection.getService().ipAddressSet());
-                } else {
-                    addFlows(userLocation.port(), serviceHost.location().port(), userLocation.deviceId(),
-                            serviceHost.mac(), serviceIp, connection);
-                }
-
-            } else {
-                // get a set of all shortest paths between the connected devices
-                Set<Path> paths = topologyService.getPaths(topologyService.currentTopology(),
-                        userLocation.deviceId(), serviceHost.location().deviceId());
-                if (paths.isEmpty()) {
-                    log.warn("ConnectionRuleInstaller: No path found between {} and {}",
-                            userLocation.toString(), serviceHost.location().toString());
-                } else {
-                    log.debug("ConnectionRuleInstaller: Installing connection between {} and {}",
-                            userLocation.deviceId().toString(), serviceHost.location().deviceId().toString());
-
-                    // pick one path. Under the assumption, that the path is shortest, no loops should be created.
-                    Path path = paths.iterator().next();
-
-                    // rule for first device
-                    Iterator<Link> currentLinkIter = path.links().iterator();
-                    Link currentLink = currentLinkIter.next();
-                    addFlows(userLocation.port(), currentLink.src().port(), userLocation.deviceId(),
-                            serviceHost.mac(), serviceIp, connection);
-
-                    // rule for every pair of links
-                    Iterator<Link> previousLinkIter = path.links().iterator();
-                    while (currentLinkIter.hasNext()) {
-                        Link previousLink = previousLinkIter.next();
-                        currentLink = currentLinkIter.next();
-
-                        addFlows(previousLink.dst().port(), currentLink.src().port(),
-                                currentLink.src().deviceId(), serviceHost.mac(), serviceIp, connection);
+                    // add one rule directing the traffic from user port to service port on device and vice versa
+                    if (userLocation.port().equals(serviceHost.location().port())) {
+                        log.warn("ConnectionRuleInstaller: User {} and service with IP={} are connected to same switch" +
+                                        " port! No connection installed.",
+                                connection.getUser().id(), connection.getService().ipAddressSet());
+                    } else {
+                        addFlows(userLocation.port(), serviceHost.location().port(), userLocation.deviceId(),
+                                serviceHost.mac(), serviceIp, connection);
                     }
 
-                    // rule for last device
-                    addFlows(currentLink.dst().port(), serviceHost.location().port(), serviceHost.location().deviceId(),
-                            serviceHost.mac(), serviceIp, connection);
+                } else {
+                    // get a set of all shortest paths between the connected devices
+                    Set<Path> paths = topologyService.getPaths(topologyService.currentTopology(),
+                            userLocation.deviceId(), serviceHost.location().deviceId());
+                    if (paths.isEmpty()) {
+                        log.warn("ConnectionRuleInstaller: No path found between {} and {}",
+                                userLocation.toString(), serviceHost.location().toString());
+                    } else {
+                        log.debug("ConnectionRuleInstaller: Installing connection between {} and {}",
+                                userLocation.deviceId().toString(), serviceHost.location().deviceId().toString());
+
+                        // pick one path. Under the assumption, that the path is shortest, no loops should be created.
+                        Path path = paths.iterator().next();
+
+                        // rule for first device
+                        Iterator<Link> currentLinkIter = path.links().iterator();
+                        Link currentLink = currentLinkIter.next();
+                        addFlows(userLocation.port(), currentLink.src().port(), userLocation.deviceId(),
+                                serviceHost.mac(), serviceIp, connection);
+
+                        // rule for every pair of links
+                        Iterator<Link> previousLinkIter = path.links().iterator();
+                        while (currentLinkIter.hasNext()) {
+                            Link previousLink = previousLinkIter.next();
+                            currentLink = currentLinkIter.next();
+
+                            addFlows(previousLink.dst().port(), currentLink.src().port(),
+                                    currentLink.src().deviceId(), serviceHost.mac(), serviceIp, connection);
+                        }
+
+                        // rule for last device
+                        addFlows(currentLink.dst().port(), serviceHost.location().port(), serviceHost.location().deviceId(),
+                                serviceHost.mac(), serviceIp, connection);
+                    }
                 }
-            }
             }
         }
     }
@@ -178,7 +178,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
      * @param ip4Address the ip address to search a host for
      * @return Service host location, default gateway host location or null
      */
-    private Host getConnectionServiceHost(Ip4Address ip4Address) {
+    private Set<Host> getConnectionServiceHost(Ip4Address ip4Address) {
 
         // get the byod config
         ByodConfig cfg = cfgService.getConfig(applicationIdStore.getAppId(APPLICATION_ID), ByodConfig.class);
@@ -189,15 +189,11 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
         if (ipPrefix.contains(ip4Address)) {
             // get the host of the service ip if possible
             Set<Host> serviceHosts = hostService.getHostsByIp(ip4Address);
-            if (serviceHosts.size() == 1) {
-                // found a host connected inside the local network, try routing to him
-                Host serviceHost = serviceHosts.iterator().next();
-                return serviceHost;
-            } else if (serviceHosts.isEmpty()) {
+            if (serviceHosts.isEmpty()) {
                 log.warn("ConnectionRuleInstaller: getConnectionServiceHost() - no host found for local ip={}.",
                         ip4Address);
             } else {
-                log.warn("ConnectionRuleInstaller: Found {} service hosts={} with ip={}. Choose unique IP address.",
+                log.warn("ConnectionRuleInstaller: Found {} service hosts={} with ip={}. Connecting to all hosts.",
                         Lists.newArrayList(
                                 serviceHosts.size(),
                                 serviceHosts.stream().map(Host::id).collect(Collectors.toSet()),
@@ -205,7 +201,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                                 .toArray());
             }
             // no host found
-            return null;
+            return serviceHosts;
         } else {
             // ip address not in local network -> send traffic to default gateway if possible
             // check if a default gateway is defined in the config
@@ -227,19 +223,19 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                     }
                     Host defaultGatewayHost = defaultGatewayHosts.iterator().next();
                     // using the default gateway as service location
-                    return defaultGatewayHost;
+                    return Sets.newHashSet(defaultGatewayHost);
                 } else {
                     // no service host and no default gateway found -> can not install connection!
                     log.warn("ConnectionRuleInstaller: No host in local network and no default gateway at {} found! " +
                                     "No connection installed for service with ip={}.",
                             cfg.defaultGateway(), ip4Address);
-                    return null;
+                    return Sets.newHashSet();
                 }
             } else {
                 // no service host and no default gateway found -> can not install connection!
                 log.warn("ConnectionRuleInstaller: No host in local network and no default gateway defined! " +
                         "No connection installed for service with ip={}.", ip4Address);
-                return null;
+                return Sets.newHashSet();
             }
         }
     }
@@ -249,15 +245,15 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
      * One for the direction user -> service
      * Another for the direction service -> user
      *
-     * @param userSidePort port directing towards the user
+     * @param userSidePort    port directing towards the user
      * @param serviceSidePort port directing towards the service
-     * @param forDeviceId device flow rule should be added to
-     * @param serviceMac MAC address of the service host
-     * @param serviceIp IP address of the service
-     * @param connection between user and service
+     * @param forDeviceId     device flow rule should be added to
+     * @param serviceMac      MAC address of the service host
+     * @param serviceIp       IP address of the service
+     * @param connection      between user and service
      */
     private void addFlows(PortNumber userSidePort, PortNumber serviceSidePort, DeviceId forDeviceId,
-                          MacAddress serviceMac, Ip4Address serviceIp, Connection connection){
+                          MacAddress serviceMac, Ip4Address serviceIp, Connection connection) {
         addFlowUserToService(userSidePort, serviceSidePort, forDeviceId, serviceMac, serviceIp, connection);
         addFlowServiceToUser(serviceSidePort, userSidePort, forDeviceId, serviceMac, serviceIp, connection);
     }
@@ -265,15 +261,15 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
     /**
      * Add the flow from the user to the service direction to the network device
      *
-     * @param inPort The in port, where the packets are coming in
-     * @param outPort The out port, where the packets are send to
+     * @param inPort      The in port, where the packets are coming in
+     * @param outPort     The out port, where the packets are send to
      * @param forDeviceId The device id where the flow is installed
-     * @param serviceMac MAC address of the service host
-     * @param serviceIp IP address of the service
-     * @param connection The connection the flows are installed for
+     * @param serviceMac  MAC address of the service host
+     * @param serviceIp   IP address of the service
+     * @param connection  The connection the flows are installed for
      */
     private void addFlowUserToService(PortNumber inPort, PortNumber outPort, DeviceId forDeviceId,
-                                      MacAddress serviceMac, Ip4Address serviceIp, Connection connection){
+                                      MacAddress serviceMac, Ip4Address serviceIp, Connection connection) {
 
         byte protocol = connection.getService().protocol();
 
@@ -282,7 +278,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
         // get the ip prefix of the network
         IpPrefix ipPrefix = Ip4Prefix.valueOf(cfg.defaultGateway(), cfg.prefixLength());
 
-        for(IpAddress userIp : connection.getUser().ipAddresses()) {
+        for (IpAddress userIp : connection.getUser().ipAddresses()) {
             // only install rules for ip addresses inside the local network
             if (userIp.isIp4() && ipPrefix.contains(userIp)) {
                 TrafficSelector.Builder trafficSelectorBuilder = DefaultTrafficSelector.builder()
@@ -292,17 +288,17 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                         .matchIPProtocol(protocol);
 
                 // do not match on IP address if it is defined as wildcard
-                if(!userIp.equals(Ip4Address.valueOf("0.0.0.0"))){
+                if (!userIp.equals(Ip4Address.valueOf("0.0.0.0"))) {
                     log.debug("DefaultConnectionRuleInstaller: UserIP wildcard set -> do not match on userIp.");
                     trafficSelectorBuilder.matchIPSrc(userIp.toIpPrefix());
                 }
-                if(!serviceIp.equals(Ip4Address.valueOf("0.0.0.0"))){
+                if (!serviceIp.equals(Ip4Address.valueOf("0.0.0.0"))) {
                     log.debug("DefaultConnectionRuleInstaller: ServiceIP wildcard set -> do not match on serviceIp.");
                     trafficSelectorBuilder.matchIPDst(serviceIp.toIpPrefix());
                 }
 
                 // only match on port if it is defined
-                if(connection.getService().tpPort() != null) {
+                if (connection.getService().tpPort() != null) {
                     if (protocol == IPv4.PROTOCOL_TCP) {
                         trafficSelectorBuilder.matchTcpDst(connection.getService().tpPort());
                     } else if (protocol == IPv4.PROTOCOL_UDP) {
@@ -315,7 +311,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
 
                 // check if the match ethernet destination is set true in config
                 // also match the ethernet destination for the internet service
-                if(MATCH_ETH_DST || connection.getService().name().equals("Internet")) {
+                if (MATCH_ETH_DST || connection.getService().name().equals("Internet")) {
                     trafficSelectorBuilder.matchEthDst(serviceMac);
                 }
 
@@ -331,11 +327,11 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                         .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
                         .makePermanent();
 
-                if(connection.getService().name().equals("PortalService")){
+                if (connection.getService().name().equals("PortalService")) {
                     // portal service has higher priority as all other services
                     // enabling portal communication even if another service is defined with the same values
                     forwardingObjective.withPriority(FLOW_PRIORITY + 10);
-                } else if(connection.getService().name().equals("Internet")){
+                } else if (connection.getService().name().equals("Internet")) {
                     // internet service has lower priority
                     forwardingObjective.withPriority(FLOW_PRIORITY - 10);
                 } else {
@@ -354,15 +350,15 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
     /**
      * Add the flow from the service to the user direction to the network device
      *
-     * @param inPort The in port, where the packets are coming in
-     * @param outPort The out port, where the packets are send to
+     * @param inPort      The in port, where the packets are coming in
+     * @param outPort     The out port, where the packets are send to
      * @param forDeviceId The device id where the flow is installed
-     * @param serviceMac MAC address of the service host
-     * @param serviceIp IP address of the service
-     * @param connection The connection the flows are installed for
+     * @param serviceMac  MAC address of the service host
+     * @param serviceIp   IP address of the service
+     * @param connection  The connection the flows are installed for
      */
     private void addFlowServiceToUser(PortNumber inPort, PortNumber outPort, DeviceId forDeviceId,
-                                      MacAddress serviceMac, Ip4Address serviceIp, Connection connection){
+                                      MacAddress serviceMac, Ip4Address serviceIp, Connection connection) {
 
         byte protocol = connection.getService().protocol();
 
@@ -371,7 +367,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
         // get the ip prefix of the network
         IpPrefix ipPrefix = Ip4Prefix.valueOf(cfg.defaultGateway(), cfg.prefixLength());
 
-        for(IpAddress userIp : connection.getUser().ipAddresses()) {
+        for (IpAddress userIp : connection.getUser().ipAddresses()) {
             // only install rules for ip addresses inside the local network
             if (userIp.isIp4() && ipPrefix.contains(userIp)) {
 
@@ -382,17 +378,17 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                         .matchIPProtocol(protocol);
 
                 // no ethernet source match for testing
-                if(!serviceIp.equals(Ip4Address.valueOf("0.0.0.0"))){
+                if (!serviceIp.equals(Ip4Address.valueOf("0.0.0.0"))) {
                     log.debug("DefaultConnectionRuleInstaller: ServiceIP wildcard set -> do not match on serviceIp.");
                     trafficSelectorBuilder.matchIPSrc(serviceIp.toIpPrefix());
                 }
-                if(!userIp.equals(Ip4Address.valueOf("0.0.0.0"))){
+                if (!userIp.equals(Ip4Address.valueOf("0.0.0.0"))) {
                     log.debug("DefaultConnectionRuleInstaller: UserIP wildcard set -> do not match on userIp.");
                     trafficSelectorBuilder.matchIPDst(userIp.toIpPrefix());
                 }
 
                 // only match on port if it is defined
-                if(connection.getService().tpPort() != null) {
+                if (connection.getService().tpPort() != null) {
                     if (protocol == IPv4.PROTOCOL_TCP) {
                         trafficSelectorBuilder.matchTcpSrc(connection.getService().tpPort());
                     } else if (protocol == IPv4.PROTOCOL_UDP) {
@@ -421,14 +417,14 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                         .fromApp(applicationIdStore.getAppId(APPLICATION_ID))
                         .makePermanent();
 
-                if(connection.getService().name().equals("PortalService")){
+                if (connection.getService().name().equals("PortalService")) {
                     // portal service has higher priority as all other services
                     // enabling portal communication even if another service is defined with the same values
                     forwardingObjective.withPriority(FLOW_PRIORITY + 10);
-                } else if(connection.getService().name().equals("Internet")){
+                } else if (connection.getService().name().equals("Internet")) {
                     // internet service has lower priority
                     forwardingObjective.withPriority(FLOW_PRIORITY - 10);
-                }  else {
+                } else {
                     forwardingObjective.withPriority(FLOW_PRIORITY);
                 }
 
