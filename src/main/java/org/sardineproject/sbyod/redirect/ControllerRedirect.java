@@ -60,7 +60,7 @@ public class ControllerRedirect implements PacketRedirectService {
             "Content-Length: 0\r\n" +
             "Connection: close\r\n\r\n";
 
-    private static int SEQUENCE_NUMBER = 0;
+    private static int sequence_number = 0;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected PacketService packetService;
@@ -282,16 +282,17 @@ public class ControllerRedirect implements PacketRedirectService {
             log.debug("ControllerRedirect: Sending SYN-ACK packet.");
 
             // ### respond with a SYN ACK ###
-            SEQUENCE_NUMBER = 0;
+            sequence_number = 0;
             tcpPacket.setFlags((short) (TCP_FLAG_MASK_SYN | TCP_FLAG_MASK_ACK))
                     .setAcknowledge(tcpPacket.getSequence() + 1)
-                    .setSequence(SEQUENCE_NUMBER++);
+                    .setSequence(sequence_number++);
 
             sendPacket(context);
         } else if((tcpFlags & TCP_FLAG_MASK_FIN) == (short) TCP_FLAG_MASK_FIN){
+            int acknowledge = tcpPacket.getAcknowledge();
             tcpPacket.setFlags((short) (TCP_FLAG_MASK_ACK))
                     .setAcknowledge(tcpPacket.getSequence() + 1)
-                    .setSequence(tcpPacket.getAcknowledge());
+                    .setSequence(acknowledge);
 
             sendPacket(context);
 
@@ -308,7 +309,7 @@ public class ControllerRedirect implements PacketRedirectService {
             // ### acknowledge the received packet ###
             tcpPacket.setFlags((short) TCP_FLAG_MASK_ACK)
                     .setAcknowledge(acknowledgmentNumber)
-                    .setSequence(SEQUENCE_NUMBER);
+                    .setSequence(sequence_number);
             // no payload
             tcpPacket.setPayload(new Data());
             sendPacket(context);
@@ -317,13 +318,13 @@ public class ControllerRedirect implements PacketRedirectService {
             // ### send HTTP redirect ###
             tcpPacket.setFlags((short)17) // ACK and FIN
                     .setAcknowledge(acknowledgmentNumber)
-                    .setSequence(SEQUENCE_NUMBER);
+                    .setSequence(sequence_number);
             // http 302 redirect as payload
             Data packetData = new Data();
             packetData.setData(HTTP_REDIRECT.getBytes());
             tcpPacket.setPayload(packetData);
             // calculate new sequence number
-            SEQUENCE_NUMBER += packetData.getData().length;
+            sequence_number += packetData.getData().length;
             sendPacket(context);
 
         } else{
