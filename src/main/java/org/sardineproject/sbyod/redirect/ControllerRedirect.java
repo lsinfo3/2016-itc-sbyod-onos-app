@@ -286,6 +286,13 @@ public class ControllerRedirect implements PacketRedirectService {
                     .setSequence(SEQUENCE_NUMBER++);
 
             sendPacket(context);
+        } else if((tcpFlags & TCP_FLAG_MASK_FIN) == (short) TCP_FLAG_MASK_FIN){
+            tcpPacket.setFlags((short) (TCP_FLAG_MASK_ACK))
+                    .setAcknowledge(tcpPacket.getSequence() + 1)
+                    .setSequence(tcpPacket.getAcknowledge());
+
+            sendPacket(context);
+
         } else if((tcpFlags & TCP_FLAG_MASK_PSH) == (short)TCP_FLAG_MASK_PSH) {
             // packet has PSH flag set (probably GET request)
             log.debug("ControllerRedirect: Sending ACK packet for received push request. " +
@@ -306,7 +313,7 @@ public class ControllerRedirect implements PacketRedirectService {
 
 
             // ### send HTTP redirect ###
-            tcpPacket.setFlags((short)24) // PSH and ACK
+            tcpPacket.setFlags((short)17) // ACK and FIN
                     .setAcknowledge(acknowledgmentNumber)
                     .setSequence(SEQUENCE_NUMBER);
             // http 302 redirect as payload
@@ -315,15 +322,6 @@ public class ControllerRedirect implements PacketRedirectService {
             tcpPacket.setPayload(packetData);
             // calculate new sequence number
             SEQUENCE_NUMBER += packetData.getData().length;
-            sendPacket(context);
-
-
-            // ### send FIN ###
-            tcpPacket.setFlags((short) TCP_FLAG_MASK_RST)
-                    .setAcknowledge(acknowledgmentNumber)
-                    .setSequence(SEQUENCE_NUMBER);
-            // no payload
-            tcpPacket.setPayload(new Data());
             sendPacket(context);
 
         } else{
