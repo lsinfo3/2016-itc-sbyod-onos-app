@@ -230,7 +230,9 @@ public class ControllerRedirect implements PacketRedirectService {
                     ### otherwise it would have been handled by these rules.
                     ### Therefore a redirect is done to the portal.
                     */
-                    injectRedirect(context);
+                    if(((TCP)ipv4Packet.getPayload()).getDestinationPort() == 80) {
+                        injectRedirect(context);
+                    }
                 }
             }
         }
