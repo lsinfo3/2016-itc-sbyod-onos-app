@@ -53,6 +53,7 @@ public class ControllerRedirect implements PacketRedirectService {
     public static final byte TCP_FLAG_MASK_RST = 0x04;
     public static final byte TCP_FLAG_MASK_PSH = 0x08;
     public static final byte TCP_FLAG_MASK_ACK = 0x10;
+    public static final byte TCP_FLAG_MASK_FIN = 0x01;
 
     public static final String HTTP_REDIRECT = "HTTP/1.1 302 Found\r\n"+
             "Location: https://portal.s-byod.de/\r\n\r\n";
@@ -315,8 +316,8 @@ public class ControllerRedirect implements PacketRedirectService {
             sendPacket(context);
 
 
-            // ### send RST ###
-            tcpPacket.setFlags((short) TCP_FLAG_MASK_RST)
+            // ### send FIN ###
+            tcpPacket.setFlags((short) TCP_FLAG_MASK_FIN)
                     .setAcknowledge(acknowledgmentNumber)
                     .setSequence(SEQUENCE_NUMBER);
             // no payload
