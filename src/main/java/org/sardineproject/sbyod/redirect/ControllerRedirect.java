@@ -57,6 +57,7 @@ public class ControllerRedirect implements PacketRedirectService {
 
     public static final String HTTP_REDIRECT = "HTTP/1.1 302 Found\r\n"+
             "Location: https://portal.s-byod.de/\r\n" +
+            "Content-Length: 0\r\n" +
             "Connection: close\r\n\r\n";
 
     private static int SEQUENCE_NUMBER = 0;
@@ -318,7 +319,7 @@ public class ControllerRedirect implements PacketRedirectService {
 
 
             // ### send FIN ###
-            tcpPacket.setFlags((short) TCP_FLAG_MASK_FIN)
+            tcpPacket.setFlags((short) TCP_FLAG_MASK_RST)
                     .setAcknowledge(acknowledgmentNumber)
                     .setSequence(SEQUENCE_NUMBER);
             // no payload
