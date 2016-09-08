@@ -11,6 +11,9 @@ The [Consul] service discovery application is supported by the S-BYOD applicatio
 allowing the integration of discovered network services into the available services
 of the BYOD network.
 
+![sardine-structure](https://cloud.githubusercontent.com/assets/19173704/18344545/17737cec-75b8-11e6-8e27-ff8129a30284.png)
+The Figure shows an example use case of the Sardine-BYOD application using three hardware switches, two access points and a private cloud. A similiar set-up can be found inside the **examples** folder.
+
 #### Note
 The S-BYOD Application is an extension of the [ONOS] project.
 Therefore a running ONOS instances is a pre-condition to start this application.
