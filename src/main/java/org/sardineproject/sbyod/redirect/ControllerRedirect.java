@@ -323,9 +323,11 @@ public class ControllerRedirect implements PacketRedirectService {
 
 
             // ### send HTTP redirect ###
+            // sequence number of answer is the acknowledged number of received packet
+            int sequenceNumber = tcpPacket.getAcknowledge();
             tcpPacket.setFlags((short) (TCP_FLAG_MASK_ACK | TCP_FLAG_MASK_FIN)) // ACK and FIN
                     .setAcknowledge(tcpPacket.getSequence() + dataPayload.getData().length)
-                    .setSequence(tcpPacket.getAcknowledge());
+                    .setSequence(sequenceNumber);
             // http 302 redirect as payload
             Data packetData = new Data();
             packetData.setData(http_redirect.getBytes());
