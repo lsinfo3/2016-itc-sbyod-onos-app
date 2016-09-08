@@ -157,7 +157,12 @@ public class PortalManager implements PortalService {
 
                 // update redirect service
                 packetRedirectService.stopRedirect();
-                packetRedirectService.activateRedirect();
+                String portalUrl = cfgService.getConfig(appId, ByodConfig.class).portalUrl();
+                if(portalUrl != null) {
+                    packetRedirectService.activateRedirect(portalUrl);
+                } else{
+                    log.warn("PortalManager: No portal URL defined in 'network-cfg.json'! Redirect to portal is not possible.");
+                }
 
                 log.debug("Portal is up. IP = {}, TpPort = {}, ID = {}",
                         Lists.newArrayList(portalIp.toString(), portalPort.toString(), this.portalId.toString()).toArray());

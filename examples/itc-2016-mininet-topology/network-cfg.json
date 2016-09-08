@@ -25,7 +25,8 @@
         "defaultGateway": "10.1.0.1",
         "consulPort": 8500,
         "matchEthDst": false,
-        "prefixLength": 16
+        "prefixLength": 16,
+        "portalUrl": "10.1.0.2"
       }
     }
   }

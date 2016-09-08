@@ -27,10 +27,8 @@ import org.onosproject.net.packet.PacketContext;
  */
 public interface PacketRedirectService {
 
-    /**
-     * Activate the redirect to the specified host
-     */
-    void activateRedirect();
+
+    void activateRedirect(String redirectUrl);
 
     /**
      * Stop the redirect of packets

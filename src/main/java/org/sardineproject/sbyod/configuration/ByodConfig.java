@@ -37,19 +37,22 @@ public class ByodConfig extends Config<ApplicationId> {
     public static final String CONSUL_PORT = "consulPort";
     public static final String MATCH_ETH_DST = "matchEthDst";
     public static final String PREFIX_LENGTH = "prefixLength";
+    public static final String PORTAL_URL = "redirectUrl";
 
 
     // TODO: check if config is valid
     @Override
     public boolean isValid(){
-        return hasOnlyFields(PORTAL_IP, PORTAL_PORT, DEFAULT_GATEWAY, CONSUL_IP, CONSUL_PORT, MATCH_ETH_DST, PREFIX_LENGTH) &&
+        return hasOnlyFields(PORTAL_IP, PORTAL_PORT, DEFAULT_GATEWAY, CONSUL_IP, CONSUL_PORT, MATCH_ETH_DST,
+                    PREFIX_LENGTH, PORTAL_URL) &&
                 isIpAddress(PORTAL_IP, OPTIONAL) &&
                 isNumber(PORTAL_PORT, OPTIONAL, 1, 10000) &&
                 isIpAddress(DEFAULT_GATEWAY, MANDATORY) &&
                 isIpAddress(CONSUL_IP, OPTIONAL) &&
                 isNumber(CONSUL_PORT, OPTIONAL, 1, 10000) &&
                 isBoolean(MATCH_ETH_DST, OPTIONAL) &&
-                isNumber(PREFIX_LENGTH, FieldPresence.MANDATORY, 0, 32);
+                isNumber(PREFIX_LENGTH, FieldPresence.MANDATORY, 0, 32) &
+                isString(PORTAL_URL, FieldPresence.OPTIONAL);
     }
 
     /**
@@ -184,6 +187,26 @@ public class ByodConfig extends Config<ApplicationId> {
      */
     public BasicElementConfig prefixLength(String prefixLength) {
         return (BasicElementConfig) setOrClear(PREFIX_LENGTH, prefixLength);
+    }
+
+    /**
+     * Returns the portal url used for redirect.
+     *
+     * @return portal url or null if not set
+     */
+    public String portalUrl(){
+        String portalUrl = get(PORTAL_URL, null);
+        return portalUrl != null ? portalUrl : null;
+    }
+
+    /**
+     * Sets the portal url.
+     *
+     * @param portalUrl redirectUrl new portal Url; null to clear
+     * @return self
+     */
+    public BasicElementConfig portalUrl(String portalUrl){
+        return (BasicElementConfig) setOrClear(PORTAL_URL, portalUrl);
     }
 
 }

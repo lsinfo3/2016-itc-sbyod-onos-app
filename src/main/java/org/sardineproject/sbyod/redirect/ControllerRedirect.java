@@ -55,8 +55,9 @@ public class ControllerRedirect implements PacketRedirectService {
     public static final byte TCP_FLAG_MASK_ACK = 0x10;
     public static final byte TCP_FLAG_MASK_FIN = 0x01;
 
+    private static String redirectUrl = "";
     public static final String HTTP_REDIRECT = "HTTP/1.1 302 Found\r\n"+
-            "Location: https://portal.s-byod.de/\r\n" +
+            "Location: " + redirectUrl + "\r\n" +
             "Content-Length: 0\r\n" +
             "Connection: close\r\n\r\n";
 
@@ -92,19 +93,22 @@ public class ControllerRedirect implements PacketRedirectService {
 
     /**
      * Activate the redirect to the specified host
+     * @param redirectUrl the URL redirecting to
      */
-    public void activateRedirect(){
-                // initiate empty rules map
-                installedRules = new HashMap<>();
-                // install rules sending relevant packets to controller
-                installRedirectRules();
+    public void activateRedirect(String redirectUrl) {
 
-                // add packet processor monitoring packets
-                processor = new ReactivePacketProcessor();
-                packetService.addProcessor(processor, PacketProcessor.director(2));
-                requestIntercepts();
+        ControllerRedirect.redirectUrl = redirectUrl;
+        // initiate empty rules map
+        installedRules = new HashMap<>();
+        // install rules sending relevant packets to controller
+        installRedirectRules();
 
-                log.info("ControllerRedirect: activated!");
+        // add packet processor monitoring packets
+        processor = new ReactivePacketProcessor();
+        packetService.addProcessor(processor, PacketProcessor.director(2));
+        requestIntercepts();
+
+        log.debug("ControllerRedirect: activated!");
     }
 
     /**
@@ -130,7 +134,7 @@ public class ControllerRedirect implements PacketRedirectService {
 
         this.installedRules = null;
 
-        log.info("ControllerRedirect: stopped!");
+        log.debug("ControllerRedirect: stopped!");
     }
 
     /**
