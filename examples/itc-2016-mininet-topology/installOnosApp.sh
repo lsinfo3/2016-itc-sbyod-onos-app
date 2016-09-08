@@ -86,7 +86,7 @@ cp $HOME/2016-itc-sbyod-onos-app/examples/sbyodMininet/pythonRedirect.py $HOME/
 
 echo "----------Startup Instructions----------------"
 
-if [ -f $HOME/2016-itc-sbyod-onos-app/target/sbyod-1.0-SNAPSHOT.oar ]
+if [ -f $HOME/2016-itc-sbyod-onos-app/target/sbyod-1.0.0.oar ]
   then
     echo "S-BYOD application created successful."
     echo "Check the 'network-cfg.json' file inside the $HOME/Applications/config/ folder before starting ONOS."
