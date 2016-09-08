@@ -56,7 +56,7 @@ public class ControllerRedirect implements PacketRedirectService {
     public static final byte TCP_FLAG_MASK_FIN = 0x01;
 
     private static String redirectUrl = "";
-    public static final String HTTP_REDIRECT = "HTTP/1.1 302 Found\r\n"+
+    public static String HTTP_REDIRECT = "HTTP/1.1 302 Found\r\n"+
             "Location: " + redirectUrl + "\r\n" +
             "Content-Length: 0\r\n" +
             "Connection: close\r\n\r\n";
