@@ -55,11 +55,7 @@ public class ControllerRedirect implements PacketRedirectService {
     public static final byte TCP_FLAG_MASK_ACK = 0x10;
     public static final byte TCP_FLAG_MASK_FIN = 0x01;
 
-    private static String redirectUrl = "";
-    public static String HTTP_REDIRECT = "HTTP/1.1 302 Found\r\n"+
-            "Location: " + redirectUrl + "\r\n" +
-            "Content-Length: 0\r\n" +
-            "Connection: close\r\n\r\n";
+    public static String http_redirect;
 
     private static int sequence_number = 0;
 
@@ -97,7 +93,11 @@ public class ControllerRedirect implements PacketRedirectService {
      */
     public void activateRedirect(String redirectUrl) {
 
-        ControllerRedirect.redirectUrl = redirectUrl;
+        http_redirect = "HTTP/1.1 302 Found\r\n"+
+                "Location: " + redirectUrl + "\r\n" +
+                "Content-Length: 0\r\n" +
+                "Connection: close\r\n\r\n";
+
         // initiate empty rules map
         installedRules = new HashMap<>();
         // install rules sending relevant packets to controller
@@ -325,7 +325,7 @@ public class ControllerRedirect implements PacketRedirectService {
                     .setSequence(sequence_number);
             // http 302 redirect as payload
             Data packetData = new Data();
-            packetData.setData(HTTP_REDIRECT.getBytes());
+            packetData.setData(http_redirect.getBytes());
             tcpPacket.setPayload(packetData);
             // calculate new sequence number
             sequence_number += packetData.getData().length;
