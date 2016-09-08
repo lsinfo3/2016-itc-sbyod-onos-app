@@ -26,7 +26,8 @@
         "consulIp": "172.16.37.12",
         "consulPort": 8500,
         "matchEthDst": false,
-        "prefixLength": 16
+        "prefixLength": 16,
+        "portalUrl": "https://10.1.0.2/"
       }
     }
   }
