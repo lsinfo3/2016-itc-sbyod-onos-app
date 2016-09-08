@@ -80,8 +80,7 @@ cd ./mininet
 git checkout -b 2.2.1 2.2.1
 cd ..
 ./mininet/util/install.sh -a
-cp $HOME/2016-itc-sbyod-onos-app/examples/sbyodMininet/mininetSBYOD.py $HOME/
-cp $HOME/2016-itc-sbyod-onos-app/examples/sbyodMininet/pythonRedirect.py $HOME/
+cp $HOME/2016-itc-sbyod-onos-app/examples/itc-2016-mininet-topology/mininetSBYOD.py $HOME/
 
 
 echo "----------Startup Instructions----------------"

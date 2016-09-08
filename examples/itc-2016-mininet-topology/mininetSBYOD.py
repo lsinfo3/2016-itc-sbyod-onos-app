@@ -64,7 +64,6 @@ def sbyodTestingNetwork():
 
     info( '*** Starting Simple HTTP Server on Portal\n')
     portalHost.cmd('python -m SimpleHTTPServer 443 &')
-    portalHost.cmd('python pythonRedirect.py &')
 
     info( '*** Running CLI\n' )
     CLI( net )
