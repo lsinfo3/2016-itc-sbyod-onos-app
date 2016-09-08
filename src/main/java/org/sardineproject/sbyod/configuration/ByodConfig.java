@@ -39,8 +39,6 @@ public class ByodConfig extends Config<ApplicationId> {
     public static final String PREFIX_LENGTH = "prefixLength";
     public static final String PORTAL_URL = "redirectUrl";
 
-
-    // TODO: check if config is valid
     @Override
     public boolean isValid(){
         return hasOnlyFields(PORTAL_IP, PORTAL_PORT, DEFAULT_GATEWAY, CONSUL_IP, CONSUL_PORT, MATCH_ETH_DST,
@@ -51,8 +49,7 @@ public class ByodConfig extends Config<ApplicationId> {
                 isIpAddress(CONSUL_IP, OPTIONAL) &&
                 isNumber(CONSUL_PORT, OPTIONAL, 1, 10000) &&
                 isBoolean(MATCH_ETH_DST, OPTIONAL) &&
-                isNumber(PREFIX_LENGTH, FieldPresence.MANDATORY, 0, 32) &
-                isString(PORTAL_URL, FieldPresence.OPTIONAL);
+                isNumber(PREFIX_LENGTH, FieldPresence.MANDATORY, 0, 32);
     }
 
     /**

@@ -192,7 +192,7 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
             if (serviceHosts.isEmpty()) {
                 log.warn("ConnectionRuleInstaller: getConnectionServiceHost() - no host found for local ip={}.",
                         ip4Address);
-            } else {
+            } else if(serviceHosts.size() > 1){
                 log.warn("ConnectionRuleInstaller: Found {} service hosts={} with ip={}. Connecting to all hosts.",
                         Lists.newArrayList(
                                 serviceHosts.size(),
@@ -200,7 +200,6 @@ public class DefaultConnectionRuleInstaller implements ConnectionRuleInstaller {
                                 ip4Address)
                                 .toArray());
             }
-            // no host found
             return serviceHosts;
         } else {
             // ip address not in local network -> send traffic to default gateway if possible
