@@ -286,13 +286,14 @@ public class ControllerRedirect implements PacketRedirectService {
             log.debug("ControllerRedirect: Sending SYN-ACK packet.");
 
             // ### respond with a SYN ACK ###
-            sequence_number = 0;
             tcpPacket.setFlags((short) (TCP_FLAG_MASK_SYN | TCP_FLAG_MASK_ACK))
                     .setAcknowledge(tcpPacket.getSequence() + 1)
-                    .setSequence(sequence_number++);
+                    .setSequence(0);
 
             sendPacket(context);
-        } else if((tcpFlags & TCP_FLAG_MASK_FIN) == (short) TCP_FLAG_MASK_FIN){
+
+        } else if(tcpFlags == ((short) (TCP_FLAG_MASK_FIN | TCP_FLAG_MASK_ACK))){
+            // packet has only FIN and ACK flags set
             int acknowledge = tcpPacket.getAcknowledge();
             tcpPacket.setFlags((short) (TCP_FLAG_MASK_ACK))
                     .setAcknowledge(tcpPacket.getSequence() + 1)
@@ -310,6 +311,7 @@ public class ControllerRedirect implements PacketRedirectService {
             Integer acknowledgmentNumber = tcpPacket.getSequence() + dataPayload.getData().length;
 
 
+            /*
             // ### acknowledge the received packet ###
             tcpPacket.setFlags((short) TCP_FLAG_MASK_ACK)
                     .setAcknowledge(acknowledgmentNumber)
@@ -317,12 +319,13 @@ public class ControllerRedirect implements PacketRedirectService {
             // no payload
             tcpPacket.setPayload(new Data());
             sendPacket(context);
+            */
 
 
             // ### send HTTP redirect ###
-            tcpPacket.setFlags((short)17) // ACK and FIN
-                    .setAcknowledge(acknowledgmentNumber)
-                    .setSequence(sequence_number);
+            tcpPacket.setFlags((short) (TCP_FLAG_MASK_ACK | TCP_FLAG_MASK_FIN)) // ACK and FIN
+                    .setAcknowledge(tcpPacket.getSequence() + dataPayload.getData().length)
+                    .setSequence(tcpPacket.getAcknowledge());
             // http 302 redirect as payload
             Data packetData = new Data();
             packetData.setData(http_redirect.getBytes());
