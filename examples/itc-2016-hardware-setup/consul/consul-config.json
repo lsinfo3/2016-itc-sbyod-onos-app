@@ -1,0 +1,6 @@
+{
+  "data_dir" : "/opt/consul",
+  "addresses" : {
+    "http" : "0.0.0.0"
+  }
+}

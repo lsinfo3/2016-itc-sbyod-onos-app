@@ -68,14 +68,14 @@ if [ -d $HOME/2016-itc-sbyod-onos-app ]
     mvn clean install -DskipTests
 
     mkdir $HOME/Applications/config
-    cp $HOME/2016-itc-sbyod-onos-app/examples/exampleConfiguration/network-cfg.json $HOME/Applications/config/
+    cp $HOME/2016-itc-sbyod-onos-app/examples/itc-2016-hardware-setup/onos-app/network-cfg.json $HOME/Applications/config/
   else
     echo "S-BYOD folder not found. S-BYOD application not installed."
 fi
 
 echo "----------Startup Instructions----------------"
 
-if [ -f $HOME/2016-itc-sbyod-onos-app/target/sbyod-1.0-SNAPSHOT.oar ]
+if [ -f $HOME/2016-itc-sbyod-onos-app/target/sbyod-1.0.0.oar ]
   then
     echo "S-BYOD application created successful."
     echo "Check the 'network-cfg.json' file inside the $HOME/Applications/config/ folder before starting ONOS."
