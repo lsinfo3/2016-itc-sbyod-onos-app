@@ -30,6 +30,10 @@
         <onos.version>1.5.1</onos.version>
         <onos.app.name>org.sardineproject.sbyod</onos.app.name>
         <onos.app.origin>Sardine Project</onos.app.origin>
+        <onos.app.title>Sardine-BYOD Application</onos.app.title>
+        <onos.app.category>Traffic Steering</onos.app.category>
+        <onos.app.url>https://github.com/lsinfo3/2016-itc-sbyod-onos-app</onos.app.url>
+        <onos.app.readme>A personalized Secure-By-Default Bring Your Own Device Solution.</onos.app.readme>
         <!-- rest begin -->
         <web.context>/onos/sbyod</web.context>
         <api.description>Bring your own device REST API of the sardine project</api.description>

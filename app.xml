@@ -16,8 +16,9 @@
   ~
   ~
   -->
-<app name="${project.groupId}.${project.artifactId}" origin="${project.properties.onos.app.origin}" version="${project.version}"
-     url="${project.url}" title="${project.properties.api.title}"
+<app name="org.sardineproject.sbyod" origin="Sardine Project" version="${project.version}"
+     title="Sardine-BYOD Application" category="Traffic Steering"
+     url="https://github.com/lsinfo3/2016-itc-sbyod-onos-app"
      featuresRepo="mvn:${project.groupId}/${project.artifactId}/${project.version}/xml/features"
      features="${project.artifactId}" apps="">
     <description>ONOS OSGi bundle archetype</description>
