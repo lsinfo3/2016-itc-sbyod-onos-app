@@ -335,6 +335,7 @@ public class ConsulServiceApi implements ConsulService {
                 List<HealthService> healthServices = consulClient.getHealthServices(serviceNameEncoded, true, queryParams).getValue();
                 for(HealthService hs : healthServices){
                     log.info("ConsulService Checks: HealthService:\n{}", hs);
+                    log.info("ConsulService Checks:\nhealth Service Address = {}\nCatalog Service Address = {}", hs.getService().getAddress(), catalogService.getAddress());
                     if(hs.getService().getAddress().equals(catalogService.getAddress())){
                         isPassing = true;
                     }
