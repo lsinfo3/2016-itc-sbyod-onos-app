@@ -334,8 +334,8 @@ public class ConsulServiceApi implements ConsulService {
                 // query consul for the service description and bundle combined services together
                 List<HealthService> healthServices = consulClient.getHealthServices(serviceNameEncoded, true, queryParams).getValue();
                 for(HealthService hs : healthServices){
-                    log.info("ConsulService Checks: HealthService:\n{}", hs);
-                    log.info("ConsulService Checks:\nhealth Service Address = {}\nCatalog Service Address = {}", hs.getService().getAddress(), catalogService.getServiceAddress());
+                    log.debug("ConsulService Checks: HealthService:\n{}", hs);
+                    log.debug("ConsulService Checks:\nhealth Service Address = {}\nCatalog Service Address = {}", hs.getService().getAddress(), catalogService.getServiceAddress());
                     if(hs.getService().getAddress().equals(catalogService.getServiceAddress())){
                         isPassing = true;
                     }
@@ -346,7 +346,7 @@ public class ConsulServiceApi implements ConsulService {
                 e.printStackTrace();
             }
         }
-        log.info("ConsulServiceChecks: Is Passing: {}", isPassing);
+        log.debug("ConsulServiceChecks: Is Passing: {}", isPassing);
         return isPassing;
     }
 
