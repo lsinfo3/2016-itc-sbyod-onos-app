@@ -22,6 +22,7 @@ import com.ecwid.consul.v1.ConsulClient;
 import com.ecwid.consul.v1.QueryParams;
 import com.ecwid.consul.v1.Response;
 import com.ecwid.consul.v1.catalog.model.CatalogService;
+import com.ecwid.consul.v1.health.model.HealthService;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.felix.scr.annotations.*;
@@ -281,19 +282,20 @@ public class ConsulServiceApi implements ConsulService {
         // get the set of service IP addresses
         Set<Ip4Address> ip4AddressSet = Sets.newHashSet();
         for(CatalogService catalogService : catalogServiceList) {
-            Ip4Address serviceIpAddress = null;
-            try {
-                if (catalogService.getServiceAddress().isEmpty()) {
-                    // use the default ip address of the consul cluster
-                    ip4AddressSet.add(Ip4Address.valueOf(catalogService.getAddress()));
-                } else {
-                    // get the ip address of the service
-                    ip4AddressSet.add(Ip4Address.valueOf(catalogService.getServiceAddress()));
+            if (checkService(catalogService)) {
+                try {
+                    if (catalogService.getServiceAddress().isEmpty()) {
+                        // use the default ip address of the consul cluster
+                        ip4AddressSet.add(Ip4Address.valueOf(catalogService.getAddress()));
+                    } else {
+                        // get the ip address of the service
+                        ip4AddressSet.add(Ip4Address.valueOf(catalogService.getServiceAddress()));
+                    }
+                } catch (IllegalArgumentException e) {
+                    log.warn("ConsulServiceApi: No correct ip address format = {}, Error: {}",
+                            catalogService.getServiceAddress(), e);
+                    return;
                 }
-            } catch (IllegalArgumentException e) {
-                log.warn("ConsulServiceApi: No correct ip address format = {}, Error: {}",
-                        catalogService.getServiceAddress(), e);
-                return;
             }
         }
 
@@ -313,6 +315,36 @@ public class ConsulServiceApi implements ConsulService {
         consulServices.add(service.build());
         log.debug("ConsulServiceApi: Added service {} to collection.", service.build());
 
+    }
+
+    private boolean checkService(CatalogService catalogService){
+        boolean isPassing = false;
+
+        QueryParams queryParams = new QueryParams("");
+        if(consulClient != null){
+
+            try {
+                // encode name to url - replacing spaces with '%20' for example
+                URL url = new URI("http", "example.com", "/" + catalogService.getServiceName() + "/", "").toURL();
+                // get only the path part of the url
+                String serviceNameEncoded = url.getPath();
+                // remove the backspaces
+                serviceNameEncoded = serviceNameEncoded.substring(1, serviceNameEncoded.length() - 1);
+
+                // query consul for the service description and bundle combined services together
+                List<HealthService> healthServices = consulClient.getHealthServices(serviceNameEncoded, true, queryParams).getValue();
+                for(HealthService hs : healthServices){
+                    if(hs.getService().getAddress().equals(catalogService.getAddress())){
+                        isPassing = true;
+                    }
+                }
+            } catch (URISyntaxException e) {
+                e.printStackTrace();
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            }
+        }
+        return isPassing;
     }
 
     private class CheckConsulCatalogServiceUpdates extends Thread{
