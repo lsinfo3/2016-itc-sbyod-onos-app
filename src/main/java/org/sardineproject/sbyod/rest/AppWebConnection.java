@@ -69,9 +69,9 @@ public class AppWebConnection extends AbstractWebResource {
                     .put("ip4Address", connection.getService().ipAddressSet().iterator().next().toString());
 
             //connection.getForwardingObjectives().size();
-            ObjectNode forwardingObjectives = mapper().createObjectNode()
-                    .put("selector", connection.getForwardingObjectives().keySet().iterator().next().selector().toString())
-                    .put("deviceId", connection.getForwardingObjectives().values().toString());
+            //ObjectNode forwardingObjectives = mapper().createObjectNode()
+            //        .put("selector", connection.getForwardingObjectives().keySet().iterator().next().selector().toString())
+            //        .put("deviceId", connection.getForwardingObjectives().values().toString());
 
             /*ArrayNode deviceArray = mapper().createArrayNode();
             for(DeviceId deviceId : connection.getForwardingObjectives().values())
