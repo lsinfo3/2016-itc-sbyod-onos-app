@@ -82,7 +82,7 @@ public class AppWebConnection extends AbstractWebResource {
 
             connectionNode.set("user", userNode);
             connectionNode.set("service", serviceNode);
-            connectionNode.set("forwardingObjective", forwardingObjectives);
+            //connectionNode.set("forwardingObjective", forwardingObjectives);
 
             arrayNode.add(connectionNode);
 
