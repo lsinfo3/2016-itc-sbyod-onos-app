@@ -90,7 +90,7 @@ public class AppWebConnection extends AbstractWebResource {
                     //.put("ip4Address", connection.getService().ipAddressSet().iterator().next().toString());
 
 
-            //create deviceArray JSON Array
+            //create deviceArray JSON Array (devices with corresponding flow rules for services)
             ArrayNode deviceArray = mapper().createArrayNode();
             //parse to SET to avoid duplicates
             Set<DeviceId> devices = new HashSet<DeviceId>(connection.getForwardingObjectives().values());
@@ -109,7 +109,7 @@ public class AppWebConnection extends AbstractWebResource {
                 deviceArray.add(deviceNode);
             }
 
-
+            //creates the JSON object to return
             connectionNode.set("user", userNode);
             connectionNode.set("service", serviceNode);
             connectionNode.set("devices", deviceArray);
