@@ -52,6 +52,11 @@ public class AppWebConnection extends AbstractWebResource {
 
         while(connectionIterator.hasNext()) {
             Connection connection = connectionIterator.next();
+            // Do not return standard services
+            if(connection.getService().name().toString().equals("DnsServiceTcp")
+                    || connection.getService().name().toString().equals("DnsServiceUdp")
+                    || connection.getService().name().toString().equals("PortalService"))
+                continue;
 
             ObjectNode connectionNode = mapper().createObjectNode();
 
@@ -67,12 +72,6 @@ public class AppWebConnection extends AbstractWebResource {
                     .put("serviceId", connection.getService().id().toString())
                     .put("serviceTpPort", connection.getService().tpPort().toString())
                     .put("ip4Address", connection.getService().ipAddressSet().iterator().next().toString());
-
-
-            /*
-                    .put("selector", connection.getForwardingObjectives().keySet().iterator().next().selector().toString())
-                    .put("deviceId", connection.getForwardingObjectives().values().toString());
-            */
 
             ArrayNode deviceArray = mapper().createArrayNode();
 
