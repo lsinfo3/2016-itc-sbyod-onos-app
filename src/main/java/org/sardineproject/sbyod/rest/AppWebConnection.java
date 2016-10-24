@@ -15,8 +15,10 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.core.Response;
 
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 import static org.slf4j.LoggerFactory.getLogger;
 
@@ -74,7 +76,8 @@ public class AppWebConnection extends AbstractWebResource {
 
             ArrayNode deviceArray = mapper().createArrayNode();
 
-            for (DeviceId deviceId : connection.getForwardingObjectives().values()){
+            Set<DeviceId> devices = new HashSet<DeviceId>(connection.getForwardingObjectives().values());
+            for (DeviceId deviceId : devices){
                 ObjectNode deviceNode = mapper().createObjectNode();
                 deviceNode.put("deviceId", deviceId.toString());
 
