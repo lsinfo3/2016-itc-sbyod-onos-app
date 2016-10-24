@@ -25,7 +25,7 @@ import static org.slf4j.LoggerFactory.getLogger;
  * returns connections consiting of (user, active services, flow objective count)
  * works like cli command "list-connections"
  */
-@Path("")
+@Path("/connections")
 public class AppWebConnection extends AbstractWebResource {
 
     private static final Logger log = getLogger(PortalManager.class);
@@ -41,7 +41,7 @@ public class AppWebConnection extends AbstractWebResource {
      * @return array of connections
      */
     @GET
-    @Path("/connections")
+    @Path("")
     public Response getServices(){
         log.debug("AppWebUser: Getting all active connections");
         connectionStore = get(ConnectionStore.class);
@@ -94,7 +94,7 @@ public class AppWebConnection extends AbstractWebResource {
                 }
             }
             */
-            
+
             connectionNode.set("user", userNode);
             connectionNode.set("service", serviceNode);
             connectionNode.set("devices", deviceArray);
