@@ -3,6 +3,7 @@ package org.sardineproject.sbyod.rest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.onlab.packet.IpAddress;
 import org.onosproject.net.DeviceId;
 import org.onosproject.rest.AbstractWebResource;
 import org.sardineproject.sbyod.cli.completer.DeviceIdCompleter;
@@ -60,21 +61,38 @@ public class AppWebConnection extends AbstractWebResource {
 
             ObjectNode connectionNode = mapper().createObjectNode();
 
-            ObjectNode userNode = mapper().createObjectNode()
+            // create userNode JSON object
+            ObjectNode locationNode = mapper().createObjectNode()
+                    .put("elementId", connection.getUser().location().elementId().toString())
+                    .put("port", connection.getUser().location().port().toString());
+            ArrayNode userIpArray = mapper().createArrayNode();
+            for(IpAddress ipAddress : connection.getUser().ipAddresses()) {
+                userIpArray.add(ipAddress.toString());
+            }
+            ObjectNode userNode = (ObjectNode) mapper().createObjectNode()
                     .put("id", connection.getUser().id().toString())
                     .put("mac", connection.getUser().mac().toString())
                     .put("vlan", connection.getUser().vlan().toString())
-                    .put("ipAddress", connection.getUser().ipAddresses().iterator().next().toString());
-            //.put("location", connection.getUser().location());
+                    .set("ipAddresses", userIpArray);
+            userNode.set("location", locationNode);
 
-            ObjectNode serviceNode = mapper().createObjectNode()
+
+            //create serviceNode JSON object
+            ArrayNode serviceIpArray = mapper().createArrayNode();
+            for(IpAddress ipAddress : connection.getService().ipAddressSet()) {
+                serviceIpArray.add(ipAddress.toString());
+            }
+            ObjectNode serviceNode = (ObjectNode) mapper().createObjectNode()
                     .put("serviceName", connection.getService().name().toString())
                     .put("serviceId", connection.getService().id().toString())
                     .put("serviceTpPort", connection.getService().tpPort().toString())
-                    .put("ip4Address", connection.getService().ipAddressSet().iterator().next().toString());
+                    .set("ipAddresses", serviceIpArray);
+                    //.put("ip4Address", connection.getService().ipAddressSet().iterator().next().toString());
 
+
+            //create deviceArray JSON Array
             ArrayNode deviceArray = mapper().createArrayNode();
-
+            //parse to SET to avoid duplicates
             Set<DeviceId> devices = new HashSet<DeviceId>(connection.getForwardingObjectives().values());
             for (DeviceId deviceId : devices){
                 ObjectNode deviceNode = mapper().createObjectNode();
