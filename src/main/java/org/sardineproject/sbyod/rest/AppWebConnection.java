@@ -22,8 +22,6 @@ import static org.slf4j.LoggerFactory.getLogger;
 
 /**
  * Lists User to Service connections
- * returns connections consiting of (user, active services, flow objective count)
- * works like cli command "list-connections"
  */
 @Path("/connections")
 public class AppWebConnection extends AbstractWebResource {
@@ -74,26 +72,23 @@ public class AppWebConnection extends AbstractWebResource {
                     .put("deviceId", connection.getForwardingObjectives().values().toString());
             */
 
-            ArrayNode flowArray = mapper().createArrayNode();
-            flowArray.add("flow1");
-
-            ObjectNode deviceNode = mapper().createObjectNode();
-            deviceNode.put("deviceId", "fooId");
-            deviceNode.set("flows", flowArray);
-
             ArrayNode deviceArray = mapper().createArrayNode();
-            deviceArray.add(deviceNode);
 
-            /*
             for (DeviceId deviceId : connection.getForwardingObjectives().values()){
+                ObjectNode deviceNode = mapper().createObjectNode();
+                deviceNode.put("deviceId", deviceId.toString());
+
+                ArrayNode flowArray = mapper().createArrayNode();
+
                 for (Map.Entry entry : connection.getForwardingObjectives().entrySet()) {
                     if (entry.getValue().equals(deviceId)) {
-
+                        flowArray.add(entry.getKey().toString());
                     }
-
                 }
+                deviceNode.set("flows", flowArray);
+                deviceArray.add(deviceNode);
             }
-            */
+
 
             connectionNode.set("user", userNode);
             connectionNode.set("service", serviceNode);
