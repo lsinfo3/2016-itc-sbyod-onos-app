@@ -21,11 +21,11 @@ import java.util.Map;
 import static org.slf4j.LoggerFactory.getLogger;
 
 /**
- * Created by Bene on 21.10.16.
+ * Lists User to Service connections
  * returns connections consiting of (user, active services, flow objective count)
  * works like cli command "list-connections"
  */
-@Path("/connections")
+@Path("")
 public class AppWebConnection extends AbstractWebResource {
 
     private static final Logger log = getLogger(PortalManager.class);
@@ -50,7 +50,7 @@ public class AppWebConnection extends AbstractWebResource {
 
         ArrayNode arrayNode = mapper().createArrayNode();
 
-        while(connectionIterator.hasNext()){
+        while(connectionIterator.hasNext()) {
             Connection connection = connectionIterator.next();
 
             ObjectNode connectionNode = mapper().createObjectNode();
@@ -60,7 +60,7 @@ public class AppWebConnection extends AbstractWebResource {
                     .put("mac", connection.getUser().mac().toString())
                     .put("vlan", connection.getUser().vlan().toString())
                     .put("ipAddress", connection.getUser().ipAddresses().iterator().next().toString());
-                    //.put("location", connection.getUser().location());
+            //.put("location", connection.getUser().location());
 
             ObjectNode serviceNode = mapper().createObjectNode()
                     .put("serviceName", connection.getService().name().toString())
@@ -68,21 +68,36 @@ public class AppWebConnection extends AbstractWebResource {
                     .put("serviceTpPort", connection.getService().tpPort().toString())
                     .put("ip4Address", connection.getService().ipAddressSet().iterator().next().toString());
 
-            //connection.getForwardingObjectives().size();
-            //ObjectNode forwardingObjectives = mapper().createObjectNode()
-            //        .put("selector", connection.getForwardingObjectives().keySet().iterator().next().selector().toString())
-            //        .put("deviceId", connection.getForwardingObjectives().values().toString());
 
-            /*ArrayNode deviceArray = mapper().createArrayNode();
-            for(DeviceId deviceId : connection.getForwardingObjectives().values())
-                for(Map.Entry entry : connection.getForwardingObjectives().entrySet()){
-                    if(entry.getValue().equals(deviceId))
+            /*
+                    .put("selector", connection.getForwardingObjectives().keySet().iterator().next().selector().toString())
+                    .put("deviceId", connection.getForwardingObjectives().values().toString());
+            */
 
-                }*/
+            ArrayNode flowArray = mapper().createArrayNode();
+            flowArray.add("flow1");
 
+            ObjectNode deviceNode = mapper().createObjectNode();
+            deviceNode.put("deviceId", "fooId");
+            deviceNode.set("flows", flowArray);
+
+            ArrayNode deviceArray = mapper().createArrayNode();
+            deviceArray.add(deviceNode);
+
+            /*
+            for (DeviceId deviceId : connection.getForwardingObjectives().values()){
+                for (Map.Entry entry : connection.getForwardingObjectives().entrySet()) {
+                    if (entry.getValue().equals(deviceId)) {
+
+                    }
+
+                }
+            }
+            */
+            
             connectionNode.set("user", userNode);
             connectionNode.set("service", serviceNode);
-            //connectionNode.set("forwardingObjective", forwardingObjectives);
+            connectionNode.set("devices", deviceArray);
 
             arrayNode.add(connectionNode);
 
