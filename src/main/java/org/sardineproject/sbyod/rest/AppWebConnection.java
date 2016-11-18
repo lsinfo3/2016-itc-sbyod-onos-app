@@ -100,7 +100,7 @@ public class AppWebConnection extends AbstractWebResource {
 
                 ArrayNode flowArray = mapper().createArrayNode();
 
-                for (Map.Entry entry : connection.getForwardingObjectives().entrySet()) {
+                for (Map.Entry entry : connection.getForwardingObjectives().entries()) {
                     if (entry.getValue().equals(deviceId)) {
                         flowArray.add(entry.getKey().toString());
                     }

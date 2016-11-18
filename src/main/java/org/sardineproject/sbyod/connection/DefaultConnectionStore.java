@@ -17,6 +17,7 @@
  */
 package org.sardineproject.sbyod.connection;
 
+import com.google.common.collect.Multimap;
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Reference;
@@ -37,6 +38,7 @@ import org.sardineproject.sbyod.portal.PortalService;
 import org.sardineproject.sbyod.service.Service;
 import org.slf4j.Logger;
 
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -131,17 +133,19 @@ public class DefaultConnectionStore implements ConnectionStore {
         // todo: also reset flow objectives of the connection if it is not completely deleted?
 
         // remove the flow objectives on the network devices
-        Map<ForwardingObjective, DeviceId> forwardingObjectives = connection.getForwardingObjectives();
+        Multimap<ForwardingObjective, DeviceId> forwardingObjectives = connection.getForwardingObjectives();
 
         for(ForwardingObjective fo : forwardingObjectives.keySet()){
 
             // get the device id where the objective is installed on
-            DeviceId deviceId = forwardingObjectives.get(fo);
+            Collection<DeviceId> deviceIds = forwardingObjectives.get(fo);
 
             log.debug("DefaultConnectionStore: Removing flow objective \n{} \n" +
-                    "for device {} in method removeConnection()", fo, deviceId);
-            // removing objective
-            flowObjectiveService.forward(forwardingObjectives.get(fo), fo);
+                    "for device {} in method removeConnection()", fo, deviceIds);
+            // removing objective for every device
+            for(DeviceId deviceId : deviceIds){
+                flowObjectiveService.forward(deviceId, fo);
+            }
         }
     }
 
