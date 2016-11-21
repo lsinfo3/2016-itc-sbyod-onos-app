@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.onlab.packet.IpAddress;
 import org.onosproject.net.DeviceId;
+import org.onosproject.net.flowobjective.FlowObjectiveService;
 import org.onosproject.rest.AbstractWebResource;
 import org.sardineproject.sbyod.cli.completer.DeviceIdCompleter;
 import org.sardineproject.sbyod.connection.Connection;
