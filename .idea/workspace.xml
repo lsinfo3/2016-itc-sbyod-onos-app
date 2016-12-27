@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="75547646-59b7-43b1-9a79-be3d9090c8f3" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/java/org/sardineproject/sbyod/rest/AppWebConnection.java" afterPath="$PROJECT_DIR$/src/main/java/org/sardineproject/sbyod/rest/AppWebConnection.java" />
-    </list>
+    <list default="true" id="75547646-59b7-43b1-9a79-be3d9090c8f3" name="Default" comment="" />
     <ignored path="sbyod.iws" />
     <ignored path=".idea/workspace.xml" />
     <ignored path="$PROJECT_DIR$/target/" />
@@ -682,12 +680,12 @@
       <updated>1477041463036</updated>
       <workItem from="1477041465983" duration="32867000" />
       <workItem from="1478168103039" duration="697000" />
-      <workItem from="1479468352300" duration="6472000" />
+      <workItem from="1479468352300" duration="6626000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="40036000" />
+    <option name="totallyTimeSpent" value="40190000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -699,7 +697,7 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="0" y="22" width="1680" height="931" extended-state="1" />
+    <frame x="0" y="22" width="1680" height="931" extended-state="0" />
     <editor active="false" />
     <layout>
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
