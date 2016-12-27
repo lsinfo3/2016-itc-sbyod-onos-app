@@ -17,7 +17,9 @@
  */
 package org.sardineproject.sbyod.connection;
 
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.IpAddress;
@@ -44,7 +46,7 @@ public class DefaultConnection implements Connection{
 
     private final Host user;
     private final Service service;
-    private Map<ForwardingObjective, DeviceId> forwardingObjectives;
+    private ArrayListMultimap<ForwardingObjective, DeviceId> forwardingObjectives;
 
 
     public DefaultConnection(Host user, Service service){
@@ -67,7 +69,7 @@ public class DefaultConnection implements Connection{
 
         this.user = user;
         this.service = service;
-        forwardingObjectives = new HashMap<>();
+        forwardingObjectives = ArrayListMultimap.create();
     }
 
     public Service getService() { return service; }
@@ -93,8 +95,8 @@ public class DefaultConnection implements Connection{
      * @return forwarding objective
      */
     @Override
-    public Map<ForwardingObjective, DeviceId> getForwardingObjectives() {
-        return Maps.newHashMap(forwardingObjectives);
+    public ArrayListMultimap<ForwardingObjective, DeviceId> getForwardingObjectives() {
+        return ArrayListMultimap.create(forwardingObjectives);
     }
 
 

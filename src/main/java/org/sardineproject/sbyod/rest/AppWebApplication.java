@@ -29,6 +29,7 @@ public class AppWebApplication extends AbstractWebApplication {
     @Override
     public Set<Class<?>> getClasses() {
         return getClasses(
+                AppWebConnection.class,
                 AppWebUser.class,
                 AppWebPortal.class,
                 AppWebService.class,

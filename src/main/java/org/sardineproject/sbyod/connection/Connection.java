@@ -17,6 +17,7 @@
  */
 package org.sardineproject.sbyod.connection;
 
+import com.google.common.collect.ArrayListMultimap;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.Host;
 import org.onosproject.net.flow.FlowRule;
@@ -57,6 +58,6 @@ public interface Connection{
      *
      * @return forwarding objective
      */
-    Map<ForwardingObjective, DeviceId> getForwardingObjectives();
+    ArrayListMultimap<ForwardingObjective, DeviceId> getForwardingObjectives();
 
 }
